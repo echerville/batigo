@@ -284,13 +284,14 @@ async function loadBatiment(lat, lng, label) {
     let bdnbData = null;
     try {
       const bbox = `${lng-0.0003},${lat-0.0003},${lng+0.0003},${lat+0.0003}`;
-      const r = await fetch(`https://api.bdnb.io/v1/batiment_groupe?bbox=${bbox}&limit=3&select=annee_construction,surface_shon_sum,type_energie_chauffage,type_energie_ecs,nb_logement_open,usage_type_r`);
+      const r = await fetch(`/api/bdnb?bbox=${encodeURIComponent(bbox)}`);
       if (r.ok) { const d=await r.json(); if(d?.length) bdnbData=d[0]; }
     } catch(e) {}
 
     let rncData = null;
     try {
-      const r = await fetch(`https://tabular-api.data.gouv.fr/api/resources/3b6e1c64-2dea-45c4-9e58-a4a55c64c2f7/data/?page_size=5`);
+      const addrQ = encodeURIComponent(label);
+      const r = await fetch(`https://tabular-api.data.gouv.fr/api/resources/3b6e1c64-2dea-45c4-9e58-a4a55c64c2f7/data/?page_size=3`);
       if (r.ok) { const d=await r.json(); if(d.data?.length) rncData=d.data[0]; }
     } catch(e) {}
 
@@ -346,16 +347,19 @@ async function loadDPE(feature) {
   const p = feature.properties;
   const housenumber = p.housenumber||'', street = p.street||p.name||'', citycode = p.citycode||'';
   try {
-    const params = new URLSearchParams({size:100,select:'N°DPE,Date_réception_DPE,Etiquette_DPE,Surface_habitable_logement,Type_énergie_principale_chauffage,Type_énergie_principale_ECS,Adresse_brut,Code_postal_BAN,Code_insee_commune_actualise',q:`${housenumber} ${street}`.trim(),q_fields:'Adresse_brut',sort:'-Date_réception_DPE'});
-    if (citycode) params.set('Code_insee_commune_actualise_eq', citycode);
-    const resp = await fetch(`https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?${params}`);
+    const q = `${housenumber} ${street}`.trim();
+    const SEL_EXIST = 'N°DPE,Date_réception_DPE,Etiquette_DPE,Surface_habitable_logement,Type_énergie_principale_chauffage,Type_énergie_principale_ECS,Adresse_brut,Code_postal_BAN,Code_insee_commune_actualise';
+    let url1 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL_EXIST}&q=${encodeURIComponent(q)}&q_fields=Adresse_brut&sort=-Date_réception_DPE`;
+    if (citycode) url1 += `&Code_insee_commune_actualise_eq=${citycode}`;
+    const resp = await fetch(url1);
     const data = await resp.json();
     let results = data.results||[];
     if (results.length < 2) {
       try {
-        const p2 = new URLSearchParams({size:50,select:'N°DPE,Date_réception_DPE,Etiquette_DPE,Surface_habitable_logement,Type_énergie_principale_chauffage,Type_énergie_principale_ECS,Adresse_brut',q:`${housenumber} ${street}`.trim(),q_fields:'Adresse_brut',sort:'-Date_réception_DPE'});
-        if (citycode) p2.set('Code_insee_commune_actualise_eq', citycode);
-        const r2 = await fetch(`https://data.ademe.fr/data-fair/api/v1/datasets/dpe03neuf/lines?${p2}`);
+        const SEL_NEUF = 'N°DPE,Date_réception_DPE,Etiquette_DPE,Surface_habitable_logement,Type_énergie_principale_chauffage,Type_énergie_principale_ECS,Adresse_brut';
+        let url2 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03neuf/lines?size=50&select=${SEL_NEUF}&q=${encodeURIComponent(q)}&q_fields=Adresse_brut&sort=-Date_réception_DPE`;
+        if (citycode) url2 += `&Code_insee_commune_actualise_eq=${citycode}`;
+        const r2 = await fetch(url2);
         const d2 = await r2.json();
         if (d2.results) results = [...results, ...d2.results];
       } catch(e) {}
