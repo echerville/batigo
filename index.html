@@ -351,24 +351,37 @@ async function loadDPE(feature) {
   el.style.display = 'block';
   el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement DPE ADEME…</div>';
   const p = feature.properties;
-  const housenumber = p.housenumber||'', street = p.street||p.name||'', citycode = p.citycode||'';
+  const banId = p.id||'', citycode = p.citycode||'';
+  const housenumber = p.housenumber||'', street = p.street||p.name||'';
   try {
-    const q = `${housenumber} ${street}`.trim();
     const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,adresse_brut,code_postal_ban';
-    let url1 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL}&q=${encodeURIComponent(q)}&q_fields=adresse_brut&sort=-date_reception_dpe`;
-    if (citycode) url1 += `&code_insee_ban_eq=${citycode}`;
+    // Filtre prioritaire : identifiant_ban exact (1 adresse précise)
+    // Fallback : texte adresse + code insee si pas de ban ID
+    let url1 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL}&sort=-date_reception_dpe`;
+    if (banId) {
+      url1 += `&identifiant_ban_eq=${encodeURIComponent(banId)}`;
+    } else {
+      const q = `${housenumber} ${street}`.trim();
+      url1 += `&q=${encodeURIComponent(q)}&q_fields=adresse_brut`;
+      if (citycode) url1 += `&code_insee_ban_eq=${citycode}`;
+    }
     const resp = await fetch(url1);
     const data = await resp.json();
     let results = data.results||[];
-    if (results.length < 2) {
-      try {
-        let url2 = `https://data.ademe.fr/data-fair/api/v1/datasets/g3cgx7jb3cmys5voxz1mrm22/lines?size=50&select=${SEL}&q=${encodeURIComponent(q)}&q_fields=adresse_brut&sort=-date_reception_dpe`;
+    // Chercher aussi dans les DPE neufs
+    try {
+      let url2 = `https://data.ademe.fr/data-fair/api/v1/datasets/g3cgx7jb3cmys5voxz1mrm22/lines?size=50&select=${SEL}&sort=-date_reception_dpe`;
+      if (banId) {
+        url2 += `&identifiant_ban_eq=${encodeURIComponent(banId)}`;
+      } else {
+        const q = `${housenumber} ${street}`.trim();
+        url2 += `&q=${encodeURIComponent(q)}&q_fields=adresse_brut`;
         if (citycode) url2 += `&code_insee_ban_eq=${citycode}`;
-        const r2 = await fetch(url2);
-        const d2 = await r2.json();
-        if (d2.results) results = [...results, ...d2.results];
-      } catch(e) {}
-    }
+      }
+      const r2 = await fetch(url2);
+      const d2 = await r2.json();
+      if (d2.results?.length) results = [...results, ...d2.results];
+    } catch(e) {}
     renderDPE(results);
   } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
 }
