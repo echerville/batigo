@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Batigo</title>
+<link href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css" rel="stylesheet"/>
+<script src="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f4f6f8;--surface:#ffffff;--surface2:#f0f2f5;--border:#e2e6eb;--border-med:#ccd2da;
+    --accent:#2BB573;--accent-dark:#1e9459;--accent-dim:rgba(43,181,115,0.10);--accent-dim2:rgba(43,181,115,0.18);
+    --text:#1a2332;--text-dim:#4a5568;--text-muted:#8fa0b5;--danger:#e53e3e;--warn:#d97706;
+    --panel-w:370px;--header-h:56px;--radius:8px;--radius-sm:5px;
+    --shadow-sm:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md:0 4px 12px rgba(0,0,0,0.10),0 2px 4px rgba(0,0,0,0.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px;line-height:1.5}
+  #header{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 20px;flex-shrink:0;z-index:100;box-shadow:var(--shadow-sm)}
+  #logo{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700;color:var(--accent);white-space:nowrap;letter-spacing:-0.3px}
+  #logo .logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+  #logo span{color:var(--text)}
+  #search-wrap{flex:1;position:relative;max-width:520px}
+  #search-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:13px;padding:9px 40px 9px 14px;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+  #search-input::placeholder{color:var(--text-muted)}
+  #search-input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-dim)}
+  #search-btn{position:absolute;right:0;top:0;bottom:0;width:40px;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;display:flex;align-items:center;justify-content:center;transition:color .15s;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+  #search-btn:hover{color:var(--accent)}
+  #suggestions{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);z-index:200;max-height:260px;overflow-y:auto}
+  .suggestion-item{padding:10px 14px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);line-height:1.4;color:var(--text-dim);display:flex;align-items:flex-start;gap:8px;transition:background .1s}
+  .suggestion-item::before{content:'📍';font-size:11px;margin-top:1px;flex-shrink:0;opacity:.5}
+  .suggestion-item:last-child{border-bottom:none}
+  .suggestion-item:hover{background:var(--accent-dim);color:var(--text)}
+  .suggestion-item strong{color:var(--text);font-weight:600}
+  #status-bar{margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:500;white-space:nowrap;display:flex;align-items:center;gap:6px}
+  #status-bar.loading{color:var(--accent)}
+  #status-bar.error{color:var(--danger)}
+  #body{flex:1;display:flex;overflow:hidden}
+  #map-area{flex:1;display:flex;flex-direction:column;position:relative}
+  #layer-bar{height:42px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:2px;padding:0 12px;flex-shrink:0;overflow-x:auto}
+  .layer-btn{height:28px;padding:0 13px;background:none;border:1.5px solid transparent;border-radius:var(--radius-sm);color:var(--text-dim);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .12s}
+  .layer-btn:hover{background:var(--surface2);color:var(--text)}
+  .layer-btn.active{color:var(--accent-dark);border-color:var(--accent);background:var(--accent-dim2);font-weight:600}
+  .layer-sep{width:1px;height:20px;background:var(--border-med);margin:0 6px;flex-shrink:0}
+  .layer-toggle{height:28px;padding:0 13px;background:none;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .12s;display:flex;align-items:center;gap:5px}
+  .layer-toggle:hover{background:var(--surface2);color:var(--text)}
+  .layer-toggle.on{color:var(--accent-dark);border-color:var(--accent);background:var(--accent-dim2);font-weight:600}
+  .measure-btn{height:28px;padding:0 13px;background:none;border:1.5px solid transparent;border-radius:var(--radius-sm);color:var(--text-dim);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .12s}
+  .measure-btn:hover{background:var(--surface2);color:var(--text)}
+  .measure-btn.active{color:#7c3aed;border-color:#7c3aed;background:rgba(124,58,237,.08);font-weight:600}
+  .measure-btn.clear{color:var(--text-muted)}
+  .measure-btn.clear:hover{color:var(--danger);background:rgba(229,62,62,.07)}
+  #map{flex:1}
+  #panoramax-panel{height:280px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
+  #panoramax-panel.visible{display:flex}
+  #panoramax-panel iframe{width:100%;height:100%;border:none}
+  #panoramax-close{position:absolute;top:10px;right:10px;width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background .15s}
+  #panoramax-close:hover{background:rgba(255,255,255,.3)}
+  #measure-result{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--radius);color:var(--accent-dark);font-family:inherit;font-size:13px;font-weight:700;padding:7px 20px;pointer-events:none;white-space:nowrap;display:none;z-index:50;box-shadow:var(--shadow-md)}
+  .addr-marker{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2.5px solid #fff;box-shadow:0 0 0 3px rgba(43,181,115,.35),var(--shadow-sm)}
+  #panel{width:var(--panel-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+  #panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);padding:0 4px;gap:2px}
+  .panel-tab{flex:1;height:40px;background:none;border:none;border-bottom:2.5px solid transparent;color:var(--text-muted);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.01em}
+  .panel-tab:hover{color:var(--text-dim)}
+  .panel-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent)}
+  #panel-content{flex:1;overflow-y:auto;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--border-med) transparent}
+  #panel-content::-webkit-scrollbar{width:4px}
+  #panel-content::-webkit-scrollbar-thumb{background:var(--border-med);border-radius:4px}
+  .panel-section{display:none;padding:14px}
+  .panel-section.active{display:block}
+  .empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
+  .empty-state .icon{font-size:36px;margin-bottom:12px;opacity:.5}
+  .empty-state p{font-size:12px;line-height:1.7}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+  .card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+  .card-title::before{content:'';display:inline-block;width:3px;height:12px;background:var(--accent);border-radius:2px}
+  .field-label{font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em}
+  .field-value{font-size:14px;color:var(--text);font-weight:600;line-height:1.3}
+  .field-value.na{color:var(--text-muted);font-style:italic;font-size:12px;font-weight:400}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .info-cell{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px}
+  .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid transparent}
+  .pill-blue{background:rgba(59,130,246,.1);color:#2563eb;border-color:rgba(59,130,246,.25)}
+  .dpe-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;margin-top:6px}
+  .dpe-table th{text-align:left;padding:6px 8px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:var(--surface2);border-bottom:1px solid var(--border)}
+  .dpe-table th:first-child{border-radius:var(--radius-sm) 0 0 0}
+  .dpe-table th:last-child{border-radius:0 var(--radius-sm) 0 0}
+  .dpe-table td{padding:7px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);vertical-align:middle;line-height:1.3}
+  .dpe-table tr:last-child td{border-bottom:none}
+  .dpe-table tr:hover td{background:var(--accent-dim);color:var(--text)}
+  .dpe-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;font-weight:800;font-size:12px;border-radius:var(--radius-sm);color:#fff;flex-shrink:0}
+  .dpe-A{background:#00a651}.dpe-B{background:#50b748}.dpe-C{background:#c8d400;color:#333}.dpe-D{background:#ffd400;color:#333}.dpe-E{background:#f7941d}.dpe-F{background:#ed1c24}.dpe-G{background:#8b0000}.dpe-N{background:var(--text-muted);font-size:9px}
+  .dpe-group-header td{background:var(--surface2)!important;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);padding:5px 8px;border-top:2px solid var(--border-med)}
+  .dpe-group-header .dpe-badge{width:18px;height:18px;font-size:10px;margin-right:6px;vertical-align:middle}
+  .dpe-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+  .dpe-summary-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .dpe-summary-title::before{content:'';display:inline-block;width:3px;height:12px;background:var(--accent);border-radius:2px}
+  .dpe-dist{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .dpe-dist-item{display:flex;align-items:center;gap:5px;background:var(--surface2);border-radius:var(--radius-sm);padding:4px 8px;border:1px solid var(--border)}
+  .dpe-dist-item .count{font-weight:700;color:var(--text);font-size:13px}
+  .dpe-dist-item .label{font-size:10px;color:var(--text-muted)}
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border-med);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle;flex-shrink:0}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #map.measuring{cursor:crosshair}
+  .maplibregl-popup-content{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:var(--radius-sm)!important;padding:10px 14px!important;font-family:inherit!important;font-size:12px!important;box-shadow:var(--shadow-md)!important}
+  .maplibregl-popup-tip{display:none!important}
+  .maplibregl-ctrl-group{border-radius:var(--radius-sm)!important;box-shadow:var(--shadow-sm)!important}
+  .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
+</style>
+</head>
+<body>
+<div id="header">
+  <div id="logo"><span class="logo-dot"></span>Bati<span>go</span></div>
+  <div id="search-wrap">
+    <input id="search-input" type="text" placeholder="Saisir une adresse…" autocomplete="off"/>
+    <button id="search-btn">⌕</button>
+    <div id="suggestions"></div>
+  </div>
+  <div id="status-bar">—</div>
+</div>
+<div id="body">
+  <div id="map-area">
+    <div id="layer-bar">
+      <button class="layer-btn active" data-layer="ign-plan">IGN Plan</button>
+      <button class="layer-btn" data-layer="ign-ortho">Satellite</button>
+      <button class="layer-btn" data-layer="osm">OSM</button>
+      <div class="layer-sep"></div>
+      <button class="layer-toggle" id="toggle-cadastre">⬜ Cadastre</button>
+      <button class="layer-toggle" id="toggle-panoramax">⬜ Street View</button>
+      <div class="layer-sep"></div>
+      <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
+      <button class="measure-btn" id="btn-measure-line">╌ Linéaire</button>
+      <button class="measure-btn clear" id="btn-measure-clear">✕ Effacer</button>
+    </div>
+    <div id="map"></div>
+    <div id="measure-result"></div>
+    <div id="panoramax-panel">
+      <button id="panoramax-close">✕</button>
+      <iframe id="panoramax-iframe" src="" allow="fullscreen; xr-spatial-tracking" allowfullscreen></iframe>
+    </div>
+  </div>
+  <div id="panel">
+    <div id="panel-tabs">
+      <button class="panel-tab active" data-tab="batiment">Bâtiment</button>
+      <button class="panel-tab" data-tab="dpe">DPE</button>
+    </div>
+    <div id="panel-content">
+      <div class="panel-section active" id="tab-batiment">
+        <div class="empty-state" id="empty-batiment"><div class="icon">◈</div><p>Saisir une adresse<br>pour afficher les données bâtiment</p></div>
+        <div id="batiment-data" style="display:none"></div>
+      </div>
+      <div class="panel-section" id="tab-dpe">
+        <div class="empty-state" id="empty-dpe"><div class="icon">◈</div><p>Saisir une adresse<br>pour afficher les DPE réalisés</p></div>
+        <div id="dpe-data" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const TILE_URLS = {
+  'ign-plan':  'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+  'ign-ortho': 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+  'osm':       'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+};
+const LAYERS = {
+  'ign-plan':  { type:'raster', tiles:[TILE_URLS['ign-plan']],  tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
+  'ign-ortho': { type:'raster', tiles:[TILE_URLS['ign-ortho']], tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
+  'osm':       { type:'raster', tiles:[TILE_URLS['osm']],       tileSize:256, maxzoom:19, attribution:'© OpenStreetMap contributors' }
+};
+const CADASTRE_SOURCE = {
+  type:'raster',
+  tiles:['https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'],
+  tileSize:256, attribution:'© IGN Cadastre'
+};
+
+let currentLayer = 'ign-plan', cadastreOn = false, currentCoords = null;
+let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: { version:8, sources:{'base':LAYERS['ign-plan']}, layers:[{id:'base-layer',type:'raster',source:'base'}], glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf' },
+  center: [2.3522, 46.8], zoom: 5, attributionControl: false
+});
+map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
+map.addControl(new maplibregl.AttributionControl({compact:true}), 'bottom-right');
+map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
+
+map.on('load', () => {
+  map.addSource('cadastre', CADASTRE_SOURCE);
+  map.addLayer({id:'cadastre-layer',type:'raster',source:'cadastre',layout:{visibility:'none'},paint:{'raster-opacity':0.7}});
+  map.addSource('measure-src', {type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'measure-fill',type:'fill',source:'measure-src',paint:{'fill-color':'#e06090','fill-opacity':0.12},filter:['==','$type','Polygon']});
+  map.addLayer({id:'measure-line',type:'line',source:'measure-src',paint:{'line-color':'#e06090','line-width':2,'line-dasharray':[4,2]}});
+  setStatus('Prêt');
+});
+
+document.querySelectorAll('.layer-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const lId = btn.dataset.layer;
+    if (lId === currentLayer) return;
+    document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLayer = lId;
+    map.getSource('base').setTiles([TILE_URLS[lId]]);
+  });
+});
+
+document.getElementById('toggle-cadastre').addEventListener('click', function() {
+  cadastreOn = !cadastreOn;
+  map.setLayoutProperty('cadastre-layer', 'visibility', cadastreOn ? 'visible' : 'none');
+  this.textContent = (cadastreOn ? '☑' : '⬜') + ' Cadastre';
+  this.classList.toggle('on', cadastreOn);
+});
+
+document.getElementById('toggle-panoramax').addEventListener('click', function() {
+  if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
+  const [lng, lat] = currentCoords;
+  window.open(`https://panoramax.ign.fr/#focus=pic&map=17.00/${lat}/${lng}&speed=250&xyz=${lng},${lat},18`, '_blank', 'noopener');
+});
+document.getElementById('panoramax-close').addEventListener('click', () => document.getElementById('panoramax-panel').classList.remove('visible'));
+
+document.querySelectorAll('.panel-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const t = tab.dataset.tab;
+    document.querySelectorAll('.panel-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + t).classList.add('active');
+  });
+});
+
+let suggestTimeout = null;
+document.getElementById('search-input').addEventListener('input', function() {
+  const q = this.value.trim(); clearTimeout(suggestTimeout);
+  if (q.length < 3) { hideSuggestions(); return; }
+  suggestTimeout = setTimeout(() => fetchSuggestions(q), 250);
+});
+document.getElementById('search-input').addEventListener('keydown', e => { if (e.key==='Enter') { const q=document.getElementById('search-input').value.trim(); if(q.length>2) fetchSuggestions(q,true); }});
+document.getElementById('search-btn').addEventListener('click', () => { const q=document.getElementById('search-input').value.trim(); if(q.length>2) fetchSuggestions(q,true); });
+document.addEventListener('click', e => { if (!e.target.closest('#search-wrap')) hideSuggestions(); });
+
+async function fetchSuggestions(q, autoSelect=false) {
+  try {
+    const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=6`);
+    const d = await r.json();
+    const features = d.features || [];
+    if (autoSelect && features.length>0) { hideSuggestions(); selectAddress(features[0]); return; }
+    renderSuggestions(features);
+  } catch(e) { setStatus('Erreur BAN','error'); }
+}
+function renderSuggestions(features) {
+  const box = document.getElementById('suggestions');
+  if (!features.length) { box.innerHTML=''; return; }
+  box.innerHTML = features.map((f,i) => { const p=f.properties; return `<div class="suggestion-item" data-i="${i}"><strong>${p.name||''}</strong> ${p.postcode||''} ${p.city||''}</div>`; }).join('');
+  box._features = features;
+  box.querySelectorAll('.suggestion-item').forEach(el => el.addEventListener('click', () => { selectAddress(box._features[parseInt(el.dataset.i)]); hideSuggestions(); }));
+}
+function hideSuggestions() { document.getElementById('suggestions').innerHTML=''; }
+
+function selectAddress(feature) {
+  const [lng,lat] = feature.geometry.coordinates;
+  const label = feature.properties.label || '';
+  document.getElementById('search-input').value = label;
+  currentCoords = [lng, lat];
+  map.flyTo({center:[lng,lat], zoom:18, speed:1.4});
+  if (addrMarker) addrMarker.remove();
+  const el = document.createElement('div'); el.className='addr-marker';
+  addrMarker = new maplibregl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
+  loadBatiment(lat, lng, label);
+  loadDPE(feature);
+}
+
+async function loadBatiment(lat, lng, label) {
+  const el = document.getElementById('batiment-data');
+  document.getElementById('empty-batiment').style.display = 'none';
+  el.style.display = 'block';
+  el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement BDNB…</div>';
+  setStatus('Chargement bâtiment…','loading');
+  try {
+    let bdnbData = null;
+    try {
+      const bbox = `${lng-0.0003},${lat-0.0003},${lng+0.0003},${lat+0.0003}`;
+      const r = await fetch(`https://api.bdnb.io/v1/batiment_groupe?bbox=${bbox}&limit=3&select=annee_construction,surface_shon_sum,type_energie_chauffage,type_energie_ecs,nb_logement_open,usage_type_r`);
+      if (r.ok) { const d=await r.json(); if(d?.length) bdnbData=d[0]; }
+    } catch(e) {}
+
+    let rncData = null;
+    try {
+      const r = await fetch(`https://tabular-api.data.gouv.fr/api/resources/3b6e1c64-2dea-45c4-9e58-a4a55c64c2f7/data/?page_size=5`);
+      if (r.ok) { const d=await r.json(); if(d.data?.length) rncData=d.data[0]; }
+    } catch(e) {}
+
+    renderBatiment(bdnbData, rncData, label);
+    setStatus('Prêt');
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
+    setStatus('Erreur','error');
+  }
+}
+
+function renderBatiment(bdnb, rnc, label) {
+  const el = document.getElementById('batiment-data');
+  const na = v => v ? `<span class="field-value">${v}</span>` : `<span class="field-value na">Non renseigné</span>`;
+  const v = val => (val!==null&&val!==undefined&&val!=='') ? val : null;
+  el.innerHTML = `
+    <div class="card"><div class="card-title">Adresse</div><div class="field-value" style="font-size:13px;line-height:1.5;font-weight:500">${label}</div></div>
+    <div class="card">
+      <div class="card-title">Bâtiment · BDNB</div>
+      <div class="info-grid" style="margin-bottom:10px">
+        <div class="info-cell"><div class="field-label">Construction</div>${na(v(bdnb?.annee_construction))}</div>
+        <div class="info-cell"><div class="field-label">Surface SHON</div>${na(bdnb?.surface_shon_sum ? Math.round(bdnb.surface_shon_sum)+'m²' : null)}</div>
+        <div class="info-cell"><div class="field-label">Logements</div>${na(v(bdnb?.nb_logement_open))}</div>
+        <div class="info-cell"><div class="field-label">Usage</div>${na(formatUsage(bdnb?.usage_type_r))}</div>
+      </div>
+      <div class="info-grid">
+        <div class="info-cell"><div class="field-label">Chauffage</div>${formatEnergie(bdnb?.type_energie_chauffage) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_chauffage)}</span>` : `<span class="field-value na">Non renseigné</span>`}</div>
+        <div class="info-cell"><div class="field-label">ECS</div>${formatEnergie(bdnb?.type_energie_ecs) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_ecs)}</span>` : `<span class="field-value na">Non renseigné</span>`}</div>
+      </div>
+      ${!bdnb?'<p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Aucune donnée BDNB à cette adresse.</p>':''}
+    </div>
+    <div class="card">
+      <div class="card-title">Copropriété · RNIC</div>
+      <div style="margin-bottom:10px"><div class="field-label">Syndic</div>${na(v(rnc?.syndic_nom_enseigne||rnc?.syndic_raison_sociale||rnc?.nom_syndic))}</div>
+      <div class="info-grid"><div class="info-cell"><div class="field-label">Lots logement</div>${na(v(rnc?.nb_lots_total||rnc?.nblots_total))}</div></div>
+    </div>`;
+}
+
+function formatEnergie(val) {
+  if (!val) return null;
+  return {'electricity':'Électricité','natural_gas':'Gaz naturel','gaz':'Gaz naturel','fuel_oil':'Fioul','fioul':'Fioul','wood':'Bois','bois':'Bois','heat_network':'Réseau chaleur','reseau_chaleur':'Réseau chaleur','thermodynamic':'PAC','pompe_a_chaleur':'PAC','coal':'Charbon','propane':'GPL','gpl':'GPL','other':'Autre'}[val.toLowerCase()] || val;
+}
+function formatUsage(val) {
+  if (!val) return null;
+  return {'R':'Résidentiel','T':'Tertiaire','M':'Mixte','residential':'Résidentiel'}[val] || val;
+}
+
+async function loadDPE(feature) {
+  const el = document.getElementById('dpe-data');
+  document.getElementById('empty-dpe').style.display = 'none';
+  el.style.display = 'block';
+  el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement DPE ADEME…</div>';
+  const p = feature.properties;
+  const housenumber = p.housenumber||'', street = p.street||p.name||'', citycode = p.citycode||'';
+  try {
+    const params = new URLSearchParams({size:100,select:'N°DPE,Date_réception_DPE,Etiquette_DPE,Surface_habitable_logement,Type_énergie_principale_chauffage,Type_énergie_principale_ECS,Adresse_brut,Code_postal_BAN,Code_insee_commune_actualise',q:`${housenumber} ${street}`.trim(),q_fields:'Adresse_brut',sort:'-Date_réception_DPE'});
+    if (citycode) params.set('Code_insee_commune_actualise_eq', citycode);
+    const resp = await fetch(`https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?${params}`);
+    const data = await resp.json();
+    let results = data.results||[];
+    if (results.length < 2) {
+      try {
+        const p2 = new URLSearchParams({size:50,select:'N°DPE,Date_réception_DPE,Etiquette_DPE,Surface_habitable_logement,Type_énergie_principale_chauffage,Type_énergie_principale_ECS,Adresse_brut',q:`${housenumber} ${street}`.trim(),q_fields:'Adresse_brut',sort:'-Date_réception_DPE'});
+        if (citycode) p2.set('Code_insee_commune_actualise_eq', citycode);
+        const r2 = await fetch(`https://data.ademe.fr/data-fair/api/v1/datasets/dpe03neuf/lines?${p2}`);
+        const d2 = await r2.json();
+        if (d2.results) results = [...results, ...d2.results];
+      } catch(e) {}
+    }
+    renderDPE(results);
+  } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
+}
+
+function renderDPE(results) {
+  const el = document.getElementById('dpe-data');
+  if (!results.length) { el.innerHTML=`<div class="empty-state"><div class="icon">◇</div><p>Aucun DPE trouvé pour cette adresse</p></div>`; return; }
+  const ORDER=['A','B','C','D','E','F','G'];
+  const groups={}; ORDER.forEach(k=>groups[k]=[]);
+  const chauffageCount={};
+  results.forEach(r=>{
+    const note=ORDER.includes(r['Etiquette_DPE'])?r['Etiquette_DPE']:'N';
+    if(!groups[note])groups[note]=[];
+    groups[note].push(r);
+    const ch=r['Type_énergie_principale_chauffage']||'';
+    if(ch) chauffageCount[ch]=(chauffageCount[ch]||0)+1;
+  });
+  const distHtml=ORDER.map(note=>{const n=groups[note].length;if(!n)return'';return`<div class="dpe-dist-item"><span class="dpe-badge dpe-${note}">${note}</span><span class="count">${n}</span><span class="label">DPE</span></div>`;}).join('');
+  const topCh=Object.entries(chauffageCount).sort((a,b)=>b[1]-a[1]);
+  const chHtml=topCh.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:3px;"><span>${k}</span><span style="color:var(--text)">${v} DPE</span></div>`).join('');
+  let tableHtml='';
+  ORDER.forEach(note=>{
+    const rows=groups[note];if(!rows.length)return;
+    tableHtml+=`<tr class="dpe-group-header"><td colspan="5"><span class="dpe-badge dpe-${note}">${note}</span> ${rows.length} diagnostic${rows.length>1?'s':''}</td></tr>`;
+    rows.forEach(r=>{
+      const date=r['Date_réception_DPE']?r['Date_réception_DPE'].substring(0,10):'—';
+      const surf=r['Surface_habitable_logement']?Math.round(r['Surface_habitable_logement'])+'m²':'—';
+      tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['Type_énergie_principale_chauffage'])}</td><td>${shortEnergie(r['Type_énergie_principale_ECS'])}</td><td style="color:var(--text-muted)">${date}</td></tr>`;
+    });
+  });
+  el.innerHTML=`<div class="dpe-summary"><div class="dpe-summary-title">Distribution — ${results.length} DPE</div><div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th></tr></thead><tbody>${tableHtml}</tbody></table>`;
+}
+
+function shortEnergie(val) {
+  if (!val) return '—';
+  return {'Électricité':'Élec.','Gaz naturel':'Gaz','Réseau de chaleur urbain':'RCU','Fioul domestique':'Fioul','Bois – Granulés (pellets) ou briquettes':'Pellets','Bois – Bûches':'Bois','GPL':'GPL','Charbon':'Charbon','Propane':'Propane','Autre':'Autre'}[val]||val.substring(0,12);
+}
+
+document.getElementById('btn-measure-poly').addEventListener('click', ()=>toggleMeasure('poly'));
+document.getElementById('btn-measure-line').addEventListener('click', ()=>toggleMeasure('line'));
+document.getElementById('btn-measure-clear').addEventListener('click', clearMeasure);
+
+function toggleMeasure(mode) {
+  if(measureMode===mode){measureMode=null;document.getElementById('map').classList.remove('measuring');document.getElementById('btn-measure-poly').classList.remove('active');document.getElementById('btn-measure-line').classList.remove('active');return;}
+  clearMeasure(); measureMode=mode;
+  document.getElementById('map').classList.add('measuring');
+  document.getElementById('btn-measure-poly').classList.toggle('active',mode==='poly');
+  document.getElementById('btn-measure-line').classList.toggle('active',mode==='line');
+}
+map.on('click',e=>{
+  if(!measureMode)return;
+  const pt=[e.lngLat.lng,e.lngLat.lat]; measurePoints.push(pt);
+  const dot=document.createElement('div'); dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#e06090;border:2px solid #fff;';
+  measureMarkers.push(new maplibregl.Marker({element:dot}).setLngLat(pt).addTo(map));
+  updateMeasureGeom();
+});
+map.on('dblclick',e=>{
+  if(!measureMode)return; e.preventDefault();
+  if(measureMode==='poly'&&measurePoints.length>=3)finalizeMeasure();
+  else if(measureMode==='line'&&measurePoints.length>=2)finalizeMeasure();
+});
+function updateMeasureGeom(){
+  const pts=measurePoints; if(pts.length<2)return;
+  let geojson;
+  if(measureMode==='line'){geojson={type:'Feature',geometry:{type:'LineString',coordinates:pts}};const m=Math.round(turf.length(geojson,{units:'kilometers'})*1000);showMeasureResult(m<1000?`${m} m`:`${(m/1000).toFixed(2)} km`);}
+  else if(measureMode==='poly'&&pts.length>=3){geojson={type:'Feature',geometry:{type:'Polygon',coordinates:[[...pts,pts[0]]]}};const area=turf.area(geojson);showMeasureResult(area<10000?`${Math.round(area)} m²`:`${(area/10000).toFixed(2)} ha`);}
+  const src=map.getSource('measure-src'); if(src&&geojson)src.setData({type:'FeatureCollection',features:[geojson]});
+}
+function finalizeMeasure(){measureMode=null;document.getElementById('map').classList.remove('measuring');document.getElementById('btn-measure-poly').classList.remove('active');document.getElementById('btn-measure-line').classList.remove('active');}
+function clearMeasure(){
+  measureMode=null;measurePoints=[];measureMarkers.forEach(m=>m.remove());measureMarkers=[];
+  document.getElementById('map').classList.remove('measuring');
+  document.getElementById('btn-measure-poly').classList.remove('active');
+  document.getElementById('btn-measure-line').classList.remove('active');
+  document.getElementById('measure-result').style.display='none';
+  const src=map.getSource('measure-src');if(src)src.setData({type:'FeatureCollection',features:[]});
+}
+function showMeasureResult(text){const el=document.getElementById('measure-result');el.textContent=text;el.style.display='block';}
+function setStatus(msg,type=''){const el=document.getElementById('status-bar');el.textContent=msg;el.className=type;}
+</script>
+</body>
+</html>
