@@ -290,8 +290,11 @@ async function loadBatiment(lat, lng, label) {
 
     let rncData = null;
     try {
-      const addrQ = encodeURIComponent(label);
-      const r = await fetch(`https://tabular-api.data.gouv.fr/api/resources/3b6e1c64-2dea-45c4-9e58-a4a55c64c2f7/data/?page_size=3`);
+      const p = feature.properties; const cc = p.citycode||'';
+      const rncUrl = cc
+        ? `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=3&code_officiel_commune__exact=${cc}`
+        : `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=3`;
+      const r = await fetch(rncUrl);
       if (r.ok) { const d=await r.json(); if(d.data?.length) rncData=d.data[0]; }
     } catch(e) {}
 
@@ -325,8 +328,11 @@ function renderBatiment(bdnb, rnc, label) {
     </div>
     <div class="card">
       <div class="card-title">Copropriété · RNIC</div>
-      <div style="margin-bottom:10px"><div class="field-label">Syndic</div>${na(v(rnc?.syndic_nom_enseigne||rnc?.syndic_raison_sociale||rnc?.nom_syndic))}</div>
-      <div class="info-grid"><div class="info-cell"><div class="field-label">Lots logement</div>${na(v(rnc?.nb_lots_total||rnc?.nblots_total))}</div></div>
+      <div style="margin-bottom:10px"><div class="field-label">Syndic</div>${na(v(rnc?.raison_sociale_du_representant_legal||rnc?.nom_d_usage_de_la_copropriete))}</div>
+      <div class="info-grid">
+        <div class="info-cell"><div class="field-label">Lots total</div>${na(v(rnc?.nombre_total_de_lots))}</div>
+        <div class="info-cell"><div class="field-label">Lots habitation</div>${na(v(rnc?.nombre_de_lots_a_usage_d_habitation))}</div>
+      </div>
     </div>`;
 }
 
@@ -348,17 +354,16 @@ async function loadDPE(feature) {
   const housenumber = p.housenumber||'', street = p.street||p.name||'', citycode = p.citycode||'';
   try {
     const q = `${housenumber} ${street}`.trim();
-    const SEL_EXIST = 'N°DPE,Date_réception_DPE,Etiquette_DPE,Surface_habitable_logement,Type_énergie_principale_chauffage,Type_énergie_principale_ECS,Adresse_brut,Code_postal_BAN,Code_insee_commune_actualise';
-    let url1 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL_EXIST}&q=${encodeURIComponent(q)}&q_fields=Adresse_brut&sort=-Date_réception_DPE`;
-    if (citycode) url1 += `&Code_insee_commune_actualise_eq=${citycode}`;
+    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,adresse_brut,code_postal_ban';
+    let url1 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL}&q=${encodeURIComponent(q)}&q_fields=adresse_brut&sort=-date_reception_dpe`;
+    if (citycode) url1 += `&code_insee_ban_eq=${citycode}`;
     const resp = await fetch(url1);
     const data = await resp.json();
     let results = data.results||[];
     if (results.length < 2) {
       try {
-        const SEL_NEUF = 'N°DPE,Date_réception_DPE,Etiquette_DPE,Surface_habitable_logement,Type_énergie_principale_chauffage,Type_énergie_principale_ECS,Adresse_brut';
-        let url2 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03neuf/lines?size=50&select=${SEL_NEUF}&q=${encodeURIComponent(q)}&q_fields=Adresse_brut&sort=-Date_réception_DPE`;
-        if (citycode) url2 += `&Code_insee_commune_actualise_eq=${citycode}`;
+        let url2 = `https://data.ademe.fr/data-fair/api/v1/datasets/g3cgx7jb3cmys5voxz1mrm22/lines?size=50&select=${SEL}&q=${encodeURIComponent(q)}&q_fields=adresse_brut&sort=-date_reception_dpe`;
+        if (citycode) url2 += `&code_insee_ban_eq=${citycode}`;
         const r2 = await fetch(url2);
         const d2 = await r2.json();
         if (d2.results) results = [...results, ...d2.results];
@@ -375,10 +380,10 @@ function renderDPE(results) {
   const groups={}; ORDER.forEach(k=>groups[k]=[]);
   const chauffageCount={};
   results.forEach(r=>{
-    const note=ORDER.includes(r['Etiquette_DPE'])?r['Etiquette_DPE']:'N';
+    const note=ORDER.includes(r['etiquette_dpe'])?r['etiquette_dpe']:'N';
     if(!groups[note])groups[note]=[];
     groups[note].push(r);
-    const ch=r['Type_énergie_principale_chauffage']||'';
+    const ch=r['type_energie_principale_chauffage']||'';
     if(ch) chauffageCount[ch]=(chauffageCount[ch]||0)+1;
   });
   const distHtml=ORDER.map(note=>{const n=groups[note].length;if(!n)return'';return`<div class="dpe-dist-item"><span class="dpe-badge dpe-${note}">${note}</span><span class="count">${n}</span><span class="label">DPE</span></div>`;}).join('');
@@ -389,9 +394,9 @@ function renderDPE(results) {
     const rows=groups[note];if(!rows.length)return;
     tableHtml+=`<tr class="dpe-group-header"><td colspan="5"><span class="dpe-badge dpe-${note}">${note}</span> ${rows.length} diagnostic${rows.length>1?'s':''}</td></tr>`;
     rows.forEach(r=>{
-      const date=r['Date_réception_DPE']?r['Date_réception_DPE'].substring(0,10):'—';
-      const surf=r['Surface_habitable_logement']?Math.round(r['Surface_habitable_logement'])+'m²':'—';
-      tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['Type_énergie_principale_chauffage'])}</td><td>${shortEnergie(r['Type_énergie_principale_ECS'])}</td><td style="color:var(--text-muted)">${date}</td></tr>`;
+      const date=r['date_reception_dpe']?r['date_reception_dpe'].substring(0,10):'—';
+      const surf=r['surface_habitable_logement']?Math.round(r['surface_habitable_logement'])+'m²':'—';
+      tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}</td><td style="color:var(--text-muted)">${date}</td></tr>`;
     });
   });
   el.innerHTML=`<div class="dpe-summary"><div class="dpe-summary-title">Distribution — ${results.length} DPE</div><div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th></tr></thead><tbody>${tableHtml}</tbody></table>`;
