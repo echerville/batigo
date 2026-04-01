@@ -478,7 +478,7 @@ function renderDPE(results) {
       const date=r['date_reception_dpe']?r['date_reception_dpe'].substring(0,10):'—';
       const surf=r['surface_habitable_logement']?Math.round(r['surface_habitable_logement'])+'m²':'—';
       const num=r['numero_dpe']||'';
-      const link=num?`<a href="https://observatoire-dpe-audit.ademe.fr/pub/dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:13px;line-height:1" title="Voir sur ADEME">↗</a>`:'';
+      const link=num?`<a href="https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:13px;line-height:1" title="Voir sur ADEME">↗</a>`:'';
       tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
     });
   });
