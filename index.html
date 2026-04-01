@@ -42,18 +42,21 @@
   #status-bar.error{color:var(--danger)}
   #body{flex:1;display:flex;overflow:hidden}
   #map-area{flex:1;display:flex;flex-direction:column;position:relative}
-  #layer-bar{height:42px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:2px;padding:0 12px;flex-shrink:0;overflow-x:auto}
-  .layer-btn{height:28px;padding:0 13px;background:none;border:1.5px solid transparent;border-radius:var(--radius-sm);color:var(--text-dim);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .12s}
-  .layer-btn:hover{background:var(--surface2);color:var(--text)}
-  .layer-btn.active{color:var(--accent-dark);border-color:var(--accent);background:var(--accent-dim2);font-weight:600}
-  .layer-sep{width:1px;height:20px;background:var(--border-med);margin:0 6px;flex-shrink:0}
-  .layer-toggle{height:28px;padding:0 13px;background:none;border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text-dim);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .12s;display:flex;align-items:center;gap:5px}
-  .layer-toggle:hover{background:var(--surface2);color:var(--text)}
-  .layer-toggle.on{color:var(--accent-dark);border-color:var(--accent);background:var(--accent-dim2);font-weight:600}
-  .measure-btn{height:28px;padding:0 13px;background:none;border:1.5px solid transparent;border-radius:var(--radius-sm);color:var(--text-dim);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .12s}
-  .measure-btn:hover{background:var(--surface2);color:var(--text)}
-  .measure-btn.active{color:#7c3aed;border-color:#7c3aed;background:rgba(124,58,237,.08);font-weight:600}
-  .bar-group-label{font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-muted);padding:0 3px 0 6px;white-space:nowrap;flex-shrink:0}
+  /* ── Topbar 2 lignes ── */
+  #layer-bar{display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto;border-bottom:1px solid var(--border)}
+  .bar-group{display:flex;align-items:center;gap:5px;padding:5px 10px}
+  .bar-col{display:flex;flex-direction:column;gap:5px}
+  .bar-group--tools  {background:#e05a1e}
+  .bar-group--base   {background:#1b9648}
+  .bar-group--layers {background:#c99800}
+  .bar-group--sv     {background:#e05a1e}
+  /* Tous les boutons de la topbar : pilule blanche par défaut */
+  #layer-bar button{height:26px;padding:0 12px;background:rgba(255,255,255,0.92);border:none;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;color:#1a2332;font-family:inherit;transition:background .12s,color .12s}
+  #layer-bar button:hover{background:rgba(255,255,255,1)}
+  /* Actif = fond semi-transparent foncé (s'intègre dans la couleur du groupe) */
+  #layer-bar .layer-btn.active,
+  #layer-bar .layer-toggle.on,
+  #layer-bar .measure-btn.active{background:rgba(0,0,0,0.22);color:#fff;font-weight:600}
   #map{flex:1}
   #panoramax-panel{height:280px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
@@ -125,21 +128,38 @@
 <div id="body">
   <div id="map-area">
     <div id="layer-bar">
-      <span class="bar-group-label">Fond</span>
-      <button class="layer-btn active" data-layer="ign-plan">IGN Plan</button>
-      <button class="layer-btn" data-layer="ign-ortho">IGN Sat.</button>
-      <button class="layer-btn" data-layer="google-plan">Google Plan</button>
-      <button class="layer-btn" data-layer="google-sat">Google Sat.</button>
-      <button class="layer-btn" data-layer="voyager">Carto</button>
-      <div class="layer-sep"></div>
-      <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
-      <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
-      <div class="layer-sep"></div>
-      <span class="bar-group-label">Street View</span>
-      <button class="layer-toggle" id="toggle-panoramax">Panoramax</button>
-      <button class="layer-toggle" id="toggle-gsv">Google</button>
-      <div class="layer-sep"></div>
-      <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
+      <!-- Outils -->
+      <div class="bar-group bar-group--tools">
+        <div class="bar-col">
+          <button class="layer-btn" data-layer="voyager">Carto</button>
+          <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
+        </div>
+      </div>
+      <!-- Fonds -->
+      <div class="bar-group bar-group--base">
+        <div class="bar-col">
+          <button class="layer-btn active" data-layer="ign-plan">IGN Plan</button>
+          <button class="layer-btn" data-layer="ign-ortho">IGN Sat.</button>
+        </div>
+        <div class="bar-col">
+          <button class="layer-btn" data-layer="google-plan">Google Plan</button>
+          <button class="layer-btn" data-layer="google-sat">Google Sat.</button>
+        </div>
+      </div>
+      <!-- Couches -->
+      <div class="bar-group bar-group--layers">
+        <div class="bar-col">
+          <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
+          <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
+        </div>
+      </div>
+      <!-- Street View -->
+      <div class="bar-group bar-group--sv">
+        <div class="bar-col">
+          <button class="layer-toggle" id="toggle-gsv">Street View</button>
+          <button class="layer-toggle" id="toggle-panoramax">Panoramax</button>
+        </div>
+      </div>
     </div>
     <div id="map"></div>
     <div id="measure-result"></div>
