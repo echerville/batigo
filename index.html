@@ -127,7 +127,7 @@
     <div id="layer-bar">
       <button class="layer-btn active" data-layer="ign-plan">IGN Plan</button>
       <button class="layer-btn" data-layer="ign-ortho">IGN Sat</button>
-      <button class="layer-btn" data-layer="osm">OSM</button>
+      <button class="layer-btn" data-layer="osm">Carto</button>
       <button class="layer-btn" data-layer="google-sat">Google Sat</button>
       <button class="layer-btn" data-layer="google-plan">Google Plan</button>
       <div class="layer-sep"></div>
@@ -167,14 +167,14 @@
 const TILE_URLS = {
   'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
   'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-  'osm':         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  'osm':         'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
   'google-sat':  'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
   'google-plan': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
 };
 const LAYERS = {
   'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
   'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
-  'osm':         { type:'raster', tiles:[TILE_URLS['osm']],         tileSize:256, maxzoom:19, attribution:'© OpenStreetMap contributors' },
+  'osm':         { type:'raster', tiles:[TILE_URLS['osm']],         tileSize:256, maxzoom:19, attribution:'© CartoDB © OpenStreetMap contributors' },
   'google-sat':  { type:'raster', tiles:[TILE_URLS['google-sat']],  tileSize:256, maxzoom:21, attribution:'© Google' },
   'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:21, attribution:'© Google' }
 };
@@ -315,11 +315,24 @@ async function loadBatiment(lat, lng, label, feature) {
     let rncData = null;
     try {
       const cc = feature?.properties?.citycode||'';
-      const rncUrl = cc
-        ? `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=3&code_officiel_commune__exact=${cc}`
-        : `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=3`;
+      const housenumber = feature?.properties?.housenumber||'';
+      const street = feature?.properties?.street||feature?.properties?.name||'';
+      let rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=5`;
+      if (cc) rncUrl += `&code_officiel_commune__exact=${cc}`;
+      // Filtre par rue pour éviter de renvoyer une copropriété aléatoire de la commune
+      if (street) rncUrl += `&adresse_reference_cadastrale__icontains=${encodeURIComponent(street)}`;
       const r = await fetch(rncUrl);
-      if (r.ok) { const d=await r.json(); if(d.data?.length) rncData=d.data[0]; }
+      if (r.ok) {
+        const d = await r.json();
+        if (d.data?.length) {
+          // Si numéro dispo, chercher la correspondance la plus proche
+          if (housenumber) {
+            rncData = d.data.find(e => (e.adresse_reference_cadastrale||'').includes(housenumber)) || d.data[0];
+          } else {
+            rncData = d.data[0];
+          }
+        }
+      }
     } catch(e) {}
 
     renderBatiment(bdnbData, rncData, label);
@@ -352,11 +365,12 @@ function renderBatiment(bdnb, rnc, label) {
     </div>
     <div class="card">
       <div class="card-title">Copropriété · RNIC</div>
-      <div style="margin-bottom:10px"><div class="field-label">Syndic</div>${na(v(rnc?.raison_sociale_du_representant_legal||rnc?.nom_d_usage_de_la_copropriete))}</div>
+      ${rnc ? `
+      <div style="margin-bottom:10px"><div class="field-label">Nom / Syndic</div>${na(v(rnc.nom_d_usage_de_la_copropriete||rnc.raison_sociale_du_representant_legal))}</div>
       <div class="info-grid">
-        <div class="info-cell"><div class="field-label">Lots total</div>${na(v(rnc?.nombre_total_de_lots))}</div>
-        <div class="info-cell"><div class="field-label">Lots habitation</div>${na(v(rnc?.nombre_de_lots_a_usage_d_habitation))}</div>
-      </div>
+        <div class="info-cell"><div class="field-label">Lots total</div>${na(v(rnc.nombre_total_de_lots))}</div>
+        <div class="info-cell"><div class="field-label">Lots habitation</div>${na(v(rnc.nombre_de_lots_a_usage_d_habitation))}</div>
+      </div>` : `<p style="font-size:11px;color:var(--text-muted)">Aucune copropriété répertoriée au RNIC à cette adresse.</p>`}
     </div>`;
 }
 
