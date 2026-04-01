@@ -45,11 +45,12 @@
   /* ── Topbar 2 lignes ── */
   #layer-bar{display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto;border-bottom:1px solid var(--border)}
   .bar-group{display:flex;align-items:center;gap:5px;padding:5px 10px}
+  .bar-group--sv{flex:1}
   .bar-col{display:flex;flex-direction:column;gap:5px}
-  .bar-group--tools  {background:#e05a1e}
-  .bar-group--base   {background:#1b9648}
-  .bar-group--layers {background:#c99800}
-  .bar-group--sv     {background:#e05a1e}
+  .bar-group--tools  {background:#f4a87c}
+  .bar-group--base   {background:#85c99a}
+  .bar-group--layers {background:#f5d47a}
+  .bar-group--sv     {background:#f4a87c}
   /* Tous les boutons de la topbar : pilule blanche par défaut */
   #layer-bar button{height:26px;padding:0 12px;background:rgba(255,255,255,0.92);border:none;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;color:#1a2332;font-family:inherit;transition:background .12s,color .12s}
   #layer-bar button:hover{background:rgba(255,255,255,1)}
@@ -131,14 +132,14 @@
       <!-- Outils -->
       <div class="bar-group bar-group--tools">
         <div class="bar-col">
-          <button class="layer-btn" data-layer="voyager">Carto</button>
+          <button class="layer-btn active" data-layer="voyager">Carto</button>
           <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
         </div>
       </div>
       <!-- Fonds -->
       <div class="bar-group bar-group--base">
         <div class="bar-col">
-          <button class="layer-btn active" data-layer="ign-plan">IGN Plan</button>
+          <button class="layer-btn" data-layer="ign-plan">IGN Plan</button>
           <button class="layer-btn" data-layer="ign-ortho">IGN Sat.</button>
         </div>
         <div class="bar-col">
@@ -226,7 +227,7 @@ const CADASTRE_SOURCE = {
 const _pmtilesProtocol = new pmtiles.Protocol();
 maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
 
-let currentLayer = 'ign-plan', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
+let currentLayer = 'voyager', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
 let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
 let streetviewActive = null;
 
@@ -238,7 +239,7 @@ const DPE_COLOR = ['match',['get','dpe'],
 
 const map = new maplibregl.Map({
   container: 'map',
-  style: { version:8, sources:{'base':LAYERS['ign-plan']}, layers:[{id:'base-layer',type:'raster',source:'base'}], glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf' },
+  style: { version:8, sources:{'base':LAYERS['voyager']}, layers:[{id:'base-layer',type:'raster',source:'base'}], glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf' },
   center: [2.3522, 46.8], zoom: 5, attributionControl: false
 });
 map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
