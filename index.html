@@ -126,11 +126,14 @@
   <div id="map-area">
     <div id="layer-bar">
       <button class="layer-btn active" data-layer="ign-plan">IGN Plan</button>
-      <button class="layer-btn" data-layer="ign-ortho">Satellite</button>
+      <button class="layer-btn" data-layer="ign-ortho">IGN Sat</button>
       <button class="layer-btn" data-layer="osm">OSM</button>
+      <button class="layer-btn" data-layer="google-sat">Google Sat</button>
+      <button class="layer-btn" data-layer="google-plan">Google Plan</button>
       <div class="layer-sep"></div>
       <button class="layer-toggle" id="toggle-cadastre">⬜ Cadastre</button>
-      <button class="layer-toggle" id="toggle-panoramax">⬜ Street View</button>
+      <button class="layer-toggle" id="toggle-panoramax">⬜ Street View IGN</button>
+      <button class="layer-toggle" id="toggle-gsv">⬜ Street View Google</button>
       <div class="layer-sep"></div>
       <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
       <button class="measure-btn" id="btn-measure-line">╌ Linéaire</button>
@@ -162,14 +165,18 @@
 </div>
 <script>
 const TILE_URLS = {
-  'ign-plan':  'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-  'ign-ortho': 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-  'osm':       'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+  'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+  'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+  'osm':         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  'google-sat':  'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+  'google-plan': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
 };
 const LAYERS = {
-  'ign-plan':  { type:'raster', tiles:[TILE_URLS['ign-plan']],  tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
-  'ign-ortho': { type:'raster', tiles:[TILE_URLS['ign-ortho']], tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
-  'osm':       { type:'raster', tiles:[TILE_URLS['osm']],       tileSize:256, maxzoom:19, attribution:'© OpenStreetMap contributors' }
+  'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
+  'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
+  'osm':         { type:'raster', tiles:[TILE_URLS['osm']],         tileSize:256, maxzoom:19, attribution:'© OpenStreetMap contributors' },
+  'google-sat':  { type:'raster', tiles:[TILE_URLS['google-sat']],  tileSize:256, maxzoom:21, attribution:'© Google' },
+  'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:21, attribution:'© Google' }
 };
 const CADASTRE_SOURCE = {
   type:'raster',
@@ -216,10 +223,27 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
   this.classList.toggle('on', cadastreOn);
 });
 
-document.getElementById('toggle-panoramax').addEventListener('click', function() {
+document.getElementById('toggle-panoramax').addEventListener('click', async function() {
   if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
   const [lng, lat] = currentCoords;
-  window.open(`https://panoramax.ign.fr/#focus=pic&map=17.00/${lat}/${lng}&speed=250&xyz=${lng},${lat},18`, '_blank', 'noopener');
+  try {
+    const d = 0.001;
+    const r = await fetch(`https://panoramax.ign.fr/api/search?bbox=${lng-d},${lat-d},${lng+d},${lat+d}&limit=1`);
+    const data = await r.json();
+    const pic = data?.features?.[0]?.id;
+    if (pic) {
+      window.open(`https://panoramax.ign.fr/#focus=pic&pic=${pic}&map=17/${lat}/${lng}`, '_blank', 'noopener');
+    } else {
+      setStatus('Aucune image Panoramax à proximité', 'error'); setTimeout(()=>setStatus('Prêt'),2500);
+    }
+  } catch(e) {
+    window.open(`https://panoramax.ign.fr/#map=17/${lat}/${lng}`, '_blank', 'noopener');
+  }
+});
+document.getElementById('toggle-gsv').addEventListener('click', function() {
+  if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
+  const [lng, lat] = currentCoords;
+  window.open(`https://www.google.com/maps/@${lat},${lng},3a,90y,0h,90t/data=!3m6!1e1`, '_blank', 'noopener');
 });
 document.getElementById('panoramax-close').addEventListener('click', () => document.getElementById('panoramax-panel').classList.remove('visible'));
 
@@ -270,11 +294,11 @@ function selectAddress(feature) {
   if (addrMarker) addrMarker.remove();
   const el = document.createElement('div'); el.className='addr-marker';
   addrMarker = new maplibregl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
-  loadBatiment(lat, lng, label);
+  loadBatiment(lat, lng, label, feature);
   loadDPE(feature);
 }
 
-async function loadBatiment(lat, lng, label) {
+async function loadBatiment(lat, lng, label, feature) {
   const el = document.getElementById('batiment-data');
   document.getElementById('empty-batiment').style.display = 'none';
   el.style.display = 'block';
@@ -290,7 +314,7 @@ async function loadBatiment(lat, lng, label) {
 
     let rncData = null;
     try {
-      const p = feature.properties; const cc = p.citycode||'';
+      const cc = feature?.properties?.citycode||'';
       const rncUrl = cc
         ? `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=3&code_officiel_commune__exact=${cc}`
         : `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=3`;
@@ -321,8 +345,8 @@ function renderBatiment(bdnb, rnc, label) {
         <div class="info-cell"><div class="field-label">Usage</div>${na(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
       </div>
       <div class="info-grid">
-        <div class="info-cell"><div class="field-label">Chauffage</div>${formatEnergie(bdnb?.type_energie_chauffage) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_chauffage)}</span>` : `<span class="field-value na">Non renseigné</span>`}</div>
-        <div class="info-cell"><div class="field-label">ECS</div>${formatEnergie(bdnb?.type_generateur_ecs) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_generateur_ecs)}</span>` : `<span class="field-value na">Non renseigné</span>`}</div>
+        <div class="info-cell"><div class="field-label">Chauffage</div>${formatEnergie(bdnb?.type_energie_chauffage) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_chauffage)}</span>${formatInstall(bdnb?.type_installation_chauffage_n1)}` : `<span class="field-value na">Non renseigné</span>`}</div>
+        <div class="info-cell"><div class="field-label">ECS</div>${formatEnergie(bdnb?.type_generateur_ecs) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_generateur_ecs)}</span>${formatInstall(bdnb?.type_installation_ecs_n1)}` : `<span class="field-value na">Non renseigné</span>`}</div>
       </div>
       ${!bdnb?'<p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Aucune donnée BDNB à cette adresse.</p>':''}
     </div>
@@ -336,6 +360,18 @@ function renderBatiment(bdnb, rnc, label) {
     </div>`;
 }
 
+function formatInstall(val) {
+  if (!val) return '';
+  if (val.toLowerCase().includes('collectif')) return ' <span style="font-size:10px;color:var(--text-muted)">Coll.</span>';
+  if (val.toLowerCase().includes('individuel')) return ' <span style="font-size:10px;color:var(--text-muted)">Indiv.</span>';
+  return '';
+}
+function shortInstall(val) {
+  if (!val) return '';
+  if (val.toLowerCase().includes('collectif')) return '<span style="font-size:9px;color:var(--text-muted);margin-left:3px">Coll.</span>';
+  if (val.toLowerCase().includes('individuel')) return '<span style="font-size:9px;color:var(--text-muted);margin-left:3px">Indiv.</span>';
+  return '';
+}
 function formatEnergie(val) {
   if (!val) return null;
   return {'electricity':'Électricité','natural_gas':'Gaz naturel','gaz':'Gaz naturel','fuel_oil':'Fioul','fioul':'Fioul','wood':'Bois','bois':'Bois','heat_network':'Réseau chaleur','reseau_chaleur':'Réseau chaleur','thermodynamic':'PAC','pompe_a_chaleur':'PAC','coal':'Charbon','propane':'GPL','gpl':'GPL','other':'Autre'}[val.toLowerCase()] || val;
@@ -357,7 +393,7 @@ async function loadDPE(feature) {
   const banId = p.id||'', citycode = p.citycode||'';
   const housenumber = p.housenumber||'', street = p.street||p.name||'';
   try {
-    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,adresse_brut,code_postal_ban';
+    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban';
     // Filtre prioritaire : identifiant_ban exact (1 adresse précise)
     // Fallback : texte adresse + code insee si pas de ban ID
     let url1 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL}&sort=-date_reception_dpe`;
@@ -412,7 +448,7 @@ function renderDPE(results) {
     rows.forEach(r=>{
       const date=r['date_reception_dpe']?r['date_reception_dpe'].substring(0,10):'—';
       const surf=r['surface_habitable_logement']?Math.round(r['surface_habitable_logement'])+'m²':'—';
-      tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}</td><td style="color:var(--text-muted)">${date}</td></tr>`;
+      tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td></tr>`;
     });
   });
   el.innerHTML=`<div class="dpe-summary"><div class="dpe-summary-title">Distribution — ${results.length} DPE</div><div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th></tr></thead><tbody>${tableHtml}</tbody></table>`;
@@ -435,12 +471,33 @@ function toggleMeasure(mode) {
   document.getElementById('btn-measure-line').classList.toggle('active',mode==='line');
 }
 map.on('click',e=>{
-  if(!measureMode)return;
-  const pt=[e.lngLat.lng,e.lngLat.lat]; measurePoints.push(pt);
-  const dot=document.createElement('div'); dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#e06090;border:2px solid #fff;';
-  measureMarkers.push(new maplibregl.Marker({element:dot}).setLngLat(pt).addTo(map));
-  updateMeasureGeom();
+  if(measureMode) {
+    const pt=[e.lngLat.lng,e.lngLat.lat]; measurePoints.push(pt);
+    const dot=document.createElement('div'); dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#e06090;border:2px solid #fff;';
+    measureMarkers.push(new maplibregl.Marker({element:dot}).setLngLat(pt).addTo(map));
+    updateMeasureGeom();
+    return;
+  }
+  reverseGeocode(e.lngLat.lng, e.lngLat.lat);
 });
+
+async function reverseGeocode(lng, lat) {
+  try {
+    setStatus('Chargement adresse…','loading');
+    const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lng}&lat=${lat}`);
+    const d = await r.json();
+    const feature = d.features?.[0];
+    if (feature) {
+      selectAddress(feature);
+    } else {
+      setStatus('Aucune adresse trouvée ici', 'error');
+      setTimeout(() => setStatus('Prêt'), 2000);
+    }
+  } catch(e) {
+    setStatus('Erreur géocodage inverse', 'error');
+    setTimeout(() => setStatus('Prêt'), 2000);
+  }
+}
 map.on('dblclick',e=>{
   if(!measureMode)return; e.preventDefault();
   if(measureMode==='poly'&&measurePoints.length>=3)finalizeMeasure();
