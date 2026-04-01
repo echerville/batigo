@@ -245,7 +245,8 @@ document.getElementById('toggle-panoramax').addEventListener('click', async func
   const [lng, lat] = currentCoords;
   try {
     const d = 0.001;
-    const r = await fetch(`https://panoramax.ign.fr/api/search?bbox=${lng-d},${lat-d},${lng+d},${lat+d}&limit=1`);
+    const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
+    const r = await fetch(`/api/panoramax?bbox=${encodeURIComponent(bbox)}`);
     const data = await r.json();
     const pic = data?.features?.[0]?.id;
     if (pic) {
@@ -261,7 +262,7 @@ document.getElementById('toggle-gsv').addEventListener('click', function() {
   if (streetviewActive === 'gsv') { closeStreetview(); return; }
   if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
   const [lng, lat] = currentCoords;
-  openStreetview('gsv', `https://maps.google.com/maps?q=&layer=c&cbll=${lat},${lng}&cbp=12,0,0,0,0&ie=UTF8&output=embed`);
+  openStreetview('gsv', `https://www.google.com/maps?layer=c&cbll=${lat},${lng}&cbp=12,0,0,0,0&output=svembed`);
 });
 document.getElementById('panoramax-close').addEventListener('click', closeStreetview);
 
@@ -335,10 +336,11 @@ async function loadBatiment(lat, lng, label, feature) {
       const cc = feature?.properties?.citycode||'';
       const housenumber = feature?.properties?.housenumber||'';
       const street = feature?.properties?.street||feature?.properties?.name||'';
+      // q= fait une recherche full-text sur tous les champs indexés (adresse, nom, etc.)
+      const q = [housenumber, street].filter(Boolean).join(' ');
       let rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=5`;
       if (cc) rncUrl += `&code_officiel_commune__exact=${cc}`;
-      // Filtre par rue pour éviter de renvoyer une copropriété aléatoire de la commune
-      if (street) rncUrl += `&adresse_reference_cadastrale__icontains=${encodeURIComponent(street)}`;
+      if (q) rncUrl += `&q=${encodeURIComponent(q)}`;
       const r = await fetch(rncUrl);
       if (r.ok) {
         const d = await r.json();
