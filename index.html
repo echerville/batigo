@@ -52,8 +52,7 @@
   .measure-btn{height:28px;padding:0 13px;background:none;border:1.5px solid transparent;border-radius:var(--radius-sm);color:var(--text-dim);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .12s}
   .measure-btn:hover{background:var(--surface2);color:var(--text)}
   .measure-btn.active{color:#7c3aed;border-color:#7c3aed;background:rgba(124,58,237,.08);font-weight:600}
-  .measure-btn.clear{color:var(--text-muted)}
-  .measure-btn.clear:hover{color:var(--danger);background:rgba(229,62,62,.07)}
+  .bar-group-label{font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-muted);padding:0 3px 0 6px;white-space:nowrap;flex-shrink:0}
   #map{flex:1}
   #panoramax-panel{height:280px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
@@ -125,19 +124,20 @@
 <div id="body">
   <div id="map-area">
     <div id="layer-bar">
+      <span class="bar-group-label">Fond</span>
       <button class="layer-btn active" data-layer="ign-plan">IGN Plan</button>
-      <button class="layer-btn" data-layer="ign-ortho">IGN Sat</button>
+      <button class="layer-btn" data-layer="ign-ortho">IGN Sat.</button>
       <button class="layer-btn" data-layer="osm">Carto</button>
-      <button class="layer-btn" data-layer="google-sat">Google Sat</button>
+      <button class="layer-btn" data-layer="google-sat">Google Sat.</button>
       <button class="layer-btn" data-layer="google-plan">Google Plan</button>
       <div class="layer-sep"></div>
-      <button class="layer-toggle" id="toggle-cadastre">⬜ Cadastre</button>
-      <button class="layer-toggle" id="toggle-panoramax">⬜ Street View IGN</button>
-      <button class="layer-toggle" id="toggle-gsv">⬜ Street View Google</button>
+      <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
+      <div class="layer-sep"></div>
+      <span class="bar-group-label">Street View</span>
+      <button class="layer-toggle" id="toggle-panoramax">Panoramax</button>
+      <button class="layer-toggle" id="toggle-gsv">Google</button>
       <div class="layer-sep"></div>
       <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
-      <button class="measure-btn" id="btn-measure-line">╌ Linéaire</button>
-      <button class="measure-btn clear" id="btn-measure-clear">✕ Effacer</button>
     </div>
     <div id="map"></div>
     <div id="measure-result"></div>
@@ -474,14 +474,15 @@ function renderDPE(results) {
   let tableHtml='';
   ORDER.forEach(note=>{
     const rows=groups[note];if(!rows.length)return;
-    tableHtml+=`<tr class="dpe-group-header"><td colspan="5"><span class="dpe-badge dpe-${note}">${note}</span> ${rows.length} diagnostic${rows.length>1?'s':''}</td></tr>`;
     rows.forEach(r=>{
       const date=r['date_reception_dpe']?r['date_reception_dpe'].substring(0,10):'—';
       const surf=r['surface_habitable_logement']?Math.round(r['surface_habitable_logement'])+'m²':'—';
-      tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td></tr>`;
+      const num=r['numero_dpe']||'';
+      const link=num?`<a href="https://observatoire-dpe-audit.ademe.fr/pub/dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:13px;line-height:1" title="Voir sur ADEME">↗</a>`:'';
+      tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
     });
   });
-  el.innerHTML=`<div class="dpe-summary"><div class="dpe-summary-title">Distribution — ${results.length} DPE</div><div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th></tr></thead><tbody>${tableHtml}</tbody></table>`;
+  el.innerHTML=`<div class="dpe-summary"><div class="dpe-summary-title">Distribution — ${results.length} DPE</div><div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${tableHtml}</tbody></table>`;
 }
 
 function shortEnergie(val) {
@@ -490,15 +491,12 @@ function shortEnergie(val) {
 }
 
 document.getElementById('btn-measure-poly').addEventListener('click', ()=>toggleMeasure('poly'));
-document.getElementById('btn-measure-line').addEventListener('click', ()=>toggleMeasure('line'));
-document.getElementById('btn-measure-clear').addEventListener('click', clearMeasure);
 
 function toggleMeasure(mode) {
-  if(measureMode===mode){measureMode=null;document.getElementById('map').classList.remove('measuring');document.getElementById('btn-measure-poly').classList.remove('active');document.getElementById('btn-measure-line').classList.remove('active');return;}
+  if(measureMode===mode){ clearMeasure(); return; }
   clearMeasure(); measureMode=mode;
   document.getElementById('map').classList.add('measuring');
-  document.getElementById('btn-measure-poly').classList.toggle('active',mode==='poly');
-  document.getElementById('btn-measure-line').classList.toggle('active',mode==='line');
+  document.getElementById('btn-measure-poly').classList.add('active');
 }
 map.on('click',e=>{
   if(measureMode) {
@@ -530,22 +528,32 @@ async function reverseGeocode(lng, lat) {
 }
 map.on('dblclick',e=>{
   if(!measureMode)return; e.preventDefault();
-  if(measureMode==='poly'&&measurePoints.length>=3)finalizeMeasure();
-  else if(measureMode==='line'&&measurePoints.length>=2)finalizeMeasure();
+  if(measurePoints.length>=3)finalizeMeasure();
 });
 function updateMeasureGeom(){
   const pts=measurePoints; if(pts.length<2)return;
   let geojson;
-  if(measureMode==='line'){geojson={type:'Feature',geometry:{type:'LineString',coordinates:pts}};const m=Math.round(turf.length(geojson,{units:'kilometers'})*1000);showMeasureResult(m<1000?`${m} m`:`${(m/1000).toFixed(2)} km`);}
-  else if(measureMode==='poly'&&pts.length>=3){geojson={type:'Feature',geometry:{type:'Polygon',coordinates:[[...pts,pts[0]]]}};const area=turf.area(geojson);showMeasureResult(area<10000?`${Math.round(area)} m²`:`${(area/10000).toFixed(2)} ha`);}
+  if(measureMode==='poly'){
+    if(pts.length>=3){
+      geojson={type:'Feature',geometry:{type:'Polygon',coordinates:[[...pts,pts[0]]]}};
+      const area=turf.area(geojson);
+      const perimM=Math.round(turf.length({type:'Feature',geometry:{type:'LineString',coordinates:[...pts,pts[0]]}},{units:'kilometers'})*1000);
+      const areaStr=area<10000?`${Math.round(area)} m²`:`${(area/10000).toFixed(2)} ha`;
+      const perimStr=perimM<1000?`${perimM} m`:`${(perimM/1000).toFixed(2)} km`;
+      showMeasureResult(`${areaStr}  ·  ${perimStr}`);
+    } else {
+      geojson={type:'Feature',geometry:{type:'LineString',coordinates:pts}};
+      const m=Math.round(turf.length(geojson,{units:'kilometers'})*1000);
+      showMeasureResult(m<1000?`${m} m`:`${(m/1000).toFixed(2)} km`);
+    }
+  }
   const src=map.getSource('measure-src'); if(src&&geojson)src.setData({type:'FeatureCollection',features:[geojson]});
 }
-function finalizeMeasure(){measureMode=null;document.getElementById('map').classList.remove('measuring');document.getElementById('btn-measure-poly').classList.remove('active');document.getElementById('btn-measure-line').classList.remove('active');}
+function finalizeMeasure(){measureMode=null;document.getElementById('map').classList.remove('measuring');document.getElementById('btn-measure-poly').classList.remove('active');}
 function clearMeasure(){
   measureMode=null;measurePoints=[];measureMarkers.forEach(m=>m.remove());measureMarkers=[];
   document.getElementById('map').classList.remove('measuring');
   document.getElementById('btn-measure-poly').classList.remove('active');
-  document.getElementById('btn-measure-line').classList.remove('active');
   document.getElementById('measure-result').style.display='none';
   const src=map.getSource('measure-src');if(src)src.setData({type:'FeatureCollection',features:[]});
 }
