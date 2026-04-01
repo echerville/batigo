@@ -247,13 +247,11 @@ document.getElementById('toggle-panoramax').addEventListener('click', async func
     const d = 0.001;
     const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
     const r = await fetch(`/api/panoramax?bbox=${encodeURIComponent(bbox)}`);
-    const data = await r.json();
-    const pic = data?.features?.[0]?.id;
-    if (pic) {
-      openStreetview('panoramax', `https://panoramax.ign.fr/#focus=pic&pic=${pic}&map=17/${lat}/${lng}`);
-    } else {
-      setStatus('Aucune image Panoramax à proximité', 'error'); setTimeout(()=>setStatus('Prêt'),2500);
-    }
+    const pic = r.ok ? (await r.json())?.features?.[0]?.id : null;
+    const url = pic
+      ? `https://panoramax.ign.fr/#focus=pic&pic=${pic}&map=17/${lat}/${lng}`
+      : `https://panoramax.ign.fr/#map=17/${lat}/${lng}`;
+    openStreetview('panoramax', url);
   } catch(e) {
     openStreetview('panoramax', `https://panoramax.ign.fr/#map=17/${lat}/${lng}`);
   }
@@ -336,21 +334,19 @@ async function loadBatiment(lat, lng, label, feature) {
       const cc = feature?.properties?.citycode||'';
       const housenumber = feature?.properties?.housenumber||'';
       const street = feature?.properties?.street||feature?.properties?.name||'';
-      // q= fait une recherche full-text sur tous les champs indexés (adresse, nom, etc.)
-      const q = [housenumber, street].filter(Boolean).join(' ');
-      let rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=5`;
+      // Filtre uniquement par commune (q= combiné cause 400), matching adresse côté client
+      let rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=20`;
       if (cc) rncUrl += `&code_officiel_commune__exact=${cc}`;
-      if (q) rncUrl += `&q=${encodeURIComponent(q)}`;
       const r = await fetch(rncUrl);
       if (r.ok) {
         const d = await r.json();
-        if (d.data?.length) {
-          // Si numéro dispo, chercher la correspondance la plus proche
-          if (housenumber) {
-            rncData = d.data.find(e => (e.adresse_reference_cadastrale||'').includes(housenumber)) || d.data[0];
-          } else {
-            rncData = d.data[0];
-          }
+        if (d.data?.length && street) {
+          const streetUp = street.toUpperCase();
+          // Cherche une copropriété dont l'adresse contient la rue (+ numéro si dispo)
+          rncData = d.data.find(e => {
+            const addr = (e.adresse_reference_cadastrale||'').toUpperCase();
+            return addr.includes(streetUp) && (!housenumber || addr.includes(housenumber));
+          }) || null;
         }
       }
     } catch(e) {}
