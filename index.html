@@ -186,9 +186,11 @@ const TILE_URLS = {
   'google-sat':  'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
   'google-plan': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
 };
+// Emprise France métropolitaine + Corse (évite les requêtes 400 hors couverture IGN)
+const FRANCE_BOUNDS = [-5.5, 41.2, 9.7, 51.2];
 const LAYERS = {
-  'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
-  'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, attribution:'© IGN Géoplateforme' },
+  'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
+  'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
   'osm':         { type:'raster', tiles:[TILE_URLS['osm']],         tileSize:256, maxzoom:19, attribution:'© CartoDB © OpenStreetMap contributors' },
   'google-sat':  { type:'raster', tiles:[TILE_URLS['google-sat']],  tileSize:256, maxzoom:21, attribution:'© Google' },
   'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:21, attribution:'© Google' }
@@ -196,7 +198,7 @@ const LAYERS = {
 const CADASTRE_SOURCE = {
   type:'raster',
   tiles:['https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'],
-  tileSize:256, attribution:'© IGN Cadastre'
+  tileSize:256, bounds:FRANCE_BOUNDS, attribution:'© IGN Cadastre'
 };
 
 let currentLayer = 'ign-plan', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
@@ -278,7 +280,7 @@ document.getElementById('toggle-dpe-layer').addEventListener('click', function()
   map.setLayoutProperty('dpe-line', 'visibility', vis);
   document.getElementById('dpe-legend').style.display = dpeLayerOn ? 'block' : 'none';
   if (dpeLayerOn) { dpeCachedBbox = null; dpeCachedZoom = null; fetchDPEBuildings(); }
-  else { if(dpeAbortCtrl) dpeAbortCtrl.abort(); map.getSource('dpe-src').setData({type:'FeatureCollection',features:[]}); }
+  else { if(dpeAbortCtrl) dpeAbortCtrl.abort(); const _s=map.getSource('dpe-src'); if(_s) _s.setData({type:'FeatureCollection',features:[]}); }
 });
 
 // Ne recharge que quand le viewport sort de la zone déjà pré-chargée
@@ -316,7 +318,7 @@ async function fetchDPEBuildings() {
     const r = await fetch(`/api/bdnb-dpe?bbox=${encodeURIComponent(bboxStr)}`, { signal: dpeAbortCtrl.signal });
     if (r.ok) {
       const geojson = await r.json();
-      map.getSource('dpe-src').setData(geojson);
+      const dpeSrc = map.getSource('dpe-src'); if (dpeSrc) dpeSrc.setData(geojson);
       dpeCachedBbox = cache;
       dpeCachedZoom = map.getZoom();
     }

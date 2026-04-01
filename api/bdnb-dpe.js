@@ -43,15 +43,34 @@ module.exports = async function handler(req, res) {
   const ne = wgs84ToL93(lngMax, latMax);
 
   try {
-    const url = `https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox`
+    const baseUrl = `https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox`
       + `?xmin=${Math.round(sw.x)}&ymin=${Math.round(sw.y)}&xmax=${Math.round(ne.x)}&ymax=${Math.round(ne.y)}`
-      + `&limit=300&select=classe_bilan_dpe,geom_groupe,batiment_groupe_id,nb_log,usage_principal_bdnb_open`;
+      + `&limit=10&select=classe_bilan_dpe,geom_groupe,batiment_groupe_id,nb_log,usage_principal_bdnb_open`;
 
-    const r = await fetch(url);
-    if (!r.ok) return res.status(r.status).json({ error: 'BDNB error', status: r.status });
+    // L'API BDNB Open est limitée à 10 résultats par requête.
+    // On lance 10 requêtes en parallèle avec offset 0,10,20...90 pour obtenir jusqu'à 100 bâtiments.
+    const offsets = Array.from({ length: 10 }, (_, i) => i * 10);
+    const pages = await Promise.all(
+      offsets.map(offset =>
+        fetch(`${baseUrl}&offset=${offset}`)
+          .then(r => r.ok ? r.json() : [])
+          .catch(() => [])
+      )
+    );
 
-    const data = await r.json();
-    if (!Array.isArray(data)) return res.json({ type:'FeatureCollection', features:[] });
+    const allData = pages.flat();
+
+    // Déduplication par batiment_groupe_id
+    const seen = new Set();
+    const data = allData.filter(b =>
+      b && b.batiment_groupe_id &&
+      !seen.has(b.batiment_groupe_id) &&
+      seen.add(b.batiment_groupe_id)
+    );
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return res.json({ type: 'FeatureCollection', features: [] });
+    }
 
     const features = data
       .filter(b => b.geom_groupe)
@@ -66,7 +85,7 @@ module.exports = async function handler(req, res) {
         }
       }));
 
-    res.json({ type:'FeatureCollection', features });
+    res.json({ type: 'FeatureCollection', features });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
