@@ -43,21 +43,23 @@
   #body{flex:1;display:flex;overflow:hidden}
   #map-area{flex:1;display:flex;flex-direction:column;position:relative}
   /* ── Topbar 2 lignes ── */
-  #layer-bar{display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto;border-bottom:1px solid var(--border)}
-  .bar-group{display:flex;align-items:center;gap:5px;padding:5px 10px}
+  #layer-bar{display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto;border-bottom:1px solid var(--border);background:#f4f6f8}
+  .bar-group{display:flex;align-items:center;gap:5px;padding:5px 10px;background:none}
   .bar-group--sv{flex:1}
   .bar-col{display:flex;flex-direction:column;gap:5px}
-  .bar-group--tools  {background:#f4a87c}
-  .bar-group--base   {background:#85c99a}
-  .bar-group--layers {background:#f5d47a}
-  .bar-group--sv     {background:#f4a87c}
-  /* Tous les boutons de la topbar : pilule blanche par défaut */
-  #layer-bar button{height:26px;padding:0 12px;background:rgba(255,255,255,0.92);border:none;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;color:#1a2332;font-family:inherit;transition:background .12s,color .12s}
-  #layer-bar button:hover{background:rgba(255,255,255,1)}
-  /* Actif = fond semi-transparent foncé (s'intègre dans la couleur du groupe) */
+  /* Pilule de base pour tous les boutons */
+  #layer-bar button{height:26px;padding:0 12px;border:none;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;color:#2d3748;font-family:inherit;transition:filter .12s,opacity .12s}
+  /* Couleurs par groupe */
+  .bar-group--tools  .layer-btn  {background:#fbc99a}  /* saumon */
+  .bar-group--base   .layer-btn  {background:#a8d8b0}  /* vert sauge */
+  .bar-group--layers .layer-toggle{background:#fde89a} /* jaune paille */
+  .bar-group--sv     .layer-toggle{background:#fbc99a} /* saumon */
+  #btn-measure-poly                {background:#c9b3f0} /* violet pastel */
+  #layer-bar button:hover{opacity:.85}
+  /* Actif : assombri + gras */
   #layer-bar .layer-btn.active,
   #layer-bar .layer-toggle.on,
-  #layer-bar .measure-btn.active{background:rgba(0,0,0,0.22);color:#fff;font-weight:600}
+  #layer-bar .measure-btn.active{filter:brightness(.72) saturate(1.2);color:#fff;font-weight:700}
   #map{flex:1}
   #panoramax-panel{height:280px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
@@ -401,6 +403,17 @@ function selectAddress(feature) {
   loadDPE(feature);
 }
 
+async function fetchCadastre(lat, lng) {
+  try {
+    const r = await fetch(`https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}&_limit=1`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    const p = d.features && d.features[0] && d.features[0].properties;
+    if (!p) return null;
+    return { section: p.section || '', numero: p.numero || '', commune: p.nom_com || '', surface: p.contenance || null };
+  } catch(e) { return null; }
+}
+
 async function loadBatiment(lat, lng, label, feature) {
   const el = document.getElementById('batiment-data');
   document.getElementById('empty-batiment').style.display = 'none';
@@ -437,7 +450,8 @@ async function loadBatiment(lat, lng, label, feature) {
       }
     } catch(e) {}
 
-    renderBatiment(bdnbData, rncData, label);
+    const cadastreData = await fetchCadastre(lat, lng);
+    renderBatiment(bdnbData, rncData, label, cadastreData);
     setStatus('Prêt');
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
@@ -445,12 +459,23 @@ async function loadBatiment(lat, lng, label, feature) {
   }
 }
 
-function renderBatiment(bdnb, rnc, label) {
+function renderBatiment(bdnb, rnc, label, cad) {
   const el = document.getElementById('batiment-data');
   const na = v => v ? `<span class="field-value">${v}</span>` : `<span class="field-value na">Non renseigné</span>`;
   const v = val => (val!==null&&val!==undefined&&val!=='') ? val : null;
+  const cadHtml = cad
+    ? `<div class="card" style="margin-top:0">
+        <div class="card-title">Cadastre</div>
+        <div class="info-grid">
+          <div class="info-cell"><div class="field-label">Section</div><span class="field-value">${cad.section || '—'}</span></div>
+          <div class="info-cell"><div class="field-label">Parcelle</div><span class="field-value">${cad.numero || '—'}</span></div>
+          ${cad.surface ? `<div class="info-cell"><div class="field-label">Surface parcelle</div><span class="field-value">${cad.surface} m²</span></div>` : ''}
+          ${cad.commune ? `<div class="info-cell"><div class="field-label">Commune</div><span class="field-value">${cad.commune}</span></div>` : ''}
+        </div>
+       </div>` : '';
   el.innerHTML = `
     <div class="card"><div class="card-title">Adresse</div><div class="field-value" style="font-size:13px;line-height:1.5;font-weight:500">${label}</div></div>
+    ${cadHtml}
     <div class="card">
       <div class="card-title">Bâtiment · BDNB</div>
       <div class="info-grid" style="margin-bottom:10px">
