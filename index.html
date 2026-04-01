@@ -128,9 +128,9 @@
       <span class="bar-group-label">Fond</span>
       <button class="layer-btn active" data-layer="ign-plan">IGN Plan</button>
       <button class="layer-btn" data-layer="ign-ortho">IGN Sat.</button>
-      <button class="layer-btn" data-layer="osm">Carto</button>
+      <button class="layer-btn" data-layer="google-plan">Google Plan</button>
       <button class="layer-btn" data-layer="google-sat">Google Sat.</button>
-      <button class="layer-btn" data-layer="google-plan">Carto</button>
+      <button class="layer-btn" data-layer="voyager">Carto</button>
       <div class="layer-sep"></div>
       <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
       <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
@@ -183,18 +183,18 @@
 const TILE_URLS = {
   'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
   'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-  'osm':         'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
   'google-sat':  'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-  'google-plan': 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+  'google-plan': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+  'voyager':     'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
 };
 // Emprise France métropolitaine + Corse (évite les requêtes 400 hors couverture IGN)
 const FRANCE_BOUNDS = [-5.5, 41.2, 9.7, 51.2];
 const LAYERS = {
   'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
   'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
-  'osm':         { type:'raster', tiles:[TILE_URLS['osm']],         tileSize:256, maxzoom:19, attribution:'© CartoDB © OpenStreetMap contributors' },
   'google-sat':  { type:'raster', tiles:[TILE_URLS['google-sat']],  tileSize:256, maxzoom:21, attribution:'' },
-  'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:19, attribution:'© CartoDB © OpenStreetMap contributors' }
+  'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:21, attribution:'' },
+  'voyager':     { type:'raster', tiles:[TILE_URLS['voyager']],     tileSize:256, maxzoom:19, attribution:'© CartoDB © OpenStreetMap contributors' }
 };
 const CADASTRE_SOURCE = {
   type:'raster',
