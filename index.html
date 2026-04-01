@@ -7,6 +7,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css" rel="stylesheet"/>
 <script src="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+<script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -132,7 +133,7 @@
       <button class="layer-btn" data-layer="google-plan">Google Plan</button>
       <div class="layer-sep"></div>
       <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
-      <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (zoom ≥ 14)">DPE</button>
+      <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
       <div class="layer-sep"></div>
       <span class="bar-group-label">Street View</span>
       <button class="layer-toggle" id="toggle-panoramax">Panoramax</button>
@@ -201,11 +202,13 @@ const CADASTRE_SOURCE = {
   tileSize:256, bounds:FRANCE_BOUNDS, attribution:'© IGN Cadastre'
 };
 
+// Enregistre le protocole PMTiles pour MapLibre
+const _pmtilesProtocol = new pmtiles.Protocol();
+maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
+
 let currentLayer = 'ign-plan', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
 let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
 let streetviewActive = null;
-let dpeLoadTimer = null, dpeAbortCtrl = null;
-let dpeCachedBbox = null, dpeCachedZoom = null; // zone déjà chargée
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -225,13 +228,18 @@ map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
 map.on('load', () => {
   map.addSource('cadastre', CADASTRE_SOURCE);
   map.addLayer({id:'cadastre-layer',type:'raster',source:'cadastre',layout:{visibility:'none'},paint:{'raster-opacity':0.7}});
-  // Couche DPE bâtiments
-  map.addSource('dpe-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
-  map.addLayer({id:'dpe-fill', type:'fill', source:'dpe-src',
+  // Couche DPE bâtiments (PMTiles statique Loire-Atlantique)
+  map.addSource('dpe-src', {
+    type: 'vector',
+    url: `pmtiles://${location.origin}/dpe-44.pmtiles`
+  });
+  map.addLayer({id:'dpe-fill', type:'fill', source:'dpe-src', 'source-layer':'dpe',
+    minzoom: 13,
     layout:{visibility:'none'},
     paint:{'fill-color':DPE_COLOR,'fill-opacity':0.55}
   });
-  map.addLayer({id:'dpe-line', type:'line', source:'dpe-src',
+  map.addLayer({id:'dpe-line', type:'line', source:'dpe-src', 'source-layer':'dpe',
+    minzoom: 13,
     layout:{visibility:'none'},
     paint:{'line-color':DPE_COLOR,'line-width':1,'line-opacity':0.85}
   });
@@ -279,51 +287,7 @@ document.getElementById('toggle-dpe-layer').addEventListener('click', function()
   map.setLayoutProperty('dpe-fill', 'visibility', vis);
   map.setLayoutProperty('dpe-line', 'visibility', vis);
   document.getElementById('dpe-legend').style.display = dpeLayerOn ? 'block' : 'none';
-  if (dpeLayerOn) { dpeCachedBbox = null; dpeCachedZoom = null; fetchDPEBuildings(); }
-  else { if(dpeAbortCtrl) dpeAbortCtrl.abort(); const _s=map.getSource('dpe-src'); if(_s) _s.setData({type:'FeatureCollection',features:[]}); }
 });
-
-// Ne recharge que quand le viewport sort de la zone déjà pré-chargée
-map.on('moveend', () => {
-  if (!dpeLayerOn) return;
-  clearTimeout(dpeLoadTimer);
-  dpeLoadTimer = setTimeout(() => {
-    if (!dpeLayerOn || map.getZoom() < 15) return;
-    if (viewportInsideDpeCache()) return; // déjà couvert, pas de rechargement
-    fetchDPEBuildings();
-  }, 500);
-});
-
-function viewportInsideDpeCache() {
-  if (!dpeCachedBbox) return false;
-  const z = map.getZoom(), b = map.getBounds();
-  if (dpeCachedZoom && Math.abs(z - dpeCachedZoom) > 1.5) return false; // zoom trop différent
-  return b.getWest()  >= dpeCachedBbox.w && b.getEast()  <= dpeCachedBbox.e &&
-         b.getSouth() >= dpeCachedBbox.s && b.getNorth() <= dpeCachedBbox.n;
-}
-
-async function fetchDPEBuildings() {
-  if (!dpeLayerOn || map.getZoom() < 15) return;
-  if (dpeAbortCtrl) dpeAbortCtrl.abort();
-  dpeAbortCtrl = new AbortController();
-
-  const b = map.getBounds();
-  // Pré-charge une zone 2× plus large pour absorber les déplacements sans recharger
-  const lngM = (b.getEast() - b.getWest()) * 0.6;
-  const latM = (b.getNorth() - b.getSouth()) * 0.6;
-  const cache = { w: b.getWest()-lngM, s: b.getSouth()-latM, e: b.getEast()+lngM, n: b.getNorth()+latM };
-  const bboxStr = `${cache.w},${cache.s},${cache.e},${cache.n}`;
-
-  try {
-    const r = await fetch(`/api/bdnb-dpe?bbox=${encodeURIComponent(bboxStr)}`, { signal: dpeAbortCtrl.signal });
-    if (r.ok) {
-      const geojson = await r.json();
-      const dpeSrc = map.getSource('dpe-src'); if (dpeSrc) dpeSrc.setData(geojson);
-      dpeCachedBbox = cache;
-      dpeCachedZoom = map.getZoom();
-    }
-  } catch(e) { if (e.name !== 'AbortError') console.warn('DPE fetch:', e.message); }
-}
 
 function openStreetview(source, url) {
   streetviewActive = source;

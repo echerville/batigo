@@ -1,0 +1,84 @@
+name: Generate DPE PMTiles Loire-Atlantique
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 1 1,7 *'  # 1er jan et 1er juillet à 3h
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y gdal-bin python3-pip unzip
+          pip3 install pyproj shapely pandas --quiet
+
+      - name: Install tippecanoe
+        run: |
+          sudo apt-get install -y tippecanoe || (
+            echo "tippecanoe not in apt, building from source..."
+            sudo apt-get install -y build-essential libsqlite3-dev zlib1g-dev
+            git clone https://github.com/felt/tippecanoe.git /tmp/tippecanoe
+            cd /tmp/tippecanoe && make -j4 && sudo make install
+          )
+          tippecanoe --version
+
+      - name: Download BDNB Loire-Atlantique (CSV)
+        run: |
+          echo "Downloading BDNB dep44 CSV (~700MB)..."
+          wget -q --show-progress \
+            "https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_2025-07-a/millesime_2025-07-a_dep44/open_data_millesime_2025-07-a_dep44_csv.zip" \
+            -O bdnb_dep44.zip
+          echo "Download complete. Listing contents..."
+          unzip -l bdnb_dep44.zip | head -50
+
+      - name: Extract DPE buildings to GeoJSON
+        run: |
+          python3 scripts/extract_dpe_44.py bdnb_dep44.zip dpe-44.geojson
+          echo "GeoJSON size: $(du -h dpe-44.geojson | cut -f1)"
+          python3 -c "
+          import json
+          with open('dpe-44.geojson') as f:
+              d = json.load(f)
+          features = d['features']
+          dpe_count = {}
+          for feat in features:
+              dpe = feat['properties'].get('dpe','?')
+              dpe_count[dpe] = dpe_count.get(dpe, 0) + 1
+          print(f'Total: {len(features)} bâtiments avec DPE')
+          print('Distribution:', dict(sorted(dpe_count.items())))
+          "
+
+      - name: Generate PMTiles
+        run: |
+          mkdir -p public
+          tippecanoe \
+            -o public/dpe-44.pmtiles \
+            --minimum-zoom=12 \
+            --maximum-zoom=18 \
+            --layer=dpe \
+            --simplification=4 \
+            --drop-densest-as-needed \
+            --force \
+            dpe-44.geojson
+          echo "PMTiles size: $(du -h public/dpe-44.pmtiles | cut -f1)"
+
+      - name: Commit and push PMTiles
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add public/dpe-44.pmtiles
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: generate DPE PMTiles Loire-Atlantique ($(date +%Y-%m-%d))"
+            git push
+          fi
