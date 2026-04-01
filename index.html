@@ -142,6 +142,20 @@
     </div>
     <div id="map"></div>
     <div id="measure-result"></div>
+    <div id="dpe-legend" style="display:none;position:absolute;bottom:44px;left:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:10px;z-index:50;box-shadow:var(--shadow-md);pointer-events:none">
+      <div style="font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-size:9px">Note DPE</div>
+      <div style="display:flex;gap:4px">
+        <span style="background:#00a651;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">A</span>
+        <span style="background:#50b748;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">B</span>
+        <span style="background:#c8d400;color:#333;padding:2px 5px;border-radius:3px;font-weight:700">C</span>
+        <span style="background:#ffd400;color:#333;padding:2px 5px;border-radius:3px;font-weight:700">D</span>
+        <span style="background:#f7941d;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">E</span>
+        <span style="background:#ed1c24;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">F</span>
+        <span style="background:#8b0000;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">G</span>
+        <span style="background:#aaaaaa;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">—</span>
+      </div>
+      <div style="color:var(--text-muted);margin-top:4px;font-size:9px">— = pas de DPE · zoom ≥ 15</div>
+    </div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
       <iframe id="panoramax-iframe" src="" allow="fullscreen; xr-spatial-tracking; geolocation" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
@@ -188,7 +202,8 @@ const CADASTRE_SOURCE = {
 let currentLayer = 'ign-plan', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
 let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
 let streetviewActive = null;
-let dpeLoadTimer = null;
+let dpeLoadTimer = null, dpeAbortCtrl = null;
+let dpeCachedBbox = null, dpeCachedZoom = null; // zone déjà chargée
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -261,29 +276,51 @@ document.getElementById('toggle-dpe-layer').addEventListener('click', function()
   const vis = dpeLayerOn ? 'visible' : 'none';
   map.setLayoutProperty('dpe-fill', 'visibility', vis);
   map.setLayoutProperty('dpe-line', 'visibility', vis);
-  if (dpeLayerOn) fetchDPEBuildings();
+  document.getElementById('dpe-legend').style.display = dpeLayerOn ? 'block' : 'none';
+  if (dpeLayerOn) { dpeCachedBbox = null; dpeCachedZoom = null; fetchDPEBuildings(); }
+  else { if(dpeAbortCtrl) dpeAbortCtrl.abort(); map.getSource('dpe-src').setData({type:'FeatureCollection',features:[]}); }
 });
 
-map.on('moveend', () => { if (dpeLayerOn) { clearTimeout(dpeLoadTimer); dpeLoadTimer = setTimeout(fetchDPEBuildings, 400); } });
+// Ne recharge que quand le viewport sort de la zone déjà pré-chargée
+map.on('moveend', () => {
+  if (!dpeLayerOn) return;
+  clearTimeout(dpeLoadTimer);
+  dpeLoadTimer = setTimeout(() => {
+    if (!dpeLayerOn || map.getZoom() < 15) return;
+    if (viewportInsideDpeCache()) return; // déjà couvert, pas de rechargement
+    fetchDPEBuildings();
+  }, 500);
+});
+
+function viewportInsideDpeCache() {
+  if (!dpeCachedBbox) return false;
+  const z = map.getZoom(), b = map.getBounds();
+  if (dpeCachedZoom && Math.abs(z - dpeCachedZoom) > 1.5) return false; // zoom trop différent
+  return b.getWest()  >= dpeCachedBbox.w && b.getEast()  <= dpeCachedBbox.e &&
+         b.getSouth() >= dpeCachedBbox.s && b.getNorth() <= dpeCachedBbox.n;
+}
 
 async function fetchDPEBuildings() {
-  if (!dpeLayerOn) return;
-  if (map.getZoom() < 14) {
-    map.getSource('dpe-src').setData({type:'FeatureCollection',features:[]});
-    setStatus('Zoom ≥ 14 pour la couche DPE','error'); setTimeout(()=>setStatus('Prêt'),2000);
-    return;
-  }
+  if (!dpeLayerOn || map.getZoom() < 15) return;
+  if (dpeAbortCtrl) dpeAbortCtrl.abort();
+  dpeAbortCtrl = new AbortController();
+
   const b = map.getBounds();
-  const bbox = `${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}`;
+  // Pré-charge une zone 2× plus large pour absorber les déplacements sans recharger
+  const lngM = (b.getEast() - b.getWest()) * 0.6;
+  const latM = (b.getNorth() - b.getSouth()) * 0.6;
+  const cache = { w: b.getWest()-lngM, s: b.getSouth()-latM, e: b.getEast()+lngM, n: b.getNorth()+latM };
+  const bboxStr = `${cache.w},${cache.s},${cache.e},${cache.n}`;
+
   try {
-    const r = await fetch(`/api/bdnb-dpe?bbox=${encodeURIComponent(bbox)}`);
+    const r = await fetch(`/api/bdnb-dpe?bbox=${encodeURIComponent(bboxStr)}`, { signal: dpeAbortCtrl.signal });
     if (r.ok) {
       const geojson = await r.json();
       map.getSource('dpe-src').setData(geojson);
-      setStatus(`${geojson.features.length} bâtiments DPE chargés`);
-      setTimeout(()=>setStatus('Prêt'),2000);
+      dpeCachedBbox = cache;
+      dpeCachedZoom = map.getZoom();
     }
-  } catch(e) {}
+  } catch(e) { if (e.name !== 'AbortError') console.warn('DPE fetch:', e.message); }
 }
 
 function openStreetview(source, url) {
