@@ -20,12 +20,12 @@ def detect_sep(zip_ref, name):
         line = f.readline().decode('utf-8', errors='replace')
     return ';' if line.count(';') > line.count(',') else ','
 
-def read_csv_from_zip(zip_ref, name, usecols=None, dtype=str, chunksize=None):
+def read_csv_from_zip(zip_ref, name, usecols=None, dtype=str):
+    """Lit un CSV complet depuis un ZIP (pas de chunksize — évite le problème de handle fermé)."""
     sep = detect_sep(zip_ref, name)
-    with zip_ref.open(name) as raw:
-        tf = io.TextIOWrapper(raw, encoding='utf-8', errors='replace')
-        return pd.read_csv(tf, sep=sep, usecols=usecols, dtype=dtype,
-                           chunksize=chunksize, low_memory=False)
+    raw = zip_ref.open(name)  # pas de 'with' : pandas gère la lecture jusqu'au bout
+    tf = io.TextIOWrapper(raw, encoding='utf-8', errors='replace')
+    return pd.read_csv(tf, sep=sep, usecols=usecols, dtype=dtype, low_memory=False)
 
 def get_columns(zip_ref, name):
     sep = detect_sep(zip_ref, name)
@@ -110,32 +110,35 @@ def main(zip_path, output_path):
                 sys.exit(1)
         geom_col_name = geom_usecols[1]
 
-        print(f"Chargement de la géométrie ({geom_file}) par chunks...", file=sys.stderr)
+        print(f"Chargement de la géométrie ({geom_file})...", file=sys.stderr)
+        # On ne lit que les 2 colonnes utiles → léger en RAM malgré la taille du fichier
+        df_geom = read_csv_from_zip(z, geom_file, usecols=geom_usecols)
+        print(f"  {len(df_geom)} bâtiments avec géométrie", file=sys.stderr)
+        df_geom = df_geom.set_index('batiment_groupe_id')
+
+        # Jointure géom × DPE
+        print("Jointure géom × DPE...", file=sys.stderr)
+        joined = df_geom.join(df_dpe, how='inner')
+        print(f"  {len(joined)} bâtiments avec géom ET DPE", file=sys.stderr)
+
         features = []
-        total = 0
-        chunks = read_csv_from_zip(z, geom_file, usecols=geom_usecols, chunksize=50_000)
-        for chunk in chunks:
-            total += len(chunk)
-            chunk = chunk.set_index('batiment_groupe_id')
-            # Joindre avec les données DPE
-            joined = chunk.join(df_dpe, how='inner')
-            for bid, row in joined.iterrows():
-                geom = convert_geom(row.get(geom_col_name))
-                if geom is None:
-                    continue
-                nb = 0
-                if nb_log_col and str(row.get(nb_log_col,'')).replace('.','').isdigit():
-                    nb = int(float(row.get(nb_log_col, 0) or 0))
-                features.append({
-                    'type': 'Feature',
-                    'geometry': geom,
-                    'properties': {
-                        'id':  str(bid),
-                        'dpe': str(row.get(dpe_col, '') or '').strip(),
-                        'nb_log': nb,
-                    }
-                })
-            print(f"  Lignes géom traitées: {total}, features: {len(features)}", file=sys.stderr)
+        for bid, row in joined.iterrows():
+            geom = convert_geom(row.get(geom_col_name))
+            if geom is None:
+                continue
+            nb = 0
+            if nb_log_col and str(row.get(nb_log_col, '')).replace('.', '').isdigit():
+                nb = int(float(row.get(nb_log_col, 0) or 0))
+            features.append({
+                'type': 'Feature',
+                'geometry': geom,
+                'properties': {
+                    'id':     str(bid),
+                    'dpe':    str(row.get(dpe_col, '') or '').strip(),
+                    'nb_log': nb,
+                }
+            })
+        print(f"  {len(features)} features avec géométrie valide", file=sys.stderr)
 
     print(f"\nTotal: {len(features)} bâtiments avec DPE et géométrie", file=sys.stderr)
     dpe_dist = {}
