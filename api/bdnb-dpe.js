@@ -45,11 +45,12 @@ module.exports = async function handler(req, res) {
   try {
     const baseUrl = `https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox`
       + `?xmin=${Math.round(sw.x)}&ymin=${Math.round(sw.y)}&xmax=${Math.round(ne.x)}&ymax=${Math.round(ne.y)}`
-      + `&limit=10&select=classe_bilan_dpe,geom_groupe,batiment_groupe_id,nb_log,usage_principal_bdnb_open`;
+      + `&limit=10&select=classe_bilan_dpe,geom_groupe,batiment_groupe_id,nb_log,usage_principal_bdnb_open`
+      + `&classe_bilan_dpe=not.is.null`; // uniquement les bâtiments avec DPE réel
 
     // L'API BDNB Open est limitée à 10 résultats par requête.
-    // On lance 10 requêtes en parallèle avec offset 0,10,20...90 pour obtenir jusqu'à 100 bâtiments.
-    const offsets = Array.from({ length: 10 }, (_, i) => i * 10);
+    // On lance 20 requêtes en parallèle (offset 0..190) pour obtenir jusqu'à 200 bâtiments avec DPE.
+    const offsets = Array.from({ length: 20 }, (_, i) => i * 10);
     const pages = await Promise.all(
       offsets.map(offset =>
         fetch(`${baseUrl}&offset=${offset}`)
