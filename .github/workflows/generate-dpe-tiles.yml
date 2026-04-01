@@ -7,7 +7,7 @@ on:
 
 jobs:
   generate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
       contents: write
@@ -17,30 +17,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install tools
+      - name: Install Python deps
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y gdal-bin python3-pip unzip
+          sudo apt-get install -y unzip wget
           pip3 install pyproj shapely pandas --quiet
 
-      - name: Install tippecanoe
+      - name: Install tippecanoe from source
         run: |
-          sudo apt-get install -y tippecanoe || (
-            echo "tippecanoe not in apt, building from source..."
-            sudo apt-get install -y build-essential libsqlite3-dev zlib1g-dev
-            git clone https://github.com/felt/tippecanoe.git /tmp/tippecanoe
-            cd /tmp/tippecanoe && make -j4 && sudo make install
-          )
+          sudo apt-get install -y build-essential libsqlite3-dev zlib1g-dev git
+          git clone --depth=1 https://github.com/felt/tippecanoe.git /tmp/tippecanoe
+          cd /tmp/tippecanoe && make -j$(nproc) && sudo make install
           tippecanoe --version
 
       - name: Download BDNB Loire-Atlantique (CSV)
         run: |
           echo "Downloading BDNB dep44 CSV (~700MB)..."
-          wget -q --show-progress \
+          wget --progress=dot:giga \
             "https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_2025-07-a/millesime_2025-07-a_dep44/open_data_millesime_2025-07-a_dep44_csv.zip" \
             -O bdnb_dep44.zip
-          echo "Download complete. Listing contents..."
-          unzip -l bdnb_dep44.zip | head -50
+          echo "Download complete. Size: $(du -h bdnb_dep44.zip | cut -f1)"
+          unzip -l bdnb_dep44.zip | grep '\.csv' | head -20
 
       - name: Extract DPE buildings to GeoJSON
         run: |
@@ -55,7 +52,7 @@ jobs:
           for feat in features:
               dpe = feat['properties'].get('dpe','?')
               dpe_count[dpe] = dpe_count.get(dpe, 0) + 1
-          print(f'Total: {len(features)} bâtiments avec DPE')
+          print(f'Total: {len(features)} batiments avec DPE')
           print('Distribution:', dict(sorted(dpe_count.items())))
           "
 
