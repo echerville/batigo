@@ -316,13 +316,13 @@ function renderBatiment(bdnb, rnc, label) {
       <div class="card-title">Bâtiment · BDNB</div>
       <div class="info-grid" style="margin-bottom:10px">
         <div class="info-cell"><div class="field-label">Construction</div>${na(v(bdnb?.annee_construction))}</div>
-        <div class="info-cell"><div class="field-label">Surface SHON</div>${na(bdnb?.surface_shon_sum ? Math.round(bdnb.surface_shon_sum)+'m²' : null)}</div>
-        <div class="info-cell"><div class="field-label">Logements</div>${na(v(bdnb?.nb_logement_open))}</div>
-        <div class="info-cell"><div class="field-label">Usage</div>${na(formatUsage(bdnb?.usage_type_r))}</div>
+        <div class="info-cell"><div class="field-label">Surface emprise</div>${na(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+'m²' : null)}</div>
+        <div class="info-cell"><div class="field-label">Logements</div>${na(v(bdnb?.nb_log))}</div>
+        <div class="info-cell"><div class="field-label">Usage</div>${na(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
       </div>
       <div class="info-grid">
         <div class="info-cell"><div class="field-label">Chauffage</div>${formatEnergie(bdnb?.type_energie_chauffage) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_chauffage)}</span>` : `<span class="field-value na">Non renseigné</span>`}</div>
-        <div class="info-cell"><div class="field-label">ECS</div>${formatEnergie(bdnb?.type_energie_ecs) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_ecs)}</span>` : `<span class="field-value na">Non renseigné</span>`}</div>
+        <div class="info-cell"><div class="field-label">ECS</div>${formatEnergie(bdnb?.type_generateur_ecs) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_generateur_ecs)}</span>` : `<span class="field-value na">Non renseigné</span>`}</div>
       </div>
       ${!bdnb?'<p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Aucune donnée BDNB à cette adresse.</p>':''}
     </div>
@@ -342,7 +342,10 @@ function formatEnergie(val) {
 }
 function formatUsage(val) {
   if (!val) return null;
-  return {'R':'Résidentiel','T':'Tertiaire','M':'Mixte','residential':'Résidentiel'}[val] || val;
+  if (val.toLowerCase().includes('individuel')) return 'Résidentiel individuel';
+  if (val.toLowerCase().includes('collectif')) return 'Résidentiel collectif';
+  if (val.toLowerCase().includes('tertiaire')) return 'Tertiaire';
+  return val;
 }
 
 async function loadDPE(feature) {
