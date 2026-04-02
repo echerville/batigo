@@ -440,21 +440,32 @@ async function loadBatiment(lat, lng, label, feature) {
 
     let rncData = null;
     try {
-      const cc = feature?.properties?.citycode||'';
-      const housenumber = feature?.properties?.housenumber||'';
-      const street = feature?.properties?.street||feature?.properties?.name||'';
-      // Filtre uniquement par commune (q= combiné cause 400), matching adresse côté client
-      let rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=20`;
-      if (cc) rncUrl += `&code_officiel_commune__exact=${cc}`;
+      const cc = feature?.properties?.citycode||'';          // ex: "44109"
+      const dep = cc.slice(0,2);                             // ex: "44"
+      const housenumber = (feature?.properties?.housenumber||'').toString().trim();
+      const street = (feature?.properties?.street||feature?.properties?.name||'').trim();
+      // Seul code_officiel_departement est filtrable seul sans provoquer de 400
+      // On filtre par département puis on match commune+adresse côté client
+      const rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/`
+        + `?page_size=200&code_officiel_departement__exact=${dep}`;
       const r = await fetch(rncUrl);
       if (r.ok) {
         const d = await r.json();
         if (d.data?.length && street) {
           const streetUp = street.toUpperCase();
-          // Cherche une copropriété dont l'adresse contient la rue (+ numéro si dispo)
+          const streetWords = streetUp.split(/\s+/).filter(w => w.length > 2); // mots significatifs
           rncData = d.data.find(e => {
-            const addr = (e.adresse_reference_cadastrale||'').toUpperCase();
-            return addr.includes(streetUp) && (!housenumber || addr.includes(housenumber));
+            // Nouvelle colonne : adresse_de_reference (ex: "21 Rue des Carmes 44000 Nantes")
+            const addr = (e.adresse_de_reference || e.numero_et_voie_adresse_de_reference || '').toUpperCase();
+            if (!addr) return false;
+            // Vérifier commune (citycode ou nom)
+            if (cc && e.code_officiel_commune && e.code_officiel_commune !== cc) return false;
+            // Vérifier que la rue est dans l'adresse
+            const streetMatch = streetWords.every(w => addr.includes(w));
+            if (!streetMatch) return false;
+            // Si numéro disponible, l'inclure dans le match
+            if (housenumber) return addr.startsWith(housenumber+' ') || addr.includes(' '+housenumber+' ');
+            return true;
           }) || null;
         }
       }
@@ -504,10 +515,13 @@ function renderBatiment(bdnb, rnc, label, cad) {
     <div class="card">
       <div class="card-title">Copropriété · RNIC</div>
       ${rnc ? `
-      <div style="margin-bottom:10px"><div class="field-label">Nom / Syndic</div>${na(v(rnc.nom_d_usage_de_la_copropriete||rnc.raison_sociale_du_representant_legal))}</div>
+      <div style="margin-bottom:8px"><div class="field-label">Nom</div>${na(v(rnc.nom_d_usage_de_la_copropriete))}</div>
+      <div style="margin-bottom:8px"><div class="field-label">Syndic</div>${na(v(rnc.raison_sociale_du_representant_legal))}</div>
       <div class="info-grid">
         <div class="info-cell"><div class="field-label">Lots total</div>${na(v(rnc.nombre_total_de_lots))}</div>
-        <div class="info-cell"><div class="field-label">Lots habitation</div>${na(v(rnc.nombre_de_lots_a_usage_d_habitation))}</div>
+        <div class="info-cell"><div class="field-label">Dont habitation</div>${na(v(rnc.nombre_de_lots_a_usage_d_habitation))}</div>
+        <div class="info-cell"><div class="field-label">Stationnement</div>${na(v(rnc.nombre_de_lots_de_stationnement))}</div>
+        <div class="info-cell"><div class="field-label">Période construction</div>${na(v(rnc.periode_de_construction))}</div>
       </div>` : `<p style="font-size:11px;color:var(--text-muted)">Aucune copropriété répertoriée au RNIC à cette adresse.</p>`}
     </div>`;
 }
