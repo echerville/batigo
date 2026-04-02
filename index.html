@@ -596,7 +596,7 @@ async function loadDPE(feature, clickLng, clickLat) {
     const q = `${housenumber} ${street}`.trim();
     const textParams = `&q=${encodeURIComponent(q)}&q_fields=adresse_brut${citycode?'&code_insee_ban_eq='+citycode:''}`;
 
-    async function fetchDPEDataset(dataset, size=100) {
+    async function fetchDPEDataset(dataset, size=100, textFallback=true) {
       const base = `https://data.ademe.fr/data-fair/api/v1/datasets/${dataset}/lines?size=${size}&select=${SEL}&sort=-date_reception_dpe`;
       // 1. Essai par identifiant_ban exact
       if (banId) {
@@ -604,8 +604,8 @@ async function loadDPE(feature, clickLng, clickLat) {
         const d = await r.json();
         if (d.results?.length) return d.results;
       }
-      // 2. Fallback texte (banId absent ou sans résultat)
-      if (q.trim()) {
+      // 2. Fallback texte uniquement pour DPE existants (neufs : IDs BAN fiables, le texte génère des faux positifs)
+      if (textFallback && q.trim()) {
         const r = await fetch(base + textParams);
         const d = await r.json();
         if (d.results?.length) return d.results;
@@ -614,8 +614,8 @@ async function loadDPE(feature, clickLng, clickLat) {
     }
 
     const [results, resultsNeufs] = await Promise.all([
-      fetchDPEDataset('dpe03existant', 100).catch(()=>[]),
-      fetchDPEDataset('g3cgx7jb3cmys5voxz1mrm22', 50).catch(()=>[]),
+      fetchDPEDataset('dpe03existant', 100, true).catch(()=>[]),
+      fetchDPEDataset('g3cgx7jb3cmys5voxz1mrm22', 50, false).catch(()=>[]),
     ]);
     renderDPE(results, resultsNeufs);
     applyNeufHatch(resultsNeufs.length > 0, clickLng ?? currentCoords?.[0], clickLat ?? currentCoords?.[1]);
