@@ -78,7 +78,7 @@ jobs:
           cp public/dpe-44.pmtiles /tmp/dpe-44.pmtiles
           # Se caler sur l'état exact du remote (commits poussés pendant le build)
           git fetch origin main
-          git reset --hard origin/main
+          git reset --hard FETCH_HEAD
           # Remettre le fichier généré et committer
           mkdir -p public
           cp /tmp/dpe-44.pmtiles public/dpe-44.pmtiles
