@@ -604,11 +604,24 @@ async function loadDPE(feature, clickLng, clickLat) {
         const d = await r.json();
         if (d.results?.length) return d.results;
       }
-      // 2. Fallback texte uniquement pour DPE existants (neufs : IDs BAN fiables, le texte génère des faux positifs)
+      // 2. Fallback texte uniquement pour DPE existants
       if (textFallback && q.trim()) {
         const r = await fetch(base + textParams);
         const d = await r.json();
-        if (d.results?.length) return d.results;
+        if (d.results?.length) {
+          // Filtrage strict côté client : adresse_brut doit contenir le numéro ET un mot-clé de la rue
+          const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|chemin|route|du|de|la|le|les|des|d|l)$/i;
+          const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP.test(w)) || '';
+          const filtered = d.results.filter(r => {
+            const addr = (r.adresse_brut || '').toLowerCase();
+            // Le numéro doit apparaître en tant que token isolé (pas dans "120" si on cherche "20")
+            if (housenumber && !new RegExp(`(?:^|\\s|,|/)${housenumber}(?:\\s|,|/|$)`).test(addr)) return false;
+            // Un mot-clé de la rue doit être présent
+            if (streetKey && !addr.includes(streetKey.toLowerCase())) return false;
+            return true;
+          });
+          if (filtered.length) return filtered;
+        }
       }
       return [];
     }
