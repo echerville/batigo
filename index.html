@@ -600,14 +600,33 @@ function renderDPE(results, resultsNeufs=[]) {
   if (!results.length && !resultsNeufs.length) { el.innerHTML=`<div class="empty-state"><div class="icon">◇</div><p>Aucun DPE trouvé pour cette adresse</p></div>`; return; }
   const ORDER=['A','B','C','D','E','F','G'];
 
-  function buildTable(rows, hatch=false) {
-    let html='';
+  function buildSection(rows, hatch=false) {
+    const h = hatch ? ' hatch' : '';
     const groups={}; ORDER.forEach(k=>groups[k]=[]);
+    const chauffageCount={};
     rows.forEach(r=>{
       const note=ORDER.includes(r['etiquette_dpe'])?r['etiquette_dpe']:'N';
       if(!groups[note])groups[note]=[];
       groups[note].push(r);
+      const ch=r['type_energie_principale_chauffage']||'';
+      if(ch) chauffageCount[ch]=(chauffageCount[ch]||0)+1;
     });
+    // Distribution — badges hachurés pour neufs
+    const distHtml=ORDER.map(note=>{
+      const n=groups[note].length; if(!n)return'';
+      return`<div class="dpe-dist-item"><span class="dpe-badge dpe-${note}${h}">${note}</span><span class="count">${n}</span><span class="label">DPE</span></div>`;
+    }).join('');
+    // Chauffage
+    const topCh=Object.entries(chauffageCount).sort((a,b)=>b[1]-a[1]);
+    const chHtml=topCh.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:3px;"><span>${k}</span><span style="color:var(--text)">${v} DPE</span></div>`).join('');
+    // Construction
+    const constrCount={};
+    rows.forEach(r=>{const yr=r['annee_construction']||r['periode_construction']||'';if(yr)constrCount[yr]=(constrCount[yr]||0)+1;});
+    const topConstr=Object.entries(constrCount).sort((a,b)=>b[1]-a[1]);
+    const constrVal=topConstr.length?topConstr[0][0]:null;
+    const constrHtml=constrVal?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">Construction</span><span style="font-size:13px;font-weight:700;color:var(--text)">${constrVal}</span></div>`:'';
+    // Tableau
+    let tableRows='';
     ORDER.forEach(note=>{
       const rr=groups[note]; if(!rr.length)return;
       rr.forEach(r=>{
@@ -615,44 +634,19 @@ function renderDPE(results, resultsNeufs=[]) {
         const surf=r['surface_habitable_logement']?Math.round(r['surface_habitable_logement'])+'m²':'—';
         const num=r['numero_dpe']||'';
         const link=num?`<a href="https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:13px;line-height:1" title="Voir sur ADEME">↗</a>`:'';
-        const badge=`<span class="dpe-badge dpe-${note}${hatch?' hatch':''}">${note}</span>`;
-        html+=`<tr><td>${badge}</td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
+        tableRows+=`<tr><td><span class="dpe-badge dpe-${note}${h}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
       });
     });
-    return html;
+    const title = hatch
+      ? `<div class="dpe-summary-title"><span class="dpe-neuf-badge">✓ Neuf</span>Distribution — ${rows.length} DPE</div>`
+      : `<div class="dpe-summary-title">Distribution — ${rows.length} DPE</div>`;
+    return `<div class="dpe-summary">${title}<div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}${constrHtml}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${tableRows}</tbody></table>`;
   }
 
-  // --- Existants ---
-  let out='';
-  if (results.length) {
-    const groups={}; ORDER.forEach(k=>groups[k]=[]);
-    const chauffageCount={};
-    results.forEach(r=>{
-      const note=ORDER.includes(r['etiquette_dpe'])?r['etiquette_dpe']:'N';
-      if(!groups[note])groups[note]=[];
-      groups[note].push(r);
-      const ch=r['type_energie_principale_chauffage']||'';
-      if(ch) chauffageCount[ch]=(chauffageCount[ch]||0)+1;
-    });
-    const distHtml=ORDER.map(note=>{const n=groups[note].length;if(!n)return'';return`<div class="dpe-dist-item"><span class="dpe-badge dpe-${note}">${note}</span><span class="count">${n}</span><span class="label">DPE</span></div>`;}).join('');
-    const topCh=Object.entries(chauffageCount).sort((a,b)=>b[1]-a[1]);
-    const chHtml=topCh.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:3px;"><span>${k}</span><span style="color:var(--text)">${v} DPE</span></div>`).join('');
-    const constrCount={};
-    results.forEach(r=>{const yr=r['annee_construction']||r['periode_construction']||'';if(yr)constrCount[yr]=(constrCount[yr]||0)+1;});
-    const topConstr=Object.entries(constrCount).sort((a,b)=>b[1]-a[1]);
-    const constrVal=topConstr.length?topConstr[0][0]:null;
-    const constrHtml=constrVal?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">Construction</span><span style="font-size:13px;font-weight:700;color:var(--text)">${constrVal}</span></div>`:'';
-    out+=`<div class="dpe-summary"><div class="dpe-summary-title">Distribution — ${results.length} DPE</div><div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}${constrHtml}</div>`;
-    out+=`<table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${buildTable(results,false)}</tbody></table>`;
-  }
-
-  // --- Neufs ---
-  if (resultsNeufs.length) {
-    out+=`<div class="dpe-neuf-header"><span class="dpe-neuf-badge">✓ Neuf</span>${resultsNeufs.length} DPE construction neuve</div>`;
-    out+=`<table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${buildTable(resultsNeufs,true)}</tbody></table>`;
-  }
-
-  el.innerHTML=out;
+  let out = '';
+  if (results.length) out += buildSection(results, false);
+  if (resultsNeufs.length) out += buildSection(resultsNeufs, true);
+  el.innerHTML = out;
 }
 
 function shortEnergie(val) {
