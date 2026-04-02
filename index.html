@@ -593,35 +593,26 @@ async function loadDPE(feature, clickLng, clickLat) {
   const housenumber = p.housenumber||'', street = p.street||p.name||'';
   try {
     const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction';
-    const q = `${housenumber} ${street}`.trim();
-    const textParams = `&q=${encodeURIComponent(q)}&q_fields=adresse_brut${citycode?'&code_insee_ban_eq='+citycode:''}`;
 
-    async function fetchDPEDataset(dataset, size=100, textFallback=true) {
+    // Mot-clé significatif de la rue (ignore préfixes génériques)
+    const SKIP_WORDS = /^(rue|avenue|boulevard|allée|allee|impasse|place|chemin|route|voie|passage|du|de|la|le|les|des|aux|au|d|l)$/i;
+    const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP_WORDS.test(w)) || '';
+
+    async function fetchDPEDataset(dataset, size=100, useFallback=true) {
       const base = `https://data.ademe.fr/data-fair/api/v1/datasets/${dataset}/lines?size=${size}&select=${SEL}&sort=-date_reception_dpe`;
-      // 1. Essai par identifiant_ban exact
+      // 1. Identifiant BAN exact (le plus précis)
       if (banId) {
         const r = await fetch(base + `&identifiant_ban_eq=${encodeURIComponent(banId)}`);
         const d = await r.json();
         if (d.results?.length) return d.results;
       }
-      // 2. Fallback texte uniquement pour DPE existants
-      if (textFallback && q.trim()) {
-        const r = await fetch(base + textParams);
+      // 2. Fallback : commune + numéro de voie exacts (champs indexés), mot-clé rue dans adresse_ban
+      if (useFallback && housenumber && citycode) {
+        let url = base + `&code_insee_ban_eq=${citycode}&numero_voie_ban_eq=${encodeURIComponent(housenumber)}`;
+        if (streetKey) url += `&q=${encodeURIComponent(streetKey)}&q_fields=adresse_ban`;
+        const r = await fetch(url);
         const d = await r.json();
-        if (d.results?.length) {
-          // Filtrage strict côté client : adresse_brut doit contenir le numéro ET un mot-clé de la rue
-          const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|chemin|route|du|de|la|le|les|des|d|l)$/i;
-          const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP.test(w)) || '';
-          const filtered = d.results.filter(r => {
-            const addr = (r.adresse_brut || '').toLowerCase();
-            // Le numéro doit apparaître en tant que token isolé (pas dans "120" si on cherche "20")
-            if (housenumber && !new RegExp(`(?:^|\\s|,|/)${housenumber}(?:\\s|,|/|$)`).test(addr)) return false;
-            // Un mot-clé de la rue doit être présent
-            if (streetKey && !addr.includes(streetKey.toLowerCase())) return false;
-            return true;
-          });
-          if (filtered.length) return filtered;
-        }
+        if (d.results?.length) return d.results;
       }
       return [];
     }
@@ -637,7 +628,7 @@ async function loadDPE(feature, clickLng, clickLat) {
 
 function renderDPE(results, resultsNeufs=[]) {
   const el = document.getElementById('dpe-data');
-  if (!results.length && !resultsNeufs.length) { el.innerHTML=`<div class="empty-state"><div class="icon">◇</div><p>Aucun DPE trouvé pour cette adresse</p></div>`; return; }
+  if (!results.length && !resultsNeufs.length) { el.innerHTML=`<div class="empty-state"><div class="icon">◇</div><p>Aucun DPE disponible dans le registre ADEME.</p><p style="font-size:10px;margin-top:6px;color:var(--text-muted)">La couleur sur la carte provient du BDNB et peut correspondre à un DPE antérieur à 2021, non disponible en open data.</p></div>`; return; }
   const ORDER=['A','B','C','D','E','F','G'];
 
   function buildSection(rows, hatch=false) {
@@ -665,18 +656,23 @@ function renderDPE(results, resultsNeufs=[]) {
     const topConstr=Object.entries(constrCount).sort((a,b)=>b[1]-a[1]);
     const constrVal=topConstr.length?topConstr[0][0]:null;
     const constrHtml=constrVal?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">Construction</span><span style="font-size:13px;font-weight:700;color:var(--text)">${constrVal}</span></div>`:'';
-    // Tableau
-    let tableRows='';
+    // Tableau — max 10 lignes (1 bâtiment = potentiellement 1 DPE/logement)
+    const TABLE_MAX = 10;
+    let tableRows='', tableCount=0;
     ORDER.forEach(note=>{
       const rr=groups[note]; if(!rr.length)return;
       rr.forEach(r=>{
+        if(tableCount>=TABLE_MAX) return;
         const date=r['date_reception_dpe']?r['date_reception_dpe'].substring(0,10):'—';
         const surf=r['surface_habitable_logement']?Math.round(r['surface_habitable_logement'])+'m²':'—';
         const num=r['numero_dpe']||'';
         const link=num?`<a href="https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:13px;line-height:1" title="Voir sur ADEME">↗</a>`:'';
         tableRows+=`<tr><td><span class="dpe-badge dpe-${note}${h}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
+        tableCount++;
       });
     });
+    const hiddenCount=rows.length-tableCount;
+    if(hiddenCount>0) tableRows+=`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);font-size:10px;padding:8px">… et ${hiddenCount} autre${hiddenCount>1?'s':''} DPE</td></tr>`;
     const title = hatch
       ? `<div class="dpe-summary-title"><span class="dpe-neuf-badge">✓ Neuf</span>Distribution — ${rows.length} DPE</div>`
       : `<div class="dpe-summary-title">Distribution — ${rows.length} DPE</div>`;
