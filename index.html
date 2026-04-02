@@ -398,14 +398,17 @@ function selectAddress(feature, clickLng, clickLat) {
   const [lng,lat] = feature.geometry.coordinates;
   const label = feature.properties.label || '';
   document.getElementById('search-input').value = label;
-  currentCoords = [lng, lat];
-  map.flyTo({center:[lng,lat], zoom:18, speed:1.4});
+  // Si clic carte : marqueur et centre sur le point exact du clic (sur le bâtiment)
+  // Si recherche texte : on utilise les coords BAN
+  const mLng = clickLng !== undefined ? clickLng : lng;
+  const mLat = clickLat !== undefined ? clickLat : lat;
+  currentCoords = [mLng, mLat];
+  map.flyTo({center:[mLng, mLat], zoom:18, speed:1.4});
   if (addrMarker) addrMarker.remove();
   const el = document.createElement('div'); el.className='addr-marker';
-  addrMarker = new maplibregl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
-  // Utilise les coordonnées exactes du clic pour le cadastre si disponibles
-  const cadLng = clickLng !== undefined ? clickLng : lng;
-  const cadLat = clickLat !== undefined ? clickLat : lat;
+  addrMarker = new maplibregl.Marker({element:el}).setLngLat([mLng, mLat]).addTo(map);
+  const cadLng = mLng;
+  const cadLat = mLat;
   loadBatiment(cadLat, cadLng, label, feature);
   loadDPE(feature);
 }
