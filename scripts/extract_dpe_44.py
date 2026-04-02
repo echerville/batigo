@@ -86,14 +86,29 @@ def main(zip_path, output_path):
         # Colonnes nb_log
         nb_log_col = next((c for c in ['nb_log','nb_logements'] if c in dpe_cols), None)
 
+        # Colonne date DPE
+        DATE_CUTOFF = '2021-07-01'
+        date_col = next((c for c in ['date_etablissement_dpe', 'date_reception_dpe',
+                                      'date_depot_dpe', 'annee_reception_dpe']
+                         if c in dpe_cols), None)
+        print(f"Colonne date DPE: {date_col or 'non trouvée (pas de filtre date)'}", file=sys.stderr)
+
         # 4. Charger le CSV DPE (petit, ~quelques Mo)
         dpe_usecols = ['batiment_groupe_id', dpe_col]
         if nb_log_col:
             dpe_usecols.append(nb_log_col)
+        if date_col:
+            dpe_usecols.append(date_col)
         print(f"Chargement du CSV DPE ({dpe_file})...", file=sys.stderr)
         df_dpe = read_csv_from_zip(z, dpe_file, usecols=dpe_usecols)
         # Filtrer uniquement les lignes avec DPE valide
         df_dpe = df_dpe[df_dpe[dpe_col].notna() & (df_dpe[dpe_col].str.strip() != '')]
+        # Filtrer les DPE antérieurs à juillet 2021
+        if date_col:
+            before = len(df_dpe)
+            df_dpe[date_col] = pd.to_datetime(df_dpe[date_col], errors='coerce')
+            df_dpe = df_dpe[df_dpe[date_col] >= DATE_CUTOFF]
+            print(f"  Filtre date >= {DATE_CUTOFF}: {before} → {len(df_dpe)} bâtiments", file=sys.stderr)
         df_dpe = df_dpe.set_index('batiment_groupe_id')
         print(f"  {len(df_dpe)} bâtiments avec DPE", file=sys.stderr)
 
