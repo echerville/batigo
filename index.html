@@ -489,9 +489,6 @@ function renderBatiment(bdnb, rnc, label, cad) {
         <div class="info-grid">
           <div class="info-cell"><div class="field-label">Section</div><span class="field-value">${cad.section || '—'}</span></div>
           <div class="info-cell"><div class="field-label">Parcelle</div><span class="field-value">${cad.numero || '—'}</span></div>
-          ${cad.surface ? `<div class="info-cell"><div class="field-label">Surface parcelle</div><span class="field-value">${cad.surface} m²</span></div>` : ''}
-          ${cad.commune ? `<div class="info-cell"><div class="field-label">Commune</div><span class="field-value">${cad.commune}</span></div>` : ''}
-          ${cad.idu ? `<div class="info-cell" style="grid-column:1/-1"><div class="field-label">Identifiant parcelle</div><span class="field-value" style="font-family:monospace;font-size:12px">${cad.idu}</span></div>` : ''}
         </div>
        </div>` : '';
   el.innerHTML = `
