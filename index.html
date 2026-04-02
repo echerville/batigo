@@ -270,6 +270,17 @@ map.on('load', () => {
     layout:{visibility:'none'},
     paint:{'line-color':DPE_COLOR,'line-width':1,'line-opacity':0.85}
   });
+  // Pattern hachuré pour DPE neufs
+  const hSz=8, hData=new Uint8Array(hSz*hSz*4);
+  for(let y=0;y<hSz;y++) for(let x=0;x<hSz;x++){
+    const i=(y*hSz+x)*4;
+    if((x+y)%hSz<2){hData[i]=255;hData[i+1]=255;hData[i+2]=255;hData[i+3]=170;}
+  }
+  map.addImage('hatch-pat',{width:hSz,height:hSz,data:hData});
+  map.addSource('neuf-hatch-src',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'neuf-hatch-fill',type:'fill',source:'neuf-hatch-src',
+    paint:{'fill-pattern':'hatch-pat'}
+  });
 
   // Popup DPE au survol
   const dpePopup = new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:4});
@@ -410,7 +421,7 @@ function selectAddress(feature, clickLng, clickLat) {
   const cadLng = mLng;
   const cadLat = mLat;
   loadBatiment(cadLat, cadLng, label, feature);
-  loadDPE(feature);
+  loadDPE(feature, mLng, mLat);
 }
 
 async function fetchCadastre(lat, lng) {
@@ -553,7 +564,26 @@ function formatUsage(val) {
   return val;
 }
 
-async function loadDPE(feature) {
+function applyNeufHatch(isNeuf, lng, lat) {
+  const src = map.getSource('neuf-hatch-src');
+  if (!src) return;
+  if (!isNeuf) { src.setData({type:'FeatureCollection',features:[]}); return; }
+  // Requête les features PMTiles au point cliqué (fonctionne si dpe-fill visible)
+  const pt = map.project([lng, lat]);
+  const feats = map.queryRenderedFeatures(pt, {layers:['dpe-fill']});
+  if (feats.length) {
+    src.setData({type:'FeatureCollection', features:[feats[0]]});
+  } else {
+    // DPE layer inactif : essai avec un rayon plus large
+    const feats2 = map.queryRenderedFeatures(
+      [{x:pt.x-12,y:pt.y-12},{x:pt.x+12,y:pt.y+12}],
+      {layers:['dpe-fill']}
+    );
+    src.setData({type:'FeatureCollection', features: feats2.length?[feats2[0]]:[]});
+  }
+}
+
+async function loadDPE(feature, clickLng, clickLat) {
   const el = document.getElementById('dpe-data');
   document.getElementById('empty-dpe').style.display = 'none';
   el.style.display = 'block';
@@ -588,6 +618,7 @@ async function loadDPE(feature) {
       fetchDPEDataset('g3cgx7jb3cmys5voxz1mrm22', 50).catch(()=>[]),
     ]);
     renderDPE(results, resultsNeufs);
+    applyNeufHatch(resultsNeufs.length > 0, clickLng ?? currentCoords?.[0], clickLat ?? currentCoords?.[1]);
   } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
 }
 
