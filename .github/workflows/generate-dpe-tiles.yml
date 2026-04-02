@@ -74,11 +74,14 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
+          # Récupérer les commits distants accumulés pendant le build (~20 min)
+          # puis se caler dessus avant de committer — évite le rejet "fetch first"
+          git fetch origin main
+          git reset --mixed origin/main
           git add public/dpe-44.pmtiles
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
             git commit -m "chore: generate DPE PMTiles Loire-Atlantique ($(date +%Y-%m-%d))"
-            git pull --rebase origin main
             git push
           fi
