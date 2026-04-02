@@ -408,12 +408,19 @@ function selectAddress(feature, clickLng, clickLat) {
 
 async function fetchCadastre(lat, lng) {
   try {
-    const r = await fetch(`https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}&_limit=1`);
+    // WFS géoplateforme IGN — parcelle intersectant le point cliqué
+    const d = 0.0001; // ~10m de marge pour trouver la parcelle sous le curseur
+    const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
+    const url = `https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature`
+      + `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle`
+      + `&OUTPUTFORMAT=application/json&COUNT=1`
+      + `&BBOX=${bbox},EPSG:4326`;
+    const r = await fetch(url);
     if (!r.ok) return null;
-    const d = await r.json();
-    const p = d.features && d.features[0] && d.features[0].properties;
+    const d2 = await r.json();
+    const p = d2.features?.[0]?.properties;
     if (!p) return null;
-    return { section: p.section || '', numero: p.numero || '', commune: p.nom_com || '', surface: p.contenance || null };
+    return { section: p.section || '', numero: p.numero || '', commune: p.nom_com || '', surface: p.contenance || null, idu: p.idu || '' };
   } catch(e) { return null; }
 }
 
@@ -474,6 +481,7 @@ function renderBatiment(bdnb, rnc, label, cad) {
           <div class="info-cell"><div class="field-label">Parcelle</div><span class="field-value">${cad.numero || '—'}</span></div>
           ${cad.surface ? `<div class="info-cell"><div class="field-label">Surface parcelle</div><span class="field-value">${cad.surface} m²</span></div>` : ''}
           ${cad.commune ? `<div class="info-cell"><div class="field-label">Commune</div><span class="field-value">${cad.commune}</span></div>` : ''}
+          ${cad.idu ? `<div class="info-cell" style="grid-column:1/-1"><div class="field-label">Identifiant parcelle</div><span class="field-value" style="font-family:monospace;font-size:12px">${cad.idu}</span></div>` : ''}
         </div>
        </div>` : '';
   el.innerHTML = `
