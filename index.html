@@ -441,32 +441,31 @@ async function loadBatiment(lat, lng, label, feature) {
     let rncData = null;
     try {
       const cc = feature?.properties?.citycode||'';          // ex: "44109"
-      const dep = cc.slice(0,2);                             // ex: "44"
-      const housenumber = (feature?.properties?.housenumber||'').toString().trim();
       const street = (feature?.properties?.street||feature?.properties?.name||'').trim();
-      // Seul code_officiel_departement est filtrable seul sans provoquer de 400
-      // On filtre par département puis on match commune+adresse côté client
-      const rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/`
-        + `?page_size=200&code_officiel_departement__exact=${dep}`;
-      const r = await fetch(rncUrl);
-      if (r.ok) {
-        const d = await r.json();
-        if (d.data?.length && street) {
-          const streetUp = street.toUpperCase();
-          const streetWords = streetUp.split(/\s+/).filter(w => w.length > 2); // mots significatifs
-          rncData = d.data.find(e => {
-            // Nouvelle colonne : adresse_de_reference (ex: "21 Rue des Carmes 44000 Nantes")
-            const addr = (e.adresse_de_reference || e.numero_et_voie_adresse_de_reference || '').toUpperCase();
-            if (!addr) return false;
-            // Vérifier commune (citycode ou nom)
-            if (cc && e.code_officiel_commune && e.code_officiel_commune !== cc) return false;
-            // Vérifier que la rue est dans l'adresse
-            const streetMatch = streetWords.every(w => addr.includes(w));
-            if (!streetMatch) return false;
-            // Si numéro disponible, l'inclure dans le match
-            if (housenumber) return addr.startsWith(housenumber+' ') || addr.includes(' '+housenumber+' ');
-            return true;
-          }) || null;
+      if (cc && street) {
+        // Extraire un mot-clé significatif de la rue (ignorer préfixes génériques)
+        const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
+        const words = street.split(/\s+/);
+        const keyWord = words.find(w => w.length >= 4 && !SKIP.test(w)) || words[words.length-1];
+        // Filtrer par commune + mot-clé d'adresse → quelques dizaines de résultats max
+        const rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/`
+          + `?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(keyWord)}`;
+        const r = await fetch(rncUrl);
+        if (r.ok) {
+          const d = await r.json();
+          if (d.data?.length) {
+            // Trouver la copropriété la plus proche par coordonnées GPS (lat/long dispo dans RNIC)
+            let best = null, bestDist = Infinity;
+            for (const e of d.data) {
+              if (e.lat != null && e.long != null) {
+                const dx = e.long - lng, dy = e.lat - lat;
+                const dist = dx*dx + dy*dy;
+                if (dist < bestDist) { bestDist = dist; best = e; }
+              }
+            }
+            // Seuil ~300m (0.003°) pour éviter les faux positifs
+            if (best && bestDist < 0.000009) rncData = best;
+          }
         }
       }
     } catch(e) {}
