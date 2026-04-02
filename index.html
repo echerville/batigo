@@ -558,7 +558,7 @@ async function loadDPE(feature) {
   const banId = p.id||'', citycode = p.citycode||'';
   const housenumber = p.housenumber||'', street = p.street||p.name||'';
   try {
-    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban';
+    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction';
     // Filtre prioritaire : identifiant_ban exact (1 adresse précise)
     // Fallback : texte adresse + code insee si pas de ban ID
     let url1 = `https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL}&sort=-date_reception_dpe`;
@@ -606,6 +606,15 @@ function renderDPE(results) {
   const distHtml=ORDER.map(note=>{const n=groups[note].length;if(!n)return'';return`<div class="dpe-dist-item"><span class="dpe-badge dpe-${note}">${note}</span><span class="count">${n}</span><span class="label">DPE</span></div>`;}).join('');
   const topCh=Object.entries(chauffageCount).sort((a,b)=>b[1]-a[1]);
   const chHtml=topCh.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:3px;"><span>${k}</span><span style="color:var(--text)">${v} DPE</span></div>`).join('');
+  // Année de construction : prendre la valeur la plus fréquente parmi les DPE
+  const constrCount={};
+  results.forEach(r=>{
+    const yr=r['annee_construction']||r['periode_construction']||'';
+    if(yr) constrCount[yr]=(constrCount[yr]||0)+1;
+  });
+  const topConstr=Object.entries(constrCount).sort((a,b)=>b[1]-a[1]);
+  const constrVal=topConstr.length?topConstr[0][0]:null;
+  const constrHtml=constrVal?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">Construction</span><span style="font-size:13px;font-weight:700;color:var(--text)">${constrVal}</span></div>`:'';
   let tableHtml='';
   ORDER.forEach(note=>{
     const rows=groups[note];if(!rows.length)return;
@@ -617,7 +626,7 @@ function renderDPE(results) {
       tableHtml+=`<tr><td><span class="dpe-badge dpe-${note}">${note}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
     });
   });
-  el.innerHTML=`<div class="dpe-summary"><div class="dpe-summary-title">Distribution — ${results.length} DPE</div><div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${tableHtml}</tbody></table>`;
+  el.innerHTML=`<div class="dpe-summary"><div class="dpe-summary-title">Distribution — ${results.length} DPE</div><div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}${constrHtml}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${tableHtml}</tbody></table>`;
 }
 
 function shortEnergie(val) {
