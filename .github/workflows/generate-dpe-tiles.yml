@@ -79,5 +79,6 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: generate DPE PMTiles Loire-Atlantique ($(date +%Y-%m-%d))"
+            git pull --rebase origin main
             git push
           fi
