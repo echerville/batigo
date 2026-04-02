@@ -390,7 +390,7 @@ function renderSuggestions(features) {
 }
 function hideSuggestions() { document.getElementById('suggestions').innerHTML=''; }
 
-function selectAddress(feature) {
+function selectAddress(feature, clickLng, clickLat) {
   const [lng,lat] = feature.geometry.coordinates;
   const label = feature.properties.label || '';
   document.getElementById('search-input').value = label;
@@ -399,7 +399,10 @@ function selectAddress(feature) {
   if (addrMarker) addrMarker.remove();
   const el = document.createElement('div'); el.className='addr-marker';
   addrMarker = new maplibregl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
-  loadBatiment(lat, lng, label, feature);
+  // Utilise les coordonnées exactes du clic pour le cadastre si disponibles
+  const cadLng = clickLng !== undefined ? clickLng : lng;
+  const cadLat = clickLat !== undefined ? clickLat : lat;
+  loadBatiment(cadLat, cadLng, label, feature);
   loadDPE(feature);
 }
 
@@ -627,7 +630,8 @@ async function reverseGeocode(lng, lat) {
     const d = await r.json();
     const feature = d.features?.[0];
     if (feature) {
-      selectAddress(feature);
+      // On passe les coordonnées exactes du clic pour le cadastre
+      selectAddress(feature, lng, lat);
     } else {
       setStatus('Aucune adresse trouvée ici', 'error');
       setTimeout(() => setStatus('Prêt'), 2000);
