@@ -245,7 +245,6 @@ let streetviewActive = null;
 // Identifiant BAN canonique fourni par BDNB (cle_interop_adr_principale_ban)
 // Partagé entre loadBatiment (producteur) et loadDPE (consommateur)
 let _canonicalBanId = null;
-let _pendingDPEApply = null; // retry après idle si tuiles pas encore rendues
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -325,14 +324,6 @@ map.on('load', () => {
   setStatus('Prêt');
 });
 
-// Retry applySelectedDPE une fois la carte stable (tuiles chargées après flyTo)
-map.on('idle', () => {
-  if (_pendingDPEApply) {
-    const p = _pendingDPEApply;
-    _pendingDPEApply = null;
-    applySelectedDPE(p.results, p.resultsNeufs, p.lng, p.lat);
-  }
-});
 
 document.querySelectorAll('.layer-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -705,7 +696,7 @@ function getBestDpeGrade(results, resultsNeufs) {
   return DPE_NUM_GRADE[Math.round(nums.reduce((a,b)=>a+b,0)/nums.length) - 1] || null;
 }
 
-function applySelectedDPE(results, resultsNeufs, lng, lat) {
+function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
   const selSrc = map.getSource('sel-dpe-src');
   const hatchSrc = map.getSource('neuf-hatch-src');
   if (!selSrc || !hatchSrc) return;
@@ -728,11 +719,10 @@ function applySelectedDPE(results, resultsNeufs, lng, lat) {
   if (!feats.length) feats = map.queryRenderedFeatures(
     [{x:pt.x-120,y:pt.y-120},{x:pt.x+120,y:pt.y+120}], {layers:['dpe-query']});
   if (!feats.length) {
-    // Tuiles pas encore rendues (flyTo en cours) → retry sur map idle
-    _pendingDPEApply = {results, resultsNeufs, lng, lat};
+    // Tuiles pas encore rendues → retry au prochain idle (max 4 tentatives)
+    if ((retry||0) < 4) map.once('idle', () => applySelectedDPE(results, resultsNeufs, lng, lat, (retry||0)+1));
     return;
   }
-  _pendingDPEApply = null;
 
   // Si plusieurs features dans le fallback large → prendre le plus proche
   let closestFeat = feats[0];
