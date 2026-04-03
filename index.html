@@ -607,6 +607,11 @@ function buildDVFCard(dvf) {
 
 function renderBatiment(bdnb, rnc, label, cad, ff) {
   const el = document.getElementById('batiment-data');
+  // L'adresse BDNB est toujours la référence canonique du bâtiment
+  const addrLabel = bdnb?.libelle_adr_principale_ban || label;
+  if (bdnb?.libelle_adr_principale_ban) {
+    document.getElementById('search-input').value = bdnb.libelle_adr_principale_ban;
+  }
   const na = v => v ? `<span class="field-value">${v}</span>` : `<span class="field-value na">Non renseigné</span>`;
   const v = val => (val!==null&&val!==undefined&&val!=='') ? val : null;
   const cadHtml = cad
@@ -618,11 +623,10 @@ function renderBatiment(bdnb, rnc, label, cad, ff) {
         </div>
        </div>` : '';
   el.innerHTML = `
-    <div class="card"><div class="card-title">Adresse</div><div class="field-value" style="font-size:13px;line-height:1.5;font-weight:500">${label}</div></div>
+    <div class="card"><div class="card-title">Adresse</div><div class="field-value" style="font-size:13px;line-height:1.5;font-weight:500">${addrLabel}</div></div>
     ${cadHtml}
     <div class="card">
       <div class="card-title">Bâtiment · BDNB</div>
-      ${bdnb?.libelle_adr_principale_ban ? `<div style="margin-bottom:8px;font-size:11px;color:var(--text-muted)">📍 <span style="color:var(--text-dim)">${bdnb.libelle_adr_principale_ban}</span></div>` : ''}
       <div class="info-grid" style="margin-bottom:6px">
         <div class="info-cell"><div class="field-label">Construction</div>${na(v(bdnb?.annee_construction))}</div>
         <div class="info-cell"><div class="field-label">Surface emprise</div>${na(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+'m²' : null)}</div>
