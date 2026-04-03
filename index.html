@@ -439,19 +439,9 @@ async function fetchCadastre(lat, lng) {
     const p = feat?.properties; if (!p) return null;
     return { section: p.section||'', numero: p.numero||'', idu: p.idu||'' };
   }
-  // Stratégie 1 : CQL_FILTER INTERSECTS — point exact, pas d'ambiguïté de parcelle
+  // BBOX ±0.0001° (~10m) — suffisant pour identifier la parcelle sous le curseur
   try {
-    const cql = `INTERSECTS(the_geom,POINT(${lng} ${lat}))`;
-    const r = await fetch(BASE + `&CQL_FILTER=${encodeURIComponent(cql)}`);
-    if (r.ok) {
-      const d = await r.json();
-      const res = parseParcel(d.features?.[0]);
-      if (res) return res;
-    }
-  } catch(e) {}
-  // Stratégie 2 : BBOX ±0.00005° (~5m) — fallback si CQL non supporté
-  try {
-    const d = 0.00005;
+    const d = 0.0001;
     const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
     const r = await fetch(BASE + `&BBOX=${bbox},EPSG:4326`);
     if (!r.ok) return null;
@@ -475,14 +465,7 @@ async function loadBatiment(lat, lng, label, feature) {
       const pool = logements.length ? logements : candidates;
       if (pool.length === 1) return pool[0];
       // Parmi le pool : le plus proche si coords dispo, sinon le plus grand
-      const withCoords = pool.filter(b => b.latitude_centre != null && b.longitude_centre != null);
-      if (withCoords.length) {
-        return withCoords.reduce((best, b) => {
-          const dx = b.longitude_centre - clickLng, dy = b.latitude_centre - clickLat;
-          const db = best.longitude_centre - clickLng, dby = best.latitude_centre - clickLat;
-          return (dx*dx+dy*dy) < (db*db+dby*dby) ? b : best;
-        });
-      }
+      // Pas de coords BDNB fiables — choisir le plus grand (surface emprise sol)
       return pool.reduce((best, b) => ((b.surface_emprise_sol||0) > (best.surface_emprise_sol||0) ? b : best));
     }
 
