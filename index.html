@@ -246,6 +246,7 @@ let streetviewActive = null;
 // Partagé entre loadBatiment (producteur) et loadDPE (consommateur)
 let _canonicalBanId = null;
 let _lastDPEApplyArgs = null; // stocké par loadDPE, consommé par le idle de selectAddress
+let _pmtilesDpeGrade = null;  // note DPE issue des tuiles PMTiles (ancienne norme)
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -420,7 +421,8 @@ function selectAddress(feature, clickLng, clickLat, bldGroupId) {
   const mLng = clickLng !== undefined ? clickLng : lng;
   const mLat = clickLat !== undefined ? clickLat : lat;
   currentCoords = [mLng, mLat];
-  _lastDPEApplyArgs = null; // reset avant chaque nouvelle adresse
+  _lastDPEApplyArgs = null;  // reset avant chaque nouvelle adresse
+  _pmtilesDpeGrade = null;
   map.flyTo({center:[mLng, mLat], zoom:18, speed:1.4});
   // Filet de sécurité : quand la carte est stable + tuiles chargées après flyTo,
   // on réessaie applySelectedDPE si loadDPE a déjà ses résultats
@@ -692,6 +694,20 @@ const DPE_GRADE_NUM = {A:1,B:2,C:3,D:4,E:5,F:6,G:7};
 const DPE_NUM_GRADE = ['A','B','C','D','E','F','G'];
 const DPE_HEX = {A:'#00a651',B:'#50b748',C:'#c8d400',D:'#ffd400',E:'#f7941d',F:'#ed1c24',G:'#8b0000'};
 
+function updateDpeBadgeArrow() {
+  const badge = document.getElementById('immeuble-dpe-badge');
+  if (!badge || !_pmtilesDpeGrade) return;
+  // Lire la note ADEME depuis la classe CSS du badge (dpe-A/B/C…)
+  const ademeClass = [...badge.classList].find(c => c.startsWith('dpe-') && c.length === 5);
+  const ademeGrade = ademeClass?.slice(4);
+  if (!ademeGrade || _pmtilesDpeGrade === ademeGrade) return;
+  badge.textContent = _pmtilesDpeGrade + '→' + ademeGrade;
+  badge.style.fontSize = '13px';
+  badge.style.width = 'auto';
+  badge.style.minWidth = '36px';
+  badge.style.padding = '0 5px';
+}
+
 function getBestDpeGrade(results, resultsNeufs) {
   // Priorité 1 : DPE immeuble collectif (note directe, pas de moyenne)
   const immeuble = (results||[]).find(r => r.methode_application_dpe === 'dpe immeuble collectif');
@@ -761,6 +777,13 @@ function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
     : [closestFeat];
   const selFeatures = allBatFeats.length ? allBatFeats : [closestFeat];
 
+  // Lire la note PMTiles (ancienne norme) depuis le feature
+  const pmGrade = closestFeat?.properties?.dpe || null;
+  if (pmGrade) {
+    _pmtilesDpeGrade = pmGrade;
+    // Si renderDPE a déjà tourné (recherche texte), mettre à jour le badge
+    updateDpeBadgeArrow();
+  }
   const grade = getBestDpeGrade(results, resultsNeufs);
   const color = DPE_HEX[grade] || '#aaaaaa';
   const isNeuf = resultsNeufs?.length > 0 && !(results?.length);
@@ -848,7 +871,7 @@ function renderDPE(results, resultsNeufs=[]) {
     const ecs = shortEnergie(r.type_energie_principale_ecs)+shortInstall(r.type_installation_ecs_n1);
     return `<div class="dpe-summary" style="border-left:3px solid ${DPE_HEX[note]||'#aaa'};padding-left:10px;">
       <div class="dpe-summary-title" style="display:flex;align-items:center;gap:8px;">
-        <span class="dpe-badge dpe-${note}" style="font-size:20px;width:36px;height:36px;line-height:36px;">${note}</span>
+        <span id="immeuble-dpe-badge" class="dpe-badge dpe-${note}" style="font-size:20px;width:36px;height:36px;line-height:36px;">${(_pmtilesDpeGrade && _pmtilesDpeGrade !== note) ? _pmtilesDpeGrade+'→'+note : note}</span>
         <span style="font-size:12px;font-weight:700;color:var(--text);">DPE du bâtiment</span>
         <span style="font-size:10px;color:var(--text-muted);margin-left:auto;">${link}</span>
       </div>
@@ -953,6 +976,7 @@ map.on('click',e=>{
       const c = turf.centroid(bldFeats[0]);
       [markerLng, markerLat] = c.geometry.coordinates;
       bldGroupId = bldFeats[0].properties?.id || null;
+      _pmtilesDpeGrade = bldFeats[0].properties?.dpe || null;
     } catch(_) {}
   }
   // Reverse geocode au centroïde si PMTiles trouvé (adresse du bâtiment, pas du portail)
