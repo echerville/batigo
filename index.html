@@ -230,6 +230,13 @@ const CADASTRE_SOURCE = {
 };
 
 // Enregistre le protocole PMTiles pour MapLibre
+const USAGE_LOGEMENT_KEYWORDS = ['résidentiel_individuel','résidentiel_collectif','résidentiel_mixte','résidentiel','habitation'];
+function isLogement(usage) {
+  if (!usage) return false;
+  const u = usage.toLowerCase();
+  return USAGE_LOGEMENT_KEYWORDS.some(k => u.includes(k));
+}
+
 const _pmtilesProtocol = new pmtiles.Protocol();
 maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
 
@@ -425,20 +432,31 @@ function selectAddress(feature, clickLng, clickLat) {
 }
 
 async function fetchCadastre(lat, lng) {
+  const BASE = `https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature`
+    + `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle`
+    + `&OUTPUTFORMAT=application/json&COUNT=1`;
+  function parseParcel(feat) {
+    const p = feat?.properties; if (!p) return null;
+    return { section: p.section||'', numero: p.numero||'', idu: p.idu||'' };
+  }
+  // Stratégie 1 : CQL_FILTER INTERSECTS — point exact, pas d'ambiguïté de parcelle
   try {
-    // WFS géoplateforme IGN — parcelle intersectant le point cliqué
-    const d = 0.0001; // ~10m de marge pour trouver la parcelle sous le curseur
+    const cql = `INTERSECTS(the_geom,POINT(${lng} ${lat}))`;
+    const r = await fetch(BASE + `&CQL_FILTER=${encodeURIComponent(cql)}`);
+    if (r.ok) {
+      const d = await r.json();
+      const res = parseParcel(d.features?.[0]);
+      if (res) return res;
+    }
+  } catch(e) {}
+  // Stratégie 2 : BBOX ±0.00005° (~5m) — fallback si CQL non supporté
+  try {
+    const d = 0.00005;
     const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
-    const url = `https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature`
-      + `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle`
-      + `&OUTPUTFORMAT=application/json&COUNT=1`
-      + `&BBOX=${bbox},EPSG:4326`;
-    const r = await fetch(url);
+    const r = await fetch(BASE + `&BBOX=${bbox},EPSG:4326`);
     if (!r.ok) return null;
     const d2 = await r.json();
-    const p = d2.features?.[0]?.properties;
-    if (!p) return null;
-    return { section: p.section || '', numero: p.numero || '', commune: p.nom_com || '', surface: p.contenance || null, idu: p.idu || '' };
+    return parseParcel(d2.features?.[0]);
   } catch(e) { return null; }
 }
 
@@ -449,11 +467,40 @@ async function loadBatiment(lat, lng, label, feature) {
   el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement BDNB…</div>';
   setStatus('Chargement bâtiment…','loading');
   try {
+    // Sélectionne le meilleur bâtiment parmi une liste de candidats BDNB
+    function pickBest(candidates, clickLat, clickLng) {
+      if (!candidates?.length) return null;
+      // Préférer les logements ; si aucun, garder tous
+      const logements = candidates.filter(b => isLogement(b.usage_principal_bdnb_open));
+      const pool = logements.length ? logements : candidates;
+      if (pool.length === 1) return pool[0];
+      // Parmi le pool : le plus proche si coords dispo, sinon le plus grand
+      const withCoords = pool.filter(b => b.latitude_centre != null && b.longitude_centre != null);
+      if (withCoords.length) {
+        return withCoords.reduce((best, b) => {
+          const dx = b.longitude_centre - clickLng, dy = b.latitude_centre - clickLat;
+          const db = best.longitude_centre - clickLng, dby = best.latitude_centre - clickLat;
+          return (dx*dx+dy*dy) < (db*db+dby*dby) ? b : best;
+        });
+      }
+      return pool.reduce((best, b) => ((b.surface_emprise_sol||0) > (best.surface_emprise_sol||0) ? b : best));
+    }
+
+    async function fetchBDNB(d) {
+      const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
+      const r = await fetch(`/api/bdnb?bbox=${encodeURIComponent(bbox)}`);
+      if (!r.ok) return [];
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    }
+
     let bdnbData = null;
     try {
-      const bbox = `${lng-0.0003},${lat-0.0003},${lng+0.0003},${lat+0.0003}`;
-      const r = await fetch(`/api/bdnb?bbox=${encodeURIComponent(bbox)}`);
-      if (r.ok) { const d=await r.json(); if(d?.length) bdnbData=d[0]; }
+      // Stratégie A : bbox ±0.0001° (~10m) — très précis
+      let candidates = await fetchBDNB(0.0001);
+      // Stratégie B : bbox ±0.0003° si A vide
+      if (!candidates.length) candidates = await fetchBDNB(0.0003);
+      bdnbData = pickBest(candidates, lat, lng);
     } catch(e) {}
 
     let rncData = null;
@@ -655,7 +702,8 @@ function renderDPE(results, resultsNeufs=[]) {
     rows.forEach(r=>{const yr=r['annee_construction']||r['periode_construction']||'';if(yr)constrCount[yr]=(constrCount[yr]||0)+1;});
     const topConstr=Object.entries(constrCount).sort((a,b)=>b[1]-a[1]);
     const constrVal=topConstr.length?topConstr[0][0]:null;
-    const constrHtml=constrVal?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">Construction</span><span style="font-size:13px;font-weight:700;color:var(--text)">${constrVal}</span></div>`:'';
+    const constrLabel=constrVal?(String(constrVal).includes('-')?'Période':'Année'):null;
+    const constrHtml=constrVal?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">${constrLabel}</span><span style="font-size:13px;font-weight:700;color:var(--text)">${constrVal}</span></div>`:'';
     // Tableau — max 10 lignes (1 bâtiment = potentiellement 1 DPE/logement)
     const TABLE_MAX = 10;
     let tableRows='', tableCount=0;
