@@ -409,11 +409,11 @@ function renderSuggestions(features) {
 }
 function hideSuggestions() { document.getElementById('suggestions').innerHTML=''; }
 
-function selectAddress(feature, clickLng, clickLat) {
+function selectAddress(feature, clickLng, clickLat, bldGroupId) {
   const [lng,lat] = feature.geometry.coordinates;
   const label = feature.properties.label || '';
   document.getElementById('search-input').value = label;
-  // Si clic carte : marqueur et centre sur le point exact du clic (sur le bâtiment)
+  // Si clic carte : marqueur au centroïde PMTiles (bldGroupId dispo) ou au point de clic
   // Si recherche texte : on utilise les coords BAN
   const mLng = clickLng !== undefined ? clickLng : lng;
   const mLat = clickLat !== undefined ? clickLat : lat;
@@ -422,9 +422,7 @@ function selectAddress(feature, clickLng, clickLat) {
   if (addrMarker) addrMarker.remove();
   const el = document.createElement('div'); el.className='addr-marker';
   addrMarker = new maplibregl.Marker({element:el}).setLngLat([mLng, mLat]).addTo(map);
-  const cadLng = mLng;
-  const cadLat = mLat;
-  loadBatiment(cadLat, cadLng, label, feature);
+  loadBatiment(mLat, mLng, label, feature, bldGroupId);
   loadDPE(feature, mLng, mLat);
 }
 
@@ -447,7 +445,7 @@ async function fetchCadastre(lat, lng) {
   } catch(e) { return null; }
 }
 
-async function loadBatiment(lat, lng, label, feature) {
+async function loadBatiment(lat, lng, label, feature, bldGroupId) {
   _canonicalBanId = null; // reset avant chaque nouveau chargement
   const el = document.getElementById('batiment-data');
   document.getElementById('empty-batiment').style.display = 'none';
@@ -458,12 +456,15 @@ async function loadBatiment(lat, lng, label, feature) {
     // Sélectionne le meilleur bâtiment parmi une liste de candidats BDNB
     function pickBest(candidates, clickLat, clickLng) {
       if (!candidates?.length) return null;
-      // Préférer les logements ; si aucun, garder tous
+      // Priorité absolue : match exact batiment_groupe_id depuis PMTiles
+      if (bldGroupId) {
+        const exact = candidates.find(b => b.batiment_groupe_id === bldGroupId);
+        if (exact) return exact;
+      }
+      // Fallback : préférer les logements, puis le plus grand
       const logements = candidates.filter(b => isLogement(b.usage_principal_bdnb_open));
       const pool = logements.length ? logements : candidates;
       if (pool.length === 1) return pool[0];
-      // Parmi le pool : le plus proche si coords dispo, sinon le plus grand
-      // Pas de coords BDNB fiables — choisir le plus grand (surface emprise sol)
       return pool.reduce((best, b) => ((b.surface_emprise_sol||0) > (best.surface_emprise_sol||0) ? b : best));
     }
 
@@ -564,16 +565,17 @@ async function loadBatiment(lat, lng, label, feature) {
         }
       }
     } catch(e) {}
-    // Fichiers Fonciers — via idu cadastre (apidf-preprod.cerema.fr)
-    let ffData = null;
-    if (cadastreData?.idu) {
+    // DVF géolocalisées — mutations par parcelle (CSV open-data, sans auth)
+    let dvfData = null;
+    const dvfIdu = bdnbUdu || cadastreData?.idu;
+    if (dvfIdu) {
       try {
-        const r = await fetch(`/api/ff?idpar=${encodeURIComponent(cadastreData.idu)}`);
-        if (r.ok) ffData = await r.json();
+        const r = await fetch(`/api/dvf?idpar=${encodeURIComponent(dvfIdu)}`);
+        if (r.ok) dvfData = await r.json();
       } catch(e) {}
     }
 
-    renderBatiment(bdnbData, rncData, label, cadastreData, ffData);
+    renderBatiment(bdnbData, rncData, label, cadastreData, dvfData);
     setStatus('Prêt');
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
@@ -581,26 +583,26 @@ async function loadBatiment(lat, lng, label, feature) {
   }
 }
 
-function buildFFCard(ff) {
-  const rows = ff?.results || (Array.isArray(ff) ? ff : []);
-  if (!rows.length) return '';
-  const TYPES = {'1':'Maison','2':'Appartement','3':'Dép. bâtie','4':'Dép. non bâtie'};
-  const counts = {}, surfaces = [];
-  const years = [];
-  for (const r of rows) {
-    const cat = TYPES[String(r.cconlc)] || 'Autre';
-    counts[cat] = (counts[cat]||0) + 1;
-    if (r.stoth) surfaces.push(parseFloat(r.stoth));
-    if (r.jannat) years.push(parseInt(r.jannat));
-  }
-  const totalSurf = surfaces.reduce((a,b)=>a+b, 0);
-  const year = years.length ? Math.round(years.reduce((a,b)=>a+b,0)/years.length) : null;
-  const typeHtml = Object.entries(counts).map(([k,v])=>
-    `<div class="info-cell"><div class="field-label">${k}</div><span class="field-value">${v}</span></div>`
-  ).join('');
-  const surfHtml = totalSurf > 0 ? `<div class="info-cell"><div class="field-label">Surface hab.</div><span class="field-value">${Math.round(totalSurf)} m²</span></div>` : '';
-  const yearHtml = year ? `<div class="info-cell"><div class="field-label">Année constr.</div><span class="field-value">${year}</span></div>` : '';
-  return `<div class="card"><div class="card-title">Fichiers Fonciers · FF</div><div class="info-grid">${typeHtml}${surfHtml}${yearHtml}</div></div>`;
+function buildDVFCard(dvf) {
+  if (!Array.isArray(dvf) || !dvf.length) return '';
+  const fmt = v => v ? new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v) : '—';
+  const rows = dvf.map(m => {
+    const types = m.types_locaux?.join(', ') || m.nature_mutation || '—';
+    const surf = m.surface_bati ? ` · ${Math.round(m.surface_bati)} m²` : '';
+    const pieces = m.nb_pieces ? ` · ${m.nb_pieces} p.` : '';
+    return `<tr>
+      <td style="color:var(--text-muted);font-size:11px">${m.date_mutation?.slice(0,7)||'—'}</td>
+      <td style="font-size:11px">${types}${surf}${pieces}</td>
+      <td style="font-weight:600;white-space:nowrap">${fmt(m.valeur_fonciere)}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="card">
+    <div class="card-title">Transactions · DVF</div>
+    <table class="dpe-table" style="width:100%">
+      <thead><tr><th>Date</th><th>Bien</th><th>Prix</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
 }
 
 function renderBatiment(bdnb, rnc, label, cad, ff) {
@@ -634,7 +636,7 @@ function renderBatiment(bdnb, rnc, label, cad, ff) {
       </div>
       ${!bdnb?'<p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Aucune donnée BDNB à cette adresse.</p>':''}
     </div>
-    ${buildFFCard(ff)}
+    ${buildDVFCard(ff)}
     <div class="card">
       <div class="card-title">Copropriété · RNIC</div>
       ${rnc ? `
@@ -897,26 +899,29 @@ map.on('click',e=>{
     [{x:pt.x-8,y:pt.y-8},{x:pt.x+8,y:pt.y+8}], {layers:['dpe-query']}
   );
   let markerLng = lng, markerLat = lat;
+  let bldGroupId = null;
   if (bldFeats.length) {
     try {
       const c = turf.centroid(bldFeats[0]);
       [markerLng, markerLat] = c.geometry.coordinates;
+      bldGroupId = bldFeats[0].properties?.id || null;
     } catch(_) {}
   }
-  // Reverse geocode au point de clic (adresse correcte) mais marqueur + requêtes au centroïde
-  reverseGeocode(lng, lat, markerLng, markerLat);
+  // Reverse geocode au centroïde si PMTiles trouvé (adresse du bâtiment, pas du portail)
+  // Sinon au point de clic (fallback)
+  const geocodeLng = bldFeats.length ? markerLng : lng;
+  const geocodeLat = bldFeats.length ? markerLat : lat;
+  reverseGeocode(geocodeLng, geocodeLat, markerLng, markerLat, bldGroupId);
 });
 
-async function reverseGeocode(lng, lat, markerLng, markerLat) {
+async function reverseGeocode(lng, lat, markerLng, markerLat, bldGroupId) {
   try {
     setStatus('Chargement adresse…','loading');
     const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lng}&lat=${lat}`);
     const d = await r.json();
     const feature = d.features?.[0];
     if (feature) {
-      // Reverse geocode au point de clic → propriétés BAN correctes (housenumber, citycode…)
-      // Marqueur + requêtes spatiales au centroïde bâtiment si disponible
-      selectAddress(feature, markerLng ?? lng, markerLat ?? lat);
+      selectAddress(feature, markerLng ?? lng, markerLat ?? lat, bldGroupId);
     } else {
       setStatus('Aucune adresse trouvée ici', 'error');
       setTimeout(() => setStatus('Prêt'), 2000);
