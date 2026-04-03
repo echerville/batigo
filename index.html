@@ -54,6 +54,8 @@
   .bar-group--base   .layer-btn  {background:#a8d8b0}  /* vert sauge */
   .bar-group--layers .layer-toggle{background:#fde89a} /* jaune paille */
   .bar-group--sv     .layer-toggle{background:#fbc99a} /* saumon */
+  .bar-group--mode   .mode-btn    {background:#b3d9f5} /* bleu clair */
+  .bar-group--mode   .mode-btn.active{filter:brightness(.72) saturate(1.2);color:#fff;font-weight:700}
   #btn-measure-poly                {background:#c9b3f0} /* violet pastel */
   #layer-bar button:hover{opacity:.85}
   /* Actif : assombri + gras */
@@ -166,6 +168,13 @@
           <button class="layer-toggle" id="toggle-gsv">Street View</button>
         </div>
       </div>
+      <!-- Mode clic -->
+      <div class="bar-group bar-group--mode">
+        <div class="bar-col">
+          <button class="mode-btn active" id="mode-v2" title="Système actuel : BDNB cascade, RNIC cadastre, DPE immeuble, couleur ADEME">V2 · Précis</button>
+          <button class="mode-btn" id="mode-v1" title="Ancien système : BDNB simple, RNIC GPS, DPE basique">V1 · Simple</button>
+        </div>
+      </div>
     </div>
     <div id="map"></div>
     <div id="measure-result"></div>
@@ -242,6 +251,7 @@ maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
 let currentLayer = 'voyager', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
 let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
 let streetviewActive = null;
+let clickMode = 'v2'; // 'v1' = ancien système simple | 'v2' = système actuel précis
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -360,6 +370,17 @@ function closeStreetview() {
   document.getElementById('toggle-gsv').classList.remove('on');
 }
 
+document.getElementById('mode-v2').addEventListener('click', function() {
+  clickMode = 'v2';
+  document.getElementById('mode-v2').classList.add('active');
+  document.getElementById('mode-v1').classList.remove('active');
+});
+document.getElementById('mode-v1').addEventListener('click', function() {
+  clickMode = 'v1';
+  document.getElementById('mode-v1').classList.add('active');
+  document.getElementById('mode-v2').classList.remove('active');
+});
+
 document.getElementById('toggle-gsv').addEventListener('click', function() {
   if (streetviewActive === 'gsv') { closeStreetview(); return; }
   if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
@@ -421,8 +442,13 @@ function selectAddress(feature, clickLng, clickLat) {
   addrMarker = new maplibregl.Marker({element:el}).setLngLat([mLng, mLat]).addTo(map);
   const cadLng = mLng;
   const cadLat = mLat;
-  loadBatiment(cadLat, cadLng, label, feature);
-  loadDPE(feature, mLng, mLat);
+  if (clickMode === 'v1') {
+    loadBatimentV1(cadLat, cadLng, label, feature);
+    loadDPEV1(feature, mLng, mLat);
+  } else {
+    loadBatiment(cadLat, cadLng, label, feature);
+    loadDPE(feature, mLng, mLat);
+  }
 }
 
 async function fetchCadastre(lat, lng) {
@@ -721,6 +747,83 @@ async function loadDPE(feature, clickLng, clickLat) {
     applySelectedDPE(results, resultsNeufs, clickLng ?? currentCoords?.[0], clickLat ?? currentCoords?.[1]);
   } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
 }
+
+// ── V1 : ancien système simple ──────────────────────────────────────────────
+
+async function loadBatimentV1(lat, lng, label, feature) {
+  const el = document.getElementById('batiment-data');
+  document.getElementById('empty-batiment').style.display = 'none';
+  el.style.display = 'block';
+  el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement BDNB…</div>';
+  setStatus('Chargement bâtiment…','loading');
+  try {
+    // BDNB : bbox fixe ±0.0003°, premier résultat sans filtrage
+    let bdnbData = null;
+    try {
+      const bbox = `${lng-0.0003},${lat-0.0003},${lng+0.0003},${lat+0.0003}`;
+      const r = await fetch(`/api/bdnb?bbox=${encodeURIComponent(bbox)}`);
+      if (r.ok) { const d = await r.json(); if (Array.isArray(d) && d.length) bdnbData = d[0]; }
+    } catch(e) {}
+
+    // RNIC : mot-clé de rue + proximité GPS seuil 300m (ancien comportement)
+    let rncData = null;
+    try {
+      const cc = feature?.properties?.citycode||'';
+      const street = (feature?.properties?.street||feature?.properties?.name||'').trim();
+      if (cc && street) {
+        const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
+        const words = street.split(/\s+/);
+        const keyWord = words.find(w => w.length >= 4 && !SKIP.test(w)) || words[words.length-1];
+        const rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/`
+          + `?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(keyWord)}`;
+        const r = await fetch(rncUrl);
+        if (r.ok) {
+          const d = await r.json();
+          if (d.data?.length) {
+            let best = null, bestDist = Infinity;
+            for (const e of d.data) {
+              if (e.lat != null && e.long != null) {
+                const dx = e.long - lng, dy = e.lat - lat;
+                const dist = dx*dx + dy*dy;
+                if (dist < bestDist) { bestDist = dist; best = e; }
+              }
+            }
+            if (best && bestDist < 0.000009) rncData = best;
+          }
+        }
+      }
+    } catch(e) {}
+
+    const cadastreData = await fetchCadastre(lat, lng);
+    renderBatiment(bdnbData, rncData, label, cadastreData);
+    setStatus('Prêt');
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
+    setStatus('Erreur','error');
+  }
+}
+
+async function loadDPEV1(feature, clickLng, clickLat) {
+  const el = document.getElementById('dpe-data');
+  document.getElementById('empty-dpe').style.display = 'none';
+  el.style.display = 'block';
+  el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement DPE ADEME…</div>';
+  const banId = feature?.properties?.id||'';
+  // Effacer la couleur ADEME sur la carte (V1 = couleur BDNB uniquement)
+  map.getSource('sel-dpe-src')?.setData({type:'FeatureCollection',features:[]});
+  map.getSource('neuf-hatch-src')?.setData({type:'FeatureCollection',features:[]});
+  try {
+    let results = [];
+    if (banId) {
+      const SEL_V1 = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,annee_construction,periode_construction';
+      const r = await fetch(`https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL_V1}&sort=-date_reception_dpe&identifiant_ban_eq=${encodeURIComponent(banId)}`);
+      if (r.ok) { const d = await r.json(); results = d.results||[]; }
+    }
+    renderDPE(results, []);
+  } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
+}
+
+// ── Fin V1 ──────────────────────────────────────────────────────────────────
 
 function renderDPE(results, resultsNeufs=[]) {
   const el = document.getElementById('dpe-data');
