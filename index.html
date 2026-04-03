@@ -245,6 +245,7 @@ let streetviewActive = null;
 // Identifiant BAN canonique fourni par BDNB (cle_interop_adr_principale_ban)
 // Partagé entre loadBatiment (producteur) et loadDPE (consommateur)
 let _canonicalBanId = null;
+let _pendingDPEApply = null; // retry après idle si tuiles pas encore rendues
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -322,6 +323,15 @@ map.on('load', () => {
   map.addLayer({id:'measure-fill',type:'fill',source:'measure-src',paint:{'fill-color':'#e06090','fill-opacity':0.12},filter:['==','$type','Polygon']});
   map.addLayer({id:'measure-line',type:'line',source:'measure-src',paint:{'line-color':'#e06090','line-width':2,'line-dasharray':[4,2]}});
   setStatus('Prêt');
+});
+
+// Retry applySelectedDPE une fois la carte stable (tuiles chargées après flyTo)
+map.on('idle', () => {
+  if (_pendingDPEApply) {
+    const p = _pendingDPEApply;
+    _pendingDPEApply = null;
+    applySelectedDPE(p.results, p.resultsNeufs, p.lng, p.lat);
+  }
 });
 
 document.querySelectorAll('.layer-btn').forEach(btn => {
@@ -713,7 +723,12 @@ function applySelectedDPE(results, resultsNeufs, lng, lat) {
   let feats = map.queryRenderedFeatures(pt, {layers:['dpe-query']});
   if (!feats.length) feats = map.queryRenderedFeatures(
     [{x:pt.x-14,y:pt.y-14},{x:pt.x+14,y:pt.y+14}], {layers:['dpe-query']});
-  if (!feats.length) return;
+  if (!feats.length) {
+    // Tuiles pas encore rendues (flyTo en cours) → retry sur map idle
+    _pendingDPEApply = {results, resultsNeufs, lng, lat};
+    return;
+  }
+  _pendingDPEApply = null;
 
   // Sélectionner TOUS les polygones du même bâtiment (batiment_groupe_id)
   const batId = feats[0].properties.id;
