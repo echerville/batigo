@@ -476,31 +476,50 @@ async function loadBatiment(lat, lng, label, feature) {
 
     let rncData = null;
     try {
-      const cc = feature?.properties?.citycode||'';          // ex: "44109"
+      const cc = feature?.properties?.citycode||'';
+      const hn = (feature?.properties?.housenumber||'').trim();
       const street = (feature?.properties?.street||feature?.properties?.name||'').trim();
-      if (cc && street) {
-        // Extraire un mot-clé significatif de la rue (ignorer préfixes génériques)
-        const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
-        const words = street.split(/\s+/);
-        const keyWord = words.find(w => w.length >= 4 && !SKIP.test(w)) || words[words.length-1];
-        // Filtrer par commune + mot-clé d'adresse → quelques dizaines de résultats max
-        const rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/`
-          + `?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(keyWord)}`;
-        const r = await fetch(rncUrl);
-        if (r.ok) {
-          const d = await r.json();
-          if (d.data?.length) {
-            // Trouver la copropriété la plus proche par coordonnées GPS (lat/long dispo dans RNIC)
-            let best = null, bestDist = Infinity;
-            for (const e of d.data) {
-              if (e.lat != null && e.long != null) {
-                const dx = e.long - lng, dy = e.lat - lat;
-                const dist = dx*dx + dy*dy;
-                if (dist < bestDist) { bestDist = dist; best = e; }
-              }
+      const RNC_BASE = 'https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/';
+
+      // Proximité GPS — retourne le candidat le plus proche si sous le seuil (en degrés²)
+      function rncClosest(data, maxDistSq) {
+        let best = null, bestDist = Infinity;
+        for (const e of data) {
+          if (e.lat != null && e.long != null) {
+            const dx = e.long - lng, dy = e.lat - lat;
+            const dist = dx*dx + dy*dy;
+            if (dist < bestDist) { bestDist = dist; best = e; }
+          }
+        }
+        return (best && bestDist < maxDistSq) ? best : null;
+      }
+
+      if (cc) {
+        // Stratégie 1 : numéro de voirie dans l'adresse RNIC (ex: "11 Rue…")
+        // Vérifie que l'adresse commence exactement par ce numéro (évite "111" matchant "11")
+        if (hn) {
+          const r1 = await fetch(`${RNC_BASE}?page_size=50&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(hn)}`);
+          if (r1.ok) {
+            const d1 = await r1.json();
+            const candidates = (d1.data||[]).filter(e => {
+              const addr = (e.adresse_de_reference||'').trim();
+              return addr === hn || addr.startsWith(hn+' ') || addr.startsWith(hn+',');
+            });
+            rncData = rncClosest(candidates, 0.000003); // ~150m
+          }
+        }
+
+        // Stratégie 2 (fallback) : mot-clé significatif de la rue — seuil GPS plus strict
+        if (!rncData && street) {
+          const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
+          const words = street.split(/\s+/);
+          const keyWord = words.find(w => w.length >= 4 && !SKIP.test(w)) || '';
+          if (keyWord) {
+            const r2 = await fetch(`${RNC_BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(keyWord)}`);
+            if (r2.ok) {
+              const d2 = await r2.json();
+              rncData = rncClosest(d2.data||[], 0.0000008); // ~80m, strict car moins précis
             }
-            // Seuil ~300m (0.003°) pour éviter les faux positifs
-            if (best && bestDist < 0.000009) rncData = best;
           }
         }
       }
