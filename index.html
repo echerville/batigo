@@ -284,6 +284,14 @@ map.on('load', () => {
     if((x+y)%hSz<2){hData[i]=255;hData[i+1]=255;hData[i+2]=255;hData[i+3]=170;}
   }
   map.addImage('hatch-pat',{width:hSz,height:hSz,data:hData});
+  // Couche de surcharge couleur ADEME sur le bâtiment sélectionné
+  map.addSource('sel-dpe-src',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'sel-dpe-fill',type:'fill',source:'sel-dpe-src',
+    paint:{'fill-color':['get','color'],'fill-opacity':0.82}
+  });
+  map.addLayer({id:'sel-dpe-line',type:'line',source:'sel-dpe-src',
+    paint:{'line-color':['get','color'],'line-width':2,'line-opacity':1}
+  });
   map.addSource('neuf-hatch-src',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'neuf-hatch-fill',type:'fill',source:'neuf-hatch-src',
     paint:{'fill-pattern':'hatch-pat'}
@@ -594,23 +602,48 @@ function formatUsage(val) {
   return val;
 }
 
-function applyNeufHatch(isNeuf, lng, lat) {
-  const src = map.getSource('neuf-hatch-src');
-  if (!src) return;
-  if (!isNeuf) { src.setData({type:'FeatureCollection',features:[]}); return; }
-  // Requête les features PMTiles au point cliqué (fonctionne si dpe-fill visible)
-  const pt = map.project([lng, lat]);
-  const feats = map.queryRenderedFeatures(pt, {layers:['dpe-fill']});
-  if (feats.length) {
-    src.setData({type:'FeatureCollection', features:[feats[0]]});
-  } else {
-    // DPE layer inactif : essai avec un rayon plus large
-    const feats2 = map.queryRenderedFeatures(
-      [{x:pt.x-12,y:pt.y-12},{x:pt.x+12,y:pt.y+12}],
-      {layers:['dpe-fill']}
-    );
-    src.setData({type:'FeatureCollection', features: feats2.length?[feats2[0]]:[]});
+const DPE_GRADE_NUM = {A:1,B:2,C:3,D:4,E:5,F:6,G:7};
+const DPE_NUM_GRADE = ['A','B','C','D','E','F','G'];
+const DPE_HEX = {A:'#00a651',B:'#50b748',C:'#c8d400',D:'#ffd400',E:'#f7941d',F:'#ed1c24',G:'#8b0000'};
+
+function avgDpeGrade(results, resultsNeufs) {
+  const all = [...(results||[]), ...(resultsNeufs||[])];
+  const nums = all.map(r => DPE_GRADE_NUM[r.etiquette_dpe]).filter(Boolean);
+  if (!nums.length) return null;
+  return DPE_NUM_GRADE[Math.round(nums.reduce((a,b)=>a+b,0)/nums.length) - 1] || null;
+}
+
+function applySelectedDPE(results, resultsNeufs, lng, lat) {
+  const selSrc = map.getSource('sel-dpe-src');
+  const hatchSrc = map.getSource('neuf-hatch-src');
+  if (!selSrc || !hatchSrc) return;
+
+  const hasAny = results?.length || resultsNeufs?.length;
+  if (!hasAny || lng == null || lat == null) {
+    selSrc.setData({type:'FeatureCollection',features:[]});
+    hatchSrc.setData({type:'FeatureCollection',features:[]});
+    return;
   }
+
+  // Récupérer le polygone du bâtiment au point cliqué
+  const pt = map.project([lng, lat]);
+  let feats = map.queryRenderedFeatures(pt, {layers:['dpe-fill']});
+  if (!feats.length) feats = map.queryRenderedFeatures(
+    [{x:pt.x-14,y:pt.y-14},{x:pt.x+14,y:pt.y+14}], {layers:['dpe-fill']});
+  if (!feats.length) return;
+
+  const geom = feats[0];
+  const grade = avgDpeGrade(results, resultsNeufs);
+  const color = DPE_HEX[grade] || '#aaaaaa';
+  const isNeuf = resultsNeufs?.length > 0 && !(results?.length);
+
+  // Surcharge couleur ADEME
+  selSrc.setData({type:'FeatureCollection', features:[{
+    ...geom, properties:{...geom.properties, color}
+  }]});
+
+  // Hachures uniquement si DPE neuf sans existant
+  hatchSrc.setData({type:'FeatureCollection', features: isNeuf ? [geom] : []});
 }
 
 async function loadDPE(feature, clickLng, clickLat) {
@@ -652,7 +685,7 @@ async function loadDPE(feature, clickLng, clickLat) {
       fetchDPEDataset('g3cgx7jb3cmys5voxz1mrm22', 50, false).catch(()=>[]),
     ]);
     renderDPE(results, resultsNeufs);
-    applyNeufHatch(resultsNeufs.length > 0, clickLng ?? currentCoords?.[0], clickLat ?? currentCoords?.[1]);
+    applySelectedDPE(results, resultsNeufs, clickLng ?? currentCoords?.[0], clickLat ?? currentCoords?.[1]);
   } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
 }
 
