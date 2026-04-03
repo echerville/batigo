@@ -606,7 +606,11 @@ const DPE_GRADE_NUM = {A:1,B:2,C:3,D:4,E:5,F:6,G:7};
 const DPE_NUM_GRADE = ['A','B','C','D','E','F','G'];
 const DPE_HEX = {A:'#00a651',B:'#50b748',C:'#c8d400',D:'#ffd400',E:'#f7941d',F:'#ed1c24',G:'#8b0000'};
 
-function avgDpeGrade(results, resultsNeufs) {
+function getBestDpeGrade(results, resultsNeufs) {
+  // Priorité 1 : DPE immeuble collectif (note directe, pas de moyenne)
+  const immeuble = (results||[]).find(r => r.methode_application_dpe === 'dpe immeuble collectif');
+  if (immeuble?.etiquette_dpe && DPE_GRADE_NUM[immeuble.etiquette_dpe]) return immeuble.etiquette_dpe;
+  // Priorité 2 : moyenne des DPE individuels
   const all = [...(results||[]), ...(resultsNeufs||[])];
   const nums = all.map(r => DPE_GRADE_NUM[r.etiquette_dpe]).filter(Boolean);
   if (!nums.length) return null;
@@ -633,7 +637,7 @@ function applySelectedDPE(results, resultsNeufs, lng, lat) {
   if (!feats.length) return;
 
   const geom = feats[0];
-  const grade = avgDpeGrade(results, resultsNeufs);
+  const grade = getBestDpeGrade(results, resultsNeufs);
   const color = DPE_HEX[grade] || '#aaaaaa';
   const isNeuf = resultsNeufs?.length > 0 && !(results?.length);
 
@@ -655,7 +659,7 @@ async function loadDPE(feature, clickLng, clickLat) {
   const banId = p.id||'', citycode = p.citycode||'';
   const housenumber = p.housenumber||'', street = p.street||p.name||'';
   try {
-    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction';
+    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,surface_habitable_immeuble,nombre_appartement,methode_application_dpe,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction';
 
     // Mot-clé significatif de la rue (ignore préfixes génériques)
     const SKIP_WORDS = /^(rue|avenue|boulevard|allée|allee|impasse|place|chemin|route|voie|passage|du|de|la|le|les|des|aux|au|d|l)$/i;
@@ -693,6 +697,41 @@ function renderDPE(results, resultsNeufs=[]) {
   const el = document.getElementById('dpe-data');
   if (!results.length && !resultsNeufs.length) { el.innerHTML=`<div class="empty-state"><div class="icon">◇</div><p>Aucun DPE disponible dans le registre ADEME.</p><p style="font-size:10px;margin-top:6px;color:var(--text-muted)">La couleur sur la carte provient du BDNB et peut correspondre à un DPE antérieur à 2021, non disponible en open data.</p></div>`; return; }
   const ORDER=['A','B','C','D','E','F','G'];
+
+  // Séparer DPE immeuble collectif des DPE logements individuels
+  const resultsImmeuble = results.filter(r => r.methode_application_dpe === 'dpe immeuble collectif');
+  const resultsLogements = results.filter(r => r.methode_application_dpe !== 'dpe immeuble collectif');
+
+  function buildImmeubleSection(rows) {
+    if (!rows.length) return '';
+    const r = rows[0]; // On prend le plus récent (déjà trié par date desc)
+    const note = ORDER.includes(r.etiquette_dpe) ? r.etiquette_dpe : 'N';
+    const surf = r.surface_habitable_immeuble ? Math.round(r.surface_habitable_immeuble)+'m²' : '—';
+    const nbLog = r.nombre_appartement ? r.nombre_appartement+' logements' : '';
+    const date = r.date_reception_dpe ? r.date_reception_dpe.substring(0,10) : '—';
+    const num = r.numero_dpe||'';
+    const link = num ? `<a href="https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;" title="Voir sur ADEME">↗</a>` : '';
+    const constrVal = r.annee_construction||r.periode_construction||null;
+    const constrLabel = constrVal ? (String(constrVal).includes('-')?'Période':'Année') : null;
+    const constrHtml = constrVal ? `<span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">${constrLabel}</span><span style="font-size:13px;font-weight:700;color:var(--text);margin-left:6px;">${constrVal}</span>` : '';
+    const ch = shortEnergie(r.type_energie_principale_chauffage)+shortInstall(r.type_installation_chauffage_n1);
+    const ecs = shortEnergie(r.type_energie_principale_ecs)+shortInstall(r.type_installation_ecs_n1);
+    return `<div class="dpe-summary" style="border-left:3px solid ${DPE_HEX[note]||'#aaa'};padding-left:10px;">
+      <div class="dpe-summary-title" style="display:flex;align-items:center;gap:8px;">
+        <span class="dpe-badge dpe-${note}" style="font-size:20px;width:36px;height:36px;line-height:36px;">${note}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text);">DPE du bâtiment</span>
+        <span style="font-size:10px;color:var(--text-muted);margin-left:auto;">${link}</span>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;">
+        ${surf!=='—'?`<div style="font-size:10px;color:var(--text-muted);">Surface<br><span style="font-size:13px;font-weight:700;color:var(--text);">${surf}</span></div>`:''}
+        ${nbLog?`<div style="font-size:10px;color:var(--text-muted);">Logements<br><span style="font-size:13px;font-weight:700;color:var(--text);">${nbLog}</span></div>`:''}
+        ${ch&&ch!=='—'?`<div style="font-size:10px;color:var(--text-muted);">Chauffage<br><span style="font-size:13px;font-weight:700;color:var(--text);">${ch}</span></div>`:''}
+        ${ecs&&ecs!=='—'?`<div style="font-size:10px;color:var(--text-muted);">ECS<br><span style="font-size:13px;font-weight:700;color:var(--text);">${ecs}</span></div>`:''}
+        ${constrVal?`<div style="font-size:10px;color:var(--text-muted);">${constrLabel}<br><span style="font-size:13px;font-weight:700;color:var(--text);">${constrVal}</span></div>`:''}
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Date diagnostic : ${date}${rows.length>1?' · '+rows.length+' DPE immeuble disponibles':''}</div>
+    </div>`;
+  }
 
   function buildSection(rows, hatch=false) {
     const h = hatch ? ' hatch' : '';
@@ -744,7 +783,8 @@ function renderDPE(results, resultsNeufs=[]) {
   }
 
   let out = '';
-  if (results.length) out += buildSection(results, false);
+  if (resultsImmeuble.length) out += buildImmeubleSection(resultsImmeuble);
+  if (resultsLogements.length) out += buildSection(resultsLogements, false);
   if (resultsNeufs.length) out += buildSection(resultsNeufs, true);
   el.innerHTML = out;
 }
