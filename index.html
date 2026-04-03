@@ -575,7 +575,7 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
       } catch(e) {}
     }
 
-    renderBatiment(bdnbData, rncData, label, cadastreData, dvfData);
+    renderBatiment(bdnbData, rncData, label, cadastreData, dvfData, bldGroupId);
     setStatus('Prêt');
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
@@ -605,11 +605,12 @@ function buildDVFCard(dvf) {
   </div>`;
 }
 
-function renderBatiment(bdnb, rnc, label, cad, ff) {
+function renderBatiment(bdnb, rnc, label, cad, ff, bldGroupId) {
   const el = document.getElementById('batiment-data');
-  // L'adresse BDNB est toujours la référence canonique du bâtiment
-  const addrLabel = bdnb?.libelle_adr_principale_ban || label;
-  if (bdnb?.libelle_adr_principale_ban) {
+  // N'écraser l'adresse avec BDNB que si le bâtiment a été identifié par clic carte (bldGroupId confirmé)
+  // Si recherche texte (bldGroupId null) : garder l'adresse tapée par l'utilisateur
+  const addrLabel = (bldGroupId && bdnb?.libelle_adr_principale_ban) ? bdnb.libelle_adr_principale_ban : label;
+  if (bldGroupId && bdnb?.libelle_adr_principale_ban) {
     document.getElementById('search-input').value = bdnb.libelle_adr_principale_ban;
   }
   const na = v => v ? `<span class="field-value">${v}</span>` : `<span class="field-value na">Non renseigné</span>`;
