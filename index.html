@@ -242,6 +242,9 @@ maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
 let currentLayer = 'voyager', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
 let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
 let streetviewActive = null;
+// Identifiant BAN canonique fourni par BDNB (cle_interop_adr_principale_ban)
+// Partagé entre loadBatiment (producteur) et loadDPE (consommateur)
+let _canonicalBanId = null;
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -445,6 +448,7 @@ async function fetchCadastre(lat, lng) {
 }
 
 async function loadBatiment(lat, lng, label, feature) {
+  _canonicalBanId = null; // reset avant chaque nouveau chargement
   const el = document.getElementById('batiment-data');
   document.getElementById('empty-batiment').style.display = 'none';
   el.style.display = 'block';
@@ -486,12 +490,23 @@ async function loadBatiment(lat, lng, label, feature) {
       cadastreData = cadRes;
     } catch(e) {}
 
+    // Extraire les identifiants canoniques BDNB et les partager avec loadDPE
+    _canonicalBanId = bdnbData?.cle_interop_adr_principale_ban || null;
+    // idu : BDNB en priorité (plus fiable), sinon WFS IGN
+    const bdnbUdu = Array.isArray(bdnbData?.l_parcelle_id) ? bdnbData.l_parcelle_id[0] : null;
+    if (bdnbUdu && !cadastreData) {
+      // Reconstruire les champs cadastre depuis l'idu BDNB (format: CCCCCSSSPPSNNNN)
+      cadastreData = { idu: bdnbUdu, section: bdnbUdu.slice(8,10), numero: bdnbUdu.slice(10) };
+    }
+
     let rncData = null;
     try {
       const cc = feature?.properties?.citycode||'';
       const hn = (feature?.properties?.housenumber||'').trim();
       const street = (feature?.properties?.street||feature?.properties?.name||'').trim();
       const RNC_BASE = 'https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/';
+      // idu : BDNB d'abord, sinon WFS cadastre
+      const rncUdu = bdnbUdu || cadastreData?.idu;
 
       // Proximité GPS — retourne le candidat le plus proche si sous le seuil (en degrés²)
       function rncClosest(data, maxDistSq) {
@@ -506,10 +521,10 @@ async function loadBatiment(lat, lng, label, feature) {
         return (best && bestDist < maxDistSq) ? best : null;
       }
 
-      // Stratégie 1 : référence cadastrale exacte (idu IGN = reference_cadastrale RNIC)
-      // Match parfait, zéro faux positif — fonctionne quand RNIC a la parcelle renseignée
-      const idu = cadastreData?.idu;
-      if (idu) {
+      // Stratégie 1 : référence cadastrale exacte
+      // idu BDNB en priorité (l_parcelle_id), sinon WFS IGN — match parfait, zéro faux positif
+      if (rncUdu) {
+        const idu = rncUdu;
         const [ra, rb, rc] = await Promise.all([
           fetch(`${RNC_BASE}?page_size=5&reference_cadastrale_1__exact=${encodeURIComponent(idu)}`),
           fetch(`${RNC_BASE}?page_size=5&reference_cadastrale_2__exact=${encodeURIComponent(idu)}`),
@@ -605,11 +620,13 @@ function renderBatiment(bdnb, rnc, label, cad, ff) {
     ${cadHtml}
     <div class="card">
       <div class="card-title">Bâtiment · BDNB</div>
-      <div class="info-grid" style="margin-bottom:10px">
+      ${bdnb?.libelle_adr_principale_ban ? `<div style="margin-bottom:8px;font-size:11px;color:var(--text-muted)">📍 <span style="color:var(--text-dim)">${bdnb.libelle_adr_principale_ban}</span></div>` : ''}
+      <div class="info-grid" style="margin-bottom:6px">
         <div class="info-cell"><div class="field-label">Construction</div>${na(v(bdnb?.annee_construction))}</div>
         <div class="info-cell"><div class="field-label">Surface emprise</div>${na(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+'m²' : null)}</div>
         <div class="info-cell"><div class="field-label">Logements</div>${na(v(bdnb?.nb_log))}</div>
         <div class="info-cell"><div class="field-label">Usage</div>${na(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
+        ${bdnb?.code_iris ? `<div class="info-cell"><div class="field-label">IRIS</div><span class="field-value" style="font-size:11px">${bdnb.code_iris}</span></div>` : ''}
       </div>
       <div class="info-grid">
         <div class="info-cell"><div class="field-label">Chauffage</div>${formatEnergie(bdnb?.type_energie_chauffage) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_chauffage)}</span>${formatInstall(bdnb?.type_installation_chauffage_n1)}` : `<span class="field-value na">Non renseigné</span>`}</div>
@@ -717,7 +734,8 @@ async function loadDPE(feature, clickLng, clickLat) {
   el.style.display = 'block';
   el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement DPE ADEME…</div>';
   const p = feature.properties;
-  const banId = p.id||'', citycode = p.citycode||'';
+  // Priorité : clé d'interopérabilité BDNB (lien bâtiment→BAN fiable) > BAN reverse geocode
+  const banId = _canonicalBanId || p.id||'', citycode = p.citycode||'';
   const housenumber = p.housenumber||'', street = p.street||p.name||'';
   try {
     const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,surface_habitable_immeuble,nombre_appartement,methode_application_dpe,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction';
@@ -872,18 +890,33 @@ map.on('click',e=>{
     updateMeasureGeom();
     return;
   }
-  reverseGeocode(e.lngLat.lng, e.lngLat.lat);
+  const {lng, lat} = e.lngLat;
+  // Chercher le polygone bâtiment sous le curseur → centroïde comme référence spatiale
+  const pt = map.project([lng, lat]);
+  const bldFeats = map.queryRenderedFeatures(
+    [{x:pt.x-8,y:pt.y-8},{x:pt.x+8,y:pt.y+8}], {layers:['dpe-query']}
+  );
+  let markerLng = lng, markerLat = lat;
+  if (bldFeats.length) {
+    try {
+      const c = turf.centroid(bldFeats[0]);
+      [markerLng, markerLat] = c.geometry.coordinates;
+    } catch(_) {}
+  }
+  // Reverse geocode au point de clic (adresse correcte) mais marqueur + requêtes au centroïde
+  reverseGeocode(lng, lat, markerLng, markerLat);
 });
 
-async function reverseGeocode(lng, lat) {
+async function reverseGeocode(lng, lat, markerLng, markerLat) {
   try {
     setStatus('Chargement adresse…','loading');
     const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lng}&lat=${lat}`);
     const d = await r.json();
     const feature = d.features?.[0];
     if (feature) {
-      // On passe les coordonnées exactes du clic pour le cadastre
-      selectAddress(feature, lng, lat);
+      // Reverse geocode au point de clic → propriétés BAN correctes (housenumber, citycode…)
+      // Marqueur + requêtes spatiales au centroïde bâtiment si disponible
+      selectAddress(feature, markerLng ?? lng, markerLat ?? lat);
     } else {
       setStatus('Aucune adresse trouvée ici', 'error');
       setTimeout(() => setStatus('Prêt'), 2000);
