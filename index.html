@@ -276,6 +276,12 @@ map.on('load', () => {
     layout:{visibility:'none'},
     paint:{'line-color':DPE_COLOR,'line-width':1,'line-opacity':0.85}
   });
+  // Layer transparent toujours actif — sert uniquement à queryRenderedFeatures
+  // pour récupérer les polygones bâtiments même quand le toggle DPE est OFF
+  map.addLayer({id:'dpe-query', type:'fill', source:'dpe-src', 'source-layer':'dpe',
+    minzoom: 13,
+    paint:{'fill-opacity':0}
+  });
   // Pattern hachuré pour DPE neufs
   const hSz=8, hData=new Uint8Array(hSz*hSz*4);
   for(let y=0;y<hSz;y++) for(let x=0;x<hSz;x++){
@@ -645,17 +651,18 @@ function applySelectedDPE(results, resultsNeufs, lng, lat) {
     return;
   }
 
-  // Récupérer le polygone du bâtiment au point cliqué
+  // Récupérer le polygone du bâtiment via dpe-query (toujours actif, opacité 0)
+  // → fonctionne que le toggle DPE soit ON ou OFF
   const pt = map.project([lng, lat]);
-  let feats = map.queryRenderedFeatures(pt, {layers:['dpe-fill']});
+  let feats = map.queryRenderedFeatures(pt, {layers:['dpe-query']});
   if (!feats.length) feats = map.queryRenderedFeatures(
-    [{x:pt.x-14,y:pt.y-14},{x:pt.x+14,y:pt.y+14}], {layers:['dpe-fill']});
+    [{x:pt.x-14,y:pt.y-14},{x:pt.x+14,y:pt.y+14}], {layers:['dpe-query']});
   if (!feats.length) return;
 
   // Sélectionner TOUS les polygones du même bâtiment (batiment_groupe_id)
   const batId = feats[0].properties.id;
   const allBatFeats = batId
-    ? map.queryRenderedFeatures({layers:['dpe-fill']}).filter(f => f.properties.id === batId)
+    ? map.queryRenderedFeatures({layers:['dpe-query']}).filter(f => f.properties.id === batId)
     : feats;
   const selFeatures = allBatFeats.length ? allBatFeats : feats;
 
