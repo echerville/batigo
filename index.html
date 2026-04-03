@@ -61,7 +61,7 @@
   #layer-bar .layer-toggle.on,
   #layer-bar .measure-btn.active{filter:brightness(.72) saturate(1.2);color:#fff;font-weight:700}
   #map{flex:1}
-  #panoramax-panel{height:280px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
+  #panoramax-panel{height:420px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
   #panoramax-panel iframe{width:100%;height:100%;border:none}
   #panoramax-close{position:absolute;top:10px;right:10px;width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background .15s}
@@ -164,7 +164,6 @@
       <div class="bar-group bar-group--sv">
         <div class="bar-col">
           <button class="layer-toggle" id="toggle-gsv">Street View</button>
-          <button class="layer-toggle" id="toggle-panoramax">Panoramax</button>
         </div>
       </div>
     </div>
@@ -342,43 +341,24 @@ document.getElementById('toggle-dpe-layer').addEventListener('click', function()
   document.getElementById('dpe-legend').style.display = dpeLayerOn ? 'block' : 'none';
 });
 
-function openStreetview(source, url) {
-  streetviewActive = source;
+function openStreetview(url) {
+  streetviewActive = 'gsv';
   document.getElementById('panoramax-iframe').src = url;
   document.getElementById('panoramax-panel').classList.add('visible');
-  document.getElementById('toggle-panoramax').classList.toggle('on', source === 'panoramax');
-  document.getElementById('toggle-gsv').classList.toggle('on', source === 'gsv');
+  document.getElementById('toggle-gsv').classList.add('on');
 }
 function closeStreetview() {
   streetviewActive = null;
   document.getElementById('panoramax-panel').classList.remove('visible');
   document.getElementById('panoramax-iframe').src = '';
-  document.getElementById('toggle-panoramax').classList.remove('on');
   document.getElementById('toggle-gsv').classList.remove('on');
 }
 
-document.getElementById('toggle-panoramax').addEventListener('click', async function() {
-  if (streetviewActive === 'panoramax') { closeStreetview(); return; }
-  if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
-  const [lng, lat] = currentCoords;
-  try {
-    const d = 0.001;
-    const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
-    const r = await fetch(`/api/panoramax?bbox=${encodeURIComponent(bbox)}`);
-    const pic = r.ok ? (await r.json())?.features?.[0]?.id : null;
-    const url = pic
-      ? `https://panoramax.ign.fr/#focus=pic&pic=${pic}&map=17/${lat}/${lng}`
-      : `https://panoramax.ign.fr/#map=17/${lat}/${lng}`;
-    openStreetview('panoramax', url);
-  } catch(e) {
-    openStreetview('panoramax', `https://panoramax.ign.fr/#map=17/${lat}/${lng}`);
-  }
-});
 document.getElementById('toggle-gsv').addEventListener('click', function() {
   if (streetviewActive === 'gsv') { closeStreetview(); return; }
   if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
   const [lng, lat] = currentCoords;
-  openStreetview('gsv', `https://www.google.com/maps?layer=c&cbll=${lat},${lng}&cbp=12,0,0,0,0&output=svembed`);
+  openStreetview(`https://www.google.com/maps?layer=c&cbll=${lat},${lng}&cbp=12,0,0,0,0&output=svembed`);
 });
 document.getElementById('panoramax-close').addEventListener('click', closeStreetview);
 
