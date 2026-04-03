@@ -636,18 +636,24 @@ function applySelectedDPE(results, resultsNeufs, lng, lat) {
     [{x:pt.x-14,y:pt.y-14},{x:pt.x+14,y:pt.y+14}], {layers:['dpe-fill']});
   if (!feats.length) return;
 
-  const geom = feats[0];
+  // Sélectionner TOUS les polygones du même bâtiment (batiment_groupe_id)
+  const batId = feats[0].properties.id;
+  const allBatFeats = batId
+    ? map.queryRenderedFeatures({layers:['dpe-fill']}).filter(f => f.properties.id === batId)
+    : feats;
+  const selFeatures = allBatFeats.length ? allBatFeats : feats;
+
   const grade = getBestDpeGrade(results, resultsNeufs);
   const color = DPE_HEX[grade] || '#aaaaaa';
   const isNeuf = resultsNeufs?.length > 0 && !(results?.length);
 
-  // Surcharge couleur ADEME
-  selSrc.setData({type:'FeatureCollection', features:[{
-    ...geom, properties:{...geom.properties, color}
-  }]});
+  // Surcharge couleur ADEME sur tous les polygones du bâtiment
+  selSrc.setData({type:'FeatureCollection', features: selFeatures.map(f => ({
+    ...f, properties:{...f.properties, color}
+  }))});
 
   // Hachures uniquement si DPE neuf sans existant
-  hatchSrc.setData({type:'FeatureCollection', features: isNeuf ? [geom] : []});
+  hatchSrc.setData({type:'FeatureCollection', features: isNeuf ? selFeatures : []});
 }
 
 async function loadDPE(feature, clickLng, clickLat) {
