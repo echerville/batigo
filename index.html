@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Batigo</title>
+<title>BâtiGo</title>
 <link href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css" rel="stylesheet"/>
 <script src="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
@@ -54,8 +54,6 @@
   .bar-group--base   .layer-btn  {background:#a8d8b0}  /* vert sauge */
   .bar-group--layers .layer-toggle{background:#fde89a} /* jaune paille */
   .bar-group--sv     .layer-toggle{background:#fbc99a} /* saumon */
-  .bar-group--mode   .mode-btn    {background:#b3d9f5} /* bleu clair */
-  .bar-group--mode   .mode-btn.active{filter:brightness(.72) saturate(1.2);color:#fff;font-weight:700}
   #btn-measure-poly                {background:#c9b3f0} /* violet pastel */
   #layer-bar button:hover{opacity:.85}
   /* Actif : assombri + gras */
@@ -66,7 +64,7 @@
   #panoramax-panel{height:420px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
   #panoramax-panel iframe{width:100%;height:100%;border:none}
-  #panoramax-close{position:absolute;top:10px;right:10px;width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background .15s}
+  #panoramax-close{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background .15s}
   #panoramax-close:hover{background:rgba(255,255,255,.3)}
   #measure-result{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--radius);color:var(--accent-dark);font-family:inherit;font-size:13px;font-weight:700;padding:7px 20px;pointer-events:none;white-space:nowrap;display:none;z-index:50;box-shadow:var(--shadow-md)}
   .addr-marker{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2.5px solid #fff;box-shadow:0 0 0 3px rgba(43,181,115,.35),var(--shadow-sm)}
@@ -78,26 +76,26 @@
   #panel-content{flex:1;overflow-y:auto;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--border-med) transparent}
   #panel-content::-webkit-scrollbar{width:4px}
   #panel-content::-webkit-scrollbar-thumb{background:var(--border-med);border-radius:4px}
-  .panel-section{display:none;padding:14px}
+  .panel-section{display:none;padding:10px}
   .panel-section.active{display:block}
   .empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
   .empty-state .icon{font-size:36px;margin-bottom:12px;opacity:.5}
   .empty-state p{font-size:12px;line-height:1.7}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
-  .card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px;box-shadow:var(--shadow-sm)}
+  .card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
   .card-title::before{content:'';display:inline-block;width:3px;height:12px;background:var(--accent);border-radius:2px}
   .field-label{font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em}
-  .field-value{font-size:14px;color:var(--text);font-weight:600;line-height:1.3}
+  .field-value{font-size:13px;color:var(--text);font-weight:600;line-height:1.3}
   .field-value.na{color:var(--text-muted);font-style:italic;font-size:12px;font-weight:400}
-  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .info-cell{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .info-cell{background:var(--surface2);border-radius:var(--radius-sm);padding:7px 10px}
   .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid transparent}
   .pill-blue{background:rgba(59,130,246,.1);color:#2563eb;border-color:rgba(59,130,246,.25)}
   .dpe-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;margin-top:6px}
-  .dpe-table th{text-align:left;padding:6px 8px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:var(--surface2);border-bottom:1px solid var(--border)}
+  .dpe-table th{text-align:left;padding:4px 7px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);background:var(--surface2);border-bottom:1px solid var(--border)}
   .dpe-table th:first-child{border-radius:var(--radius-sm) 0 0 0}
   .dpe-table th:last-child{border-radius:0 var(--radius-sm) 0 0}
-  .dpe-table td{padding:7px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);vertical-align:middle;line-height:1.3}
+  .dpe-table td{padding:5px 7px;border-bottom:1px solid var(--border);color:var(--text-dim);vertical-align:middle;line-height:1.3}
   .dpe-table tr:last-child td{border-bottom:none}
   .dpe-table tr:hover td{background:var(--accent-dim);color:var(--text)}
   .dpe-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;font-weight:800;font-size:12px;border-radius:var(--radius-sm);color:#fff;flex-shrink:0}
@@ -108,8 +106,8 @@
   .dpe-neuf-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(80,183,72,.12);color:#2d7a26;border:1px solid rgba(80,183,72,.35);border-radius:20px;font-size:9px;font-weight:700;padding:2px 7px;letter-spacing:.04em}
   .dpe-group-header td{background:var(--surface2)!important;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);padding:5px 8px;border-top:2px solid var(--border-med)}
   .dpe-group-header .dpe-badge{width:18px;height:18px;font-size:10px;margin-right:6px;vertical-align:middle}
-  .dpe-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
-  .dpe-summary-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .dpe-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px;box-shadow:var(--shadow-sm)}
+  .dpe-summary-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px;display:flex;align-items:center;gap:6px}
   .dpe-summary-title::before{content:'';display:inline-block;width:3px;height:12px;background:var(--accent);border-radius:2px}
   .dpe-dist{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
   .dpe-dist-item{display:flex;align-items:center;gap:5px;background:var(--surface2);border-radius:var(--radius-sm);padding:4px 8px;border:1px solid var(--border)}
@@ -126,7 +124,7 @@
 </head>
 <body>
 <div id="header">
-  <div id="logo"><span class="logo-dot"></span>Bati<span>go</span></div>
+  <div id="logo"><span class="logo-dot"></span>Bâti<span>Go</span></div>
   <div id="search-wrap">
     <input id="search-input" type="text" placeholder="Saisir une adresse…" autocomplete="off"/>
     <button id="search-btn">⌕</button>
@@ -166,13 +164,6 @@
       <div class="bar-group bar-group--sv">
         <div class="bar-col">
           <button class="layer-toggle" id="toggle-gsv">Street View</button>
-        </div>
-      </div>
-      <!-- Mode clic -->
-      <div class="bar-group bar-group--mode">
-        <div class="bar-col">
-          <button class="mode-btn active" id="mode-v2" title="Système actuel : BDNB cascade, RNIC cadastre, DPE immeuble, couleur ADEME">V2 · Précis</button>
-          <button class="mode-btn" id="mode-v1" title="Ancien système : BDNB simple, RNIC GPS, DPE basique">V1 · Simple</button>
         </div>
       </div>
     </div>
@@ -251,7 +242,6 @@ maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
 let currentLayer = 'voyager', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
 let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
 let streetviewActive = null;
-let clickMode = 'v2'; // 'v1' = ancien système simple | 'v2' = système actuel précis
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -370,17 +360,6 @@ function closeStreetview() {
   document.getElementById('toggle-gsv').classList.remove('on');
 }
 
-document.getElementById('mode-v2').addEventListener('click', function() {
-  clickMode = 'v2';
-  document.getElementById('mode-v2').classList.add('active');
-  document.getElementById('mode-v1').classList.remove('active');
-});
-document.getElementById('mode-v1').addEventListener('click', function() {
-  clickMode = 'v1';
-  document.getElementById('mode-v1').classList.add('active');
-  document.getElementById('mode-v2').classList.remove('active');
-});
-
 document.getElementById('toggle-gsv').addEventListener('click', function() {
   if (streetviewActive === 'gsv') { closeStreetview(); return; }
   if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
@@ -442,13 +421,8 @@ function selectAddress(feature, clickLng, clickLat) {
   addrMarker = new maplibregl.Marker({element:el}).setLngLat([mLng, mLat]).addTo(map);
   const cadLng = mLng;
   const cadLat = mLat;
-  if (clickMode === 'v1') {
-    loadBatimentV1(cadLat, cadLng, label, feature);
-    loadDPEV1(feature, mLng, mLat);
-  } else {
-    loadBatiment(cadLat, cadLng, label, feature);
-    loadDPE(feature, mLng, mLat);
-  }
+  loadBatiment(cadLat, cadLng, label, feature);
+  loadDPE(feature, mLng, mLat);
 }
 
 async function fetchCadastre(lat, lng) {
@@ -575,7 +549,16 @@ async function loadBatiment(lat, lng, label, feature) {
         }
       }
     } catch(e) {}
-    renderBatiment(bdnbData, rncData, label, cadastreData);
+    // Fichiers Fonciers — via idu cadastre (apidf-preprod.cerema.fr)
+    let ffData = null;
+    if (cadastreData?.idu) {
+      try {
+        const r = await fetch(`/api/ff?idpar=${encodeURIComponent(cadastreData.idu)}`);
+        if (r.ok) ffData = await r.json();
+      } catch(e) {}
+    }
+
+    renderBatiment(bdnbData, rncData, label, cadastreData, ffData);
     setStatus('Prêt');
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
@@ -583,7 +566,29 @@ async function loadBatiment(lat, lng, label, feature) {
   }
 }
 
-function renderBatiment(bdnb, rnc, label, cad) {
+function buildFFCard(ff) {
+  const rows = ff?.results || (Array.isArray(ff) ? ff : []);
+  if (!rows.length) return '';
+  const TYPES = {'1':'Maison','2':'Appartement','3':'Dép. bâtie','4':'Dép. non bâtie'};
+  const counts = {}, surfaces = [];
+  const years = [];
+  for (const r of rows) {
+    const cat = TYPES[String(r.cconlc)] || 'Autre';
+    counts[cat] = (counts[cat]||0) + 1;
+    if (r.stoth) surfaces.push(parseFloat(r.stoth));
+    if (r.jannat) years.push(parseInt(r.jannat));
+  }
+  const totalSurf = surfaces.reduce((a,b)=>a+b, 0);
+  const year = years.length ? Math.round(years.reduce((a,b)=>a+b,0)/years.length) : null;
+  const typeHtml = Object.entries(counts).map(([k,v])=>
+    `<div class="info-cell"><div class="field-label">${k}</div><span class="field-value">${v}</span></div>`
+  ).join('');
+  const surfHtml = totalSurf > 0 ? `<div class="info-cell"><div class="field-label">Surface hab.</div><span class="field-value">${Math.round(totalSurf)} m²</span></div>` : '';
+  const yearHtml = year ? `<div class="info-cell"><div class="field-label">Année constr.</div><span class="field-value">${year}</span></div>` : '';
+  return `<div class="card"><div class="card-title">Fichiers Fonciers · FF</div><div class="info-grid">${typeHtml}${surfHtml}${yearHtml}</div></div>`;
+}
+
+function renderBatiment(bdnb, rnc, label, cad, ff) {
   const el = document.getElementById('batiment-data');
   const na = v => v ? `<span class="field-value">${v}</span>` : `<span class="field-value na">Non renseigné</span>`;
   const v = val => (val!==null&&val!==undefined&&val!=='') ? val : null;
@@ -612,6 +617,7 @@ function renderBatiment(bdnb, rnc, label, cad) {
       </div>
       ${!bdnb?'<p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Aucune donnée BDNB à cette adresse.</p>':''}
     </div>
+    ${buildFFCard(ff)}
     <div class="card">
       <div class="card-title">Copropriété · RNIC</div>
       ${rnc ? `
@@ -748,82 +754,6 @@ async function loadDPE(feature, clickLng, clickLat) {
   } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
 }
 
-// ── V1 : ancien système simple ──────────────────────────────────────────────
-
-async function loadBatimentV1(lat, lng, label, feature) {
-  const el = document.getElementById('batiment-data');
-  document.getElementById('empty-batiment').style.display = 'none';
-  el.style.display = 'block';
-  el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement BDNB…</div>';
-  setStatus('Chargement bâtiment…','loading');
-  try {
-    // BDNB : bbox fixe ±0.0003°, premier résultat sans filtrage
-    let bdnbData = null;
-    try {
-      const bbox = `${lng-0.0003},${lat-0.0003},${lng+0.0003},${lat+0.0003}`;
-      const r = await fetch(`/api/bdnb?bbox=${encodeURIComponent(bbox)}`);
-      if (r.ok) { const d = await r.json(); if (Array.isArray(d) && d.length) bdnbData = d[0]; }
-    } catch(e) {}
-
-    // RNIC : mot-clé de rue + proximité GPS seuil 300m (ancien comportement)
-    let rncData = null;
-    try {
-      const cc = feature?.properties?.citycode||'';
-      const street = (feature?.properties?.street||feature?.properties?.name||'').trim();
-      if (cc && street) {
-        const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
-        const words = street.split(/\s+/);
-        const keyWord = words.find(w => w.length >= 4 && !SKIP.test(w)) || words[words.length-1];
-        const rncUrl = `https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/`
-          + `?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(keyWord)}`;
-        const r = await fetch(rncUrl);
-        if (r.ok) {
-          const d = await r.json();
-          if (d.data?.length) {
-            let best = null, bestDist = Infinity;
-            for (const e of d.data) {
-              if (e.lat != null && e.long != null) {
-                const dx = e.long - lng, dy = e.lat - lat;
-                const dist = dx*dx + dy*dy;
-                if (dist < bestDist) { bestDist = dist; best = e; }
-              }
-            }
-            if (best && bestDist < 0.000009) rncData = best;
-          }
-        }
-      }
-    } catch(e) {}
-
-    const cadastreData = await fetchCadastre(lat, lng);
-    renderBatiment(bdnbData, rncData, label, cadastreData);
-    setStatus('Prêt');
-  } catch(e) {
-    el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
-    setStatus('Erreur','error');
-  }
-}
-
-async function loadDPEV1(feature, clickLng, clickLat) {
-  const el = document.getElementById('dpe-data');
-  document.getElementById('empty-dpe').style.display = 'none';
-  el.style.display = 'block';
-  el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement DPE ADEME…</div>';
-  const banId = feature?.properties?.id||'';
-  // Effacer la couleur ADEME sur la carte (V1 = couleur BDNB uniquement)
-  map.getSource('sel-dpe-src')?.setData({type:'FeatureCollection',features:[]});
-  map.getSource('neuf-hatch-src')?.setData({type:'FeatureCollection',features:[]});
-  try {
-    let results = [];
-    if (banId) {
-      const SEL_V1 = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,annee_construction,periode_construction';
-      const r = await fetch(`https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=100&select=${SEL_V1}&sort=-date_reception_dpe&identifiant_ban_eq=${encodeURIComponent(banId)}`);
-      if (r.ok) { const d = await r.json(); results = d.results||[]; }
-    }
-    renderDPE(results, []);
-  } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
-}
-
-// ── Fin V1 ──────────────────────────────────────────────────────────────────
 
 function renderDPE(results, resultsNeufs=[]) {
   const el = document.getElementById('dpe-data');
