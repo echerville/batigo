@@ -245,6 +245,7 @@ let streetviewActive = null;
 // Identifiant BAN canonique fourni par BDNB (cle_interop_adr_principale_ban)
 // Partagé entre loadBatiment (producteur) et loadDPE (consommateur)
 let _canonicalBanId = null;
+let _lastDPEApplyArgs = null; // stocké par loadDPE, consommé par le idle de selectAddress
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -419,7 +420,13 @@ function selectAddress(feature, clickLng, clickLat, bldGroupId) {
   const mLng = clickLng !== undefined ? clickLng : lng;
   const mLat = clickLat !== undefined ? clickLat : lat;
   currentCoords = [mLng, mLat];
+  _lastDPEApplyArgs = null; // reset avant chaque nouvelle adresse
   map.flyTo({center:[mLng, mLat], zoom:18, speed:1.4});
+  // Filet de sécurité : quand la carte est stable + tuiles chargées après flyTo,
+  // on réessaie applySelectedDPE si loadDPE a déjà ses résultats
+  map.once('idle', () => {
+    if (_lastDPEApplyArgs) applySelectedDPE(..._lastDPEApplyArgs);
+  });
   if (addrMarker) addrMarker.remove();
   const el = document.createElement('div'); el.className='addr-marker';
   addrMarker = new maplibregl.Marker({element:el}).setLngLat([mLng, mLat]).addTo(map);
@@ -715,11 +722,21 @@ function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
   if (!feats.length) feats = map.queryRenderedFeatures(
     [{x:pt.x-20,y:pt.y-20},{x:pt.x+20,y:pt.y+20}], {layers:['dpe-query']});
   // Fallback large : coords BAN souvent sur la rue hors du polygone bâtiment
-  // → scanner ~70m autour et prendre le plus proche géographiquement
   if (!feats.length) feats = map.queryRenderedFeatures(
     [{x:pt.x-120,y:pt.y-120},{x:pt.x+120,y:pt.y+120}], {layers:['dpe-query']});
+  // Dernier recours : tout le viewport, prendre le plus proche
+  if (!feats.length && map.getZoom() >= 13) {
+    const all = map.queryRenderedFeatures({layers:['dpe-query']});
+    if (all.length) feats = [all.reduce((best, f) => {
+      try {
+        const cc = turf.centroid(f).geometry.coordinates;
+        const cb = turf.centroid(best).geometry.coordinates;
+        return ((cc[0]-lng)**2+(cc[1]-lat)**2) < ((cb[0]-lng)**2+(cb[1]-lat)**2) ? f : best;
+      } catch(_) { return best; }
+    })];
+  }
   if (!feats.length) {
-    // Tuiles pas encore rendues → retry au prochain idle (max 4 tentatives)
+    // Tuiles pas encore rendues (zoom<13 ou flyTo en cours) → retry sur idle
     if ((retry||0) < 4) map.once('idle', () => applySelectedDPE(results, resultsNeufs, lng, lat, (retry||0)+1));
     return;
   }
@@ -797,7 +814,11 @@ async function loadDPE(feature, clickLng, clickLat) {
       fetchDPEDataset('g3cgx7jb3cmys5voxz1mrm22', 50, false).catch(()=>[]),
     ]);
     renderDPE(results, resultsNeufs);
-    applySelectedDPE(results, resultsNeufs, clickLng ?? currentCoords?.[0], clickLat ?? currentCoords?.[1]);
+    const _applyLng = clickLng ?? currentCoords?.[0];
+    const _applyLat = clickLat ?? currentCoords?.[1];
+    // Stocker pour le idle de selectAddress (filet si ADEME répond après idle)
+    _lastDPEApplyArgs = [results, resultsNeufs, _applyLng, _applyLat];
+    applySelectedDPE(results, resultsNeufs, _applyLng, _applyLat);
   } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
 }
 
