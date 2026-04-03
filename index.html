@@ -722,7 +722,11 @@ function applySelectedDPE(results, resultsNeufs, lng, lat) {
   const pt = map.project([lng, lat]);
   let feats = map.queryRenderedFeatures(pt, {layers:['dpe-query']});
   if (!feats.length) feats = map.queryRenderedFeatures(
-    [{x:pt.x-14,y:pt.y-14},{x:pt.x+14,y:pt.y+14}], {layers:['dpe-query']});
+    [{x:pt.x-20,y:pt.y-20},{x:pt.x+20,y:pt.y+20}], {layers:['dpe-query']});
+  // Fallback large : coords BAN souvent sur la rue hors du polygone bâtiment
+  // → scanner ~70m autour et prendre le plus proche géographiquement
+  if (!feats.length) feats = map.queryRenderedFeatures(
+    [{x:pt.x-120,y:pt.y-120},{x:pt.x+120,y:pt.y+120}], {layers:['dpe-query']});
   if (!feats.length) {
     // Tuiles pas encore rendues (flyTo en cours) → retry sur map idle
     _pendingDPEApply = {results, resultsNeufs, lng, lat};
@@ -730,12 +734,25 @@ function applySelectedDPE(results, resultsNeufs, lng, lat) {
   }
   _pendingDPEApply = null;
 
+  // Si plusieurs features dans le fallback large → prendre le plus proche
+  let closestFeat = feats[0];
+  if (feats.length > 1) {
+    let minDist = Infinity;
+    for (const f of feats) {
+      try {
+        const c = turf.centroid(f).geometry.coordinates;
+        const d = (c[0]-lng)**2 + (c[1]-lat)**2;
+        if (d < minDist) { minDist = d; closestFeat = f; }
+      } catch(_) {}
+    }
+  }
+
   // Sélectionner TOUS les polygones du même bâtiment (batiment_groupe_id)
-  const batId = feats[0].properties.id;
+  const batId = closestFeat.properties.id;
   const allBatFeats = batId
     ? map.queryRenderedFeatures({layers:['dpe-query']}).filter(f => f.properties.id === batId)
-    : feats;
-  const selFeatures = allBatFeats.length ? allBatFeats : feats;
+    : [closestFeat];
+  const selFeatures = allBatFeats.length ? allBatFeats : [closestFeat];
 
   const grade = getBestDpeGrade(results, resultsNeufs);
   const color = DPE_HEX[grade] || '#aaaaaa';
