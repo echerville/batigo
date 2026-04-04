@@ -816,7 +816,7 @@ async function loadDPE(feature, clickLng, clickLat) {
   const banId = _canonicalBanId || p.id||'', citycode = p.citycode||'';
   const housenumber = p.housenumber||'', street = p.street||p.name||'';
   try {
-    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,surface_habitable_immeuble,nombre_appartement,methode_application_dpe,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction,conso_5_usages_ep_m2';
+    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,surface_habitable_immeuble,nombre_appartement,methode_application_dpe,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction,conso_5_usages_par_m2_ep';
 
     // Mot-clé significatif de la rue (ignore préfixes génériques)
     const SKIP_WORDS = /^(rue|avenue|boulevard|allée|allee|impasse|place|chemin|route|voie|passage|du|de|la|le|les|des|aux|au|d|l)$/i;
@@ -905,7 +905,7 @@ function renderDPE(results, resultsNeufs=[]) {
     const ch = r['type_energie_principale_chauffage'] || '';
     const ecs = r['type_energie_principale_ecs'] || '';
     if (!ch.includes('Électricité') && !ecs.includes('Électricité')) return null;
-    const ep = parseFloat(r['conso_5_usages_ep_m2']);
+    const ep = parseFloat(r['conso_5_usages_par_m2_ep']);
     if (!ep || isNaN(ep) || ep <= 0) return null;
     // Le coefficient électricité est passé de 2.58 à 2.3 → on reconstitue l'ancienne conso ep
     const oldEp = ep * (2.58 / 2.3);
