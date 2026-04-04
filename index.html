@@ -269,7 +269,7 @@ map.on('load', () => {
   // Couche DPE bâtiments (PMTiles statique Loire-Atlantique)
   map.addSource('dpe-src', {
     type: 'vector',
-    url: `pmtiles://${location.origin}/dpe-44.pmtiles`
+    url: `pmtiles://${location.origin}/public/dpe-44.pmtiles`
   });
   map.addLayer({id:'dpe-fill', type:'fill', source:'dpe-src', 'source-layer':'dpe',
     minzoom: 13,
@@ -302,6 +302,14 @@ map.on('load', () => {
   map.addLayer({id:'sel-dpe-line',type:'line',source:'sel-dpe-src',
     paint:{'line-color':['get','color'],'line-width':2,'line-opacity':1}
   });
+  // Hachures sur tous les bâtiments neufs (neuf=1 dans PMTiles)
+  map.addLayer({id:'dpe-neuf-hatch', type:'fill', source:'dpe-src', 'source-layer':'dpe',
+    minzoom: 13,
+    layout:{visibility:'none'},
+    filter: ['==', ['get', 'neuf'], 1],
+    paint: {'fill-pattern': 'hatch-pat'}
+  });
+  // Source GeoJSON pour les hachures du bâtiment sélectionné (fallback)
   map.addSource('neuf-hatch-src',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'neuf-hatch-fill',type:'fill',source:'neuf-hatch-src',
     paint:{'fill-pattern':'hatch-pat'}
@@ -350,6 +358,7 @@ document.getElementById('toggle-dpe-layer').addEventListener('click', function()
   const vis = dpeLayerOn ? 'visible' : 'none';
   map.setLayoutProperty('dpe-fill', 'visibility', vis);
   map.setLayoutProperty('dpe-line', 'visibility', vis);
+  map.setLayoutProperty('dpe-neuf-hatch', 'visibility', vis);
   document.getElementById('dpe-legend').style.display = dpeLayerOn ? 'block' : 'none';
 });
 

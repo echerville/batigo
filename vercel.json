@@ -8,15 +8,12 @@
       ]
     },
     {
-      "source": "/(.+\\.pmtiles)",
+      "source": "/public/(.+\\.pmtiles)",
       "headers": [
         { "key": "Content-Type", "value": "application/x-protobuf" },
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Cache-Control", "value": "public, max-age=86400" }
       ]
     }
-  ],
-  "rewrites": [
-    { "source": "/dpe-44.pmtiles", "destination": "/public/dpe-44.pmtiles" }
   ]
 }
