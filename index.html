@@ -515,25 +515,26 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
       return Array.isArray(data) ? data : [];
     }
 
-    // BDNB d'abord pour obtenir l'IDU, puis cadastre avec IDU si dispo
+    // BDNB + cadastre en parallèle
     let bdnbData = null, cadastreData = null;
     try {
-      // Étape 1 : BDNB
-      let c = await fetchBDNB(0.0001).catch(() => []);
-      if (!c.length) c = await fetchBDNB(0.0003).catch(() => []);
-      bdnbData = pickBest(c, lat, lng);
+      const [bdnbRes, cadRes] = await Promise.all([
+        (async () => {
+          let c = await fetchBDNB(0.0001).catch(() => []);
+          if (!c.length) c = await fetchBDNB(0.0003).catch(() => []);
+          return pickBest(c, lat, lng);
+        })(),
+        fetchCadastre(lat, lng, null).catch(() => null)
+      ]);
+      bdnbData = bdnbRes;
+      cadastreData = cadRes;
     } catch(e) {}
 
     // Extraire les identifiants canoniques BDNB et les partager avec loadDPE
     _canonicalBanId = bdnbData?.cle_interop_adr_principale_ban || null;
     const bdnbUdu = Array.isArray(bdnbData?.l_parcelle_id) ? bdnbData.l_parcelle_id[0] : null;
 
-    // Étape 2 : cadastre avec IDU BDNB pour une résolution précise
-    try {
-      cadastreData = await fetchCadastre(lat, lng, bdnbUdu).catch(() => null);
-    } catch(e) {}
-
-    // Fallback : parser l'IDU BDNB directement si le WFS a échoué
+    // Si WFS a échoué, parser l'IDU BDNB directement (section uniquement)
     if (bdnbUdu && !cadastreData?.idu) {
       cadastreData = parseIdu(bdnbUdu);
     }
@@ -647,9 +648,8 @@ function renderBatiment(bdnb, rnc, label, cad, dvfIdu, bldGroupId) {
       <div style="flex:1;height:1px;background:var(--border)"></div>
       <div style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 8px;flex-shrink:0">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        <span style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase">Parcelle</span>
-        <span style="font-size:11px;font-weight:700;color:var(--text-dim);margin-left:2px">${cad.section||'—'} ${cad.numero||'—'}</span>
-        ${cad.idu ? `<span style="font-size:9.5px;color:var(--text-muted);margin-left:2px;font-family:monospace">${cad.idu}</span>` : ''}
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase">Section</span>
+        <span style="font-size:11px;font-weight:700;color:var(--text-dim);margin-left:2px">${cad.section||'—'}</span>
       </div>
       <div style="flex:1;height:1px;background:var(--border)"></div>
     </div>` : ''}
