@@ -104,6 +104,9 @@
   .dpe-neuf-header{display:flex;align-items:center;gap:7px;margin:14px 0 8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
   .dpe-neuf-header::before{content:'';display:inline-block;width:3px;height:12px;background:#50b748;border-radius:2px}
   .dpe-neuf-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(80,183,72,.12);color:#2d7a26;border:1px solid rgba(80,183,72,.35);border-radius:20px;font-size:9px;font-weight:700;padding:2px 7px;letter-spacing:.04em}
+  .dvf-accordion summary::-webkit-details-marker{display:none}
+  .dvf-accordion .dvf-chevron{transition:transform .2s}
+  .dvf-accordion[open] .dvf-chevron{transform:rotate(90deg)}
   .dpe-group-header td{background:var(--surface2)!important;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);padding:5px 8px;border-top:2px solid var(--border-med)}
   .dpe-group-header .dpe-badge{width:18px;height:18px;font-size:10px;margin-right:6px;vertical-align:middle}
   .dpe-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px;box-shadow:var(--shadow-sm)}
@@ -584,17 +587,9 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
         }
       }
     } catch(e) {}
-    // DVF géolocalisées — mutations par parcelle (CSV open-data, sans auth)
-    let dvfData = null;
+    // DVF : on ne précharge plus, le fetch se fait à la demande (accordéon)
     const dvfIdu = bdnbUdu || cadastreData?.idu;
-    if (dvfIdu) {
-      try {
-        const r = await fetch(`/api/dvf?idpar=${encodeURIComponent(dvfIdu)}`);
-        if (r.ok) dvfData = await r.json();
-      } catch(e) {}
-    }
-
-    renderBatiment(bdnbData, rncData, label, cadastreData, dvfData, bldGroupId);
+    renderBatiment(bdnbData, rncData, label, cadastreData, dvfIdu, bldGroupId);
     setStatus('Prêt');
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
@@ -602,29 +597,19 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
   }
 }
 
-function buildDVFCard(dvf) {
-  if (!Array.isArray(dvf) || !dvf.length) return '';
+function buildDVFTable(dvf) {
+  if (!Array.isArray(dvf) || !dvf.length) return '<div style="font-size:11px;color:var(--text-muted)">Aucune transaction trouvée sur cette parcelle</div>';
   const fmt = v => v ? new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v) : '—';
   const rows = dvf.map(m => {
     const types = m.types_locaux?.join(', ') || m.nature_mutation || '—';
     const surf = m.surface_bati ? ` · ${Math.round(m.surface_bati)} m²` : '';
     const pieces = m.nb_pieces ? ` · ${m.nb_pieces} p.` : '';
-    return `<tr>
-      <td style="color:var(--text-muted);font-size:11px">${m.date_mutation?.slice(0,7)||'—'}</td>
-      <td style="font-size:11px">${types}${surf}${pieces}</td>
-      <td style="font-weight:600;white-space:nowrap">${fmt(m.valeur_fonciere)}</td>
-    </tr>`;
+    return `<tr><td style="color:var(--text-muted);font-size:11px">${m.date_mutation?.slice(0,7)||'—'}</td><td style="font-size:11px">${types}${surf}${pieces}</td><td style="font-weight:600;white-space:nowrap">${fmt(m.valeur_fonciere)}</td></tr>`;
   }).join('');
-  return `<div class="card">
-    <div class="card-title">Transactions · DVF</div>
-    <table class="dpe-table" style="width:100%">
-      <thead><tr><th>Date</th><th>Bien</th><th>Prix</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
+  return `<table class="dpe-table" style="width:100%"><thead><tr><th>Date</th><th>Bien</th><th>Prix</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-function renderBatiment(bdnb, rnc, label, cad, ff, bldGroupId) {
+function renderBatiment(bdnb, rnc, label, cad, dvfIdu, bldGroupId) {
   const el = document.getElementById('batiment-data');
   // N'écraser l'adresse avec BDNB que si le bâtiment a été identifié par clic carte (bldGroupId confirmé)
   // Si recherche texte (bldGroupId null) : garder l'adresse tapée par l'utilisateur
@@ -660,7 +645,14 @@ function renderBatiment(bdnb, rnc, label, cad, ff, bldGroupId) {
       </div>
       ${!bdnb?'<p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Aucune donnée BDNB à cette adresse.</p>':''}
     </div>
-    ${buildDVFCard(ff)}
+    <details class="card dvf-accordion"${dvfIdu ? ` data-idu="${dvfIdu}"` : ''}>
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;margin-bottom:0">
+        <span style="display:inline-block;width:3px;height:12px;background:var(--accent);border-radius:2px;flex-shrink:0"></span>
+        <span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);flex:1">Transactions · DVF</span>
+        <span class="dvf-chevron" style="font-size:9px;color:var(--text-muted)">▶</span>
+      </summary>
+      <div class="dvf-content" style="margin-top:8px">${dvfIdu ? '' : '<div style="font-size:11px;color:var(--text-muted)">Parcelle non identifiée</div>'}</div>
+    </details>
     <div class="card">
       <div class="card-title">Copropriété · RNIC</div>
       ${rnc ? `
@@ -673,6 +665,23 @@ function renderBatiment(bdnb, rnc, label, cad, ff, bldGroupId) {
         <div class="info-cell"><div class="field-label">Période construction</div>${na(v(rnc.periode_de_construction))}</div>
       </div>` : `<p style="font-size:11px;color:var(--text-muted)">Aucune copropriété répertoriée au RNIC à cette adresse.</p>`}
     </div>`;
+  // Lazy-load DVF au premier dépliage de l'accordéon
+  const dvfDetails = el.querySelector('.dvf-accordion');
+  if (dvfDetails && dvfIdu) {
+    dvfDetails.addEventListener('toggle', async function handler() {
+      if (!this.open || this.dataset.loaded) return;
+      this.dataset.loaded = '1';
+      const content = this.querySelector('.dvf-content');
+      content.innerHTML = '<div style="text-align:center;padding:10px;color:var(--text-muted);font-size:11px"><span class="spinner"></span> Chargement…</div>';
+      try {
+        const r = await fetch(`/api/dvf?idpar=${encodeURIComponent(this.dataset.idu)}`);
+        const dvf = r.ok ? await r.json() : null;
+        content.innerHTML = buildDVFTable(dvf);
+      } catch(e) {
+        content.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Erreur de chargement</div>';
+      }
+    });
+  }
 }
 
 function formatInstall(val) {
