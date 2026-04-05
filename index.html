@@ -169,20 +169,6 @@
     </div>
     <div id="map"></div>
     <div id="measure-result"></div>
-    <div id="dpe-legend" style="display:none;position:absolute;bottom:44px;left:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:10px;z-index:50;box-shadow:var(--shadow-md);pointer-events:none">
-      <div style="font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;font-size:9px">Note DPE</div>
-      <div style="display:flex;gap:4px">
-        <span style="background:#00a651;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">A</span>
-        <span style="background:#50b748;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">B</span>
-        <span style="background:#c8d400;color:#333;padding:2px 5px;border-radius:3px;font-weight:700">C</span>
-        <span style="background:#ffd400;color:#333;padding:2px 5px;border-radius:3px;font-weight:700">D</span>
-        <span style="background:#f7941d;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">E</span>
-        <span style="background:#ed1c24;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">F</span>
-        <span style="background:#8b0000;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">G</span>
-        <span style="background:#aaaaaa;color:#fff;padding:2px 5px;border-radius:3px;font-weight:700">—</span>
-      </div>
-      <div style="color:var(--text-muted);margin-top:4px;font-size:9px">— = pas de DPE · zoom ≥ 15</div>
-    </div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
       <iframe id="panoramax-iframe" src="" allow="fullscreen; xr-spatial-tracking; geolocation" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
@@ -359,7 +345,6 @@ document.getElementById('toggle-dpe-layer').addEventListener('click', function()
   map.setLayoutProperty('dpe-fill', 'visibility', vis);
   map.setLayoutProperty('dpe-line', 'visibility', vis);
   map.setLayoutProperty('dpe-neuf-hatch', 'visibility', vis);
-  document.getElementById('dpe-legend').style.display = dpeLayerOn ? 'block' : 'none';
 });
 
 function openStreetview(url) {
@@ -616,23 +601,15 @@ function renderBatiment(bdnb, rnc, label, cad, dvfIdu, bldGroupId) {
   }
   const na = v => v ? `<span class="field-value">${v}</span>` : `<span class="field-value na">Non renseigné</span>`;
   const v = val => (val!==null&&val!==undefined&&val!=='') ? val : null;
-  const cadHtml = cad
-    ? `<div class="card" style="margin-top:0">
-        <div class="card-title">Cadastre</div>
-        <div class="info-grid">
-          <div class="info-cell"><div class="field-label">Section</div><span class="field-value">${cad.section || '—'}</span></div>
-          <div class="info-cell"><div class="field-label">Parcelle</div><span class="field-value">${cad.numero || '—'}</span></div>
-        </div>
-       </div>` : '';
   el.innerHTML = `
     <div class="addr-banner">
       <div class="addr-banner-pin">📍</div>
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="addr-banner-main">${addrLabel.split(',')[0]||addrLabel}</div>
         <div class="addr-banner-sub">${addrLabel.split(',').slice(1).join(',').trim()||''}</div>
       </div>
+      ${cad ? `<div style="text-align:right;flex-shrink:0;padding-left:10px"><div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:3px">Cadastre</div><div style="font-size:12px;font-weight:700;color:var(--text-dim)">${cad.section||'—'} · ${cad.numero||'—'}</div></div>` : ''}
     </div>
-    ${cadHtml}
     <div class="card">
       <div class="card-title">Bâtiment · BDNB</div>
       <div class="info-grid" style="margin-bottom:6px">
@@ -640,7 +617,6 @@ function renderBatiment(bdnb, rnc, label, cad, dvfIdu, bldGroupId) {
         <div class="info-cell"><div class="field-label">Surface emprise</div>${na(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+'m²' : null)}</div>
         <div class="info-cell"><div class="field-label">Logements</div>${na(v(bdnb?.nb_log))}</div>
         <div class="info-cell"><div class="field-label">Usage</div>${na(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
-        ${bdnb?.code_iris ? `<div class="info-cell"><div class="field-label">IRIS</div><span class="field-value" style="font-size:11px">${bdnb.code_iris}</span></div>` : ''}
       </div>
       <div class="info-grid">
         <div class="info-cell"><div class="field-label">Chauffage</div>${formatEnergie(bdnb?.type_energie_chauffage) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_chauffage)}</span>${formatInstall(bdnb?.type_installation_chauffage_n1)}` : `<span class="field-value na">Non renseigné</span>`}</div>
