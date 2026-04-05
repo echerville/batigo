@@ -430,23 +430,58 @@ function selectAddress(feature, clickLng, clickLat, bldGroupId) {
   loadDPE(feature, mLng, mLat);
 }
 
-async function fetchCadastre(lat, lng) {
+async function fetchCadastre(lat, lng, idu) {
   const BASE = `https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature`
     + `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle`
     + `&OUTPUTFORMAT=application/json&COUNT=1`;
   function parseParcel(feat) {
     const p = feat?.properties; if (!p) return null;
-    return { section: p.section||'', numero: p.numero||'', idu: p.idu||'' };
+    const sec = (p.section||'').replace(/^0+(?=[A-Z])/,'') || p.section || '';
+    const num = (p.numero||'').replace(/^0+/,'') || p.numero || '';
+    return { section: sec, numero: num, idu: p.idu||'' };
   }
-  // BBOX ±0.0001° (~10m) — suffisant pour identifier la parcelle sous le curseur
   try {
+    // Stratégie 1 : filtre exact sur IDU si disponible (précis, sans ambiguïté)
+    if (idu) {
+      const r = await fetch(BASE + `&CQL_FILTER=idu='${encodeURIComponent(idu)}'`);
+      if (r.ok) {
+        const d = await r.json();
+        const res = parseParcel(d.features?.[0]);
+        if (res?.idu) return res;
+      }
+    }
+    // Stratégie 2 : point géographique — filtre BBOX 20m + INTERSECTS
     const d = 0.0001;
     const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
-    const r = await fetch(BASE + `&BBOX=${bbox},EPSG:4326`);
-    if (!r.ok) return null;
-    const d2 = await r.json();
-    return parseParcel(d2.features?.[0]);
+    const r2 = await fetch(BASE + `&BBOX=${bbox},EPSG:4326`
+      + `&CQL_FILTER=INTERSECTS(geom,POINT(${lng} ${lat}))`);
+    if (r2.ok) {
+      const d2 = await r2.json();
+      const res = parseParcel(d2.features?.[0]);
+      if (res?.idu) return res;
+    }
+    // Stratégie 3 : BBOX seule (fallback)
+    const r3 = await fetch(BASE + `&BBOX=${bbox},EPSG:4326`);
+    if (!r3.ok) return null;
+    const d3 = await r3.json();
+    return parseParcel(d3.features?.[0]);
   } catch(e) { return null; }
+}
+
+// Parse un IDU cadastral pour en extraire section et numéro
+// Formats courants : CCCCCSSPPPPP (11 ch), CCCCCSSSPPPPP (12 ch, section avec préfixe 0)
+function parseIdu(idu) {
+  if (!idu || idu.length < 9) return null;
+  // Regex : commune(5) + préfixe optionnel + section (lettres) + numero (4-5 chiffres)
+  const m = idu.match(/^(\d{5})\d*([A-Z]{1,2})(\d{3,5})$/);
+  if (m) {
+    return { idu, section: m[2], numero: m[3].replace(/^0+/,'') || m[3] };
+  }
+  // Fallback générique : 4 derniers = numero, milieu = section
+  const numero = idu.slice(-4);
+  const middle = idu.slice(5, -4);
+  const section = middle.replace(/^0+(?=[A-Z])/,'') || middle;
+  return { idu, section, numero };
 }
 
 async function loadBatiment(lat, lng, label, feature, bldGroupId) {
@@ -480,28 +515,27 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
       return Array.isArray(data) ? data : [];
     }
 
-    // BDNB + cadastre en parallèle (indépendants)
+    // BDNB d'abord pour obtenir l'IDU, puis cadastre avec IDU si dispo
     let bdnbData = null, cadastreData = null;
     try {
-      const [bdnbRes, cadRes] = await Promise.all([
-        (async () => {
-          let c = await fetchBDNB(0.0001);
-          if (!c.length) c = await fetchBDNB(0.0003);
-          return pickBest(c, lat, lng);
-        })().catch(() => null),
-        fetchCadastre(lat, lng).catch(() => null)
-      ]);
-      bdnbData = bdnbRes;
-      cadastreData = cadRes;
+      // Étape 1 : BDNB
+      let c = await fetchBDNB(0.0001).catch(() => []);
+      if (!c.length) c = await fetchBDNB(0.0003).catch(() => []);
+      bdnbData = pickBest(c, lat, lng);
     } catch(e) {}
 
     // Extraire les identifiants canoniques BDNB et les partager avec loadDPE
     _canonicalBanId = bdnbData?.cle_interop_adr_principale_ban || null;
-    // idu : BDNB en priorité (plus fiable), sinon WFS IGN
     const bdnbUdu = Array.isArray(bdnbData?.l_parcelle_id) ? bdnbData.l_parcelle_id[0] : null;
-    if (bdnbUdu && !cadastreData) {
-      // Reconstruire les champs cadastre depuis l'idu BDNB (format: CCCCCSSSPPSNNNN)
-      cadastreData = { idu: bdnbUdu, section: bdnbUdu.slice(8,10), numero: bdnbUdu.slice(10) };
+
+    // Étape 2 : cadastre avec IDU BDNB pour une résolution précise
+    try {
+      cadastreData = await fetchCadastre(lat, lng, bdnbUdu).catch(() => null);
+    } catch(e) {}
+
+    // Fallback : parser l'IDU BDNB directement si le WFS a échoué
+    if (bdnbUdu && !cadastreData?.idu) {
+      cadastreData = parseIdu(bdnbUdu);
     }
 
     let rncData = null;
@@ -608,8 +642,17 @@ function renderBatiment(bdnb, rnc, label, cad, dvfIdu, bldGroupId) {
         <div class="addr-banner-main">${addrLabel.split(',')[0]||addrLabel}</div>
         <div class="addr-banner-sub">${addrLabel.split(',').slice(1).join(',').trim()||''}</div>
       </div>
-      ${cad ? `<div style="text-align:right;flex-shrink:0;padding-left:10px"><div style="font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:3px">Cadastre</div><div style="font-size:12px;font-weight:700;color:var(--text-dim)">${cad.section||'—'} · ${cad.numero||'—'}</div></div>` : ''}
     </div>
+    ${cad ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;margin-top:-4px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <div style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 8px;flex-shrink:0">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase">Parcelle</span>
+        <span style="font-size:11px;font-weight:700;color:var(--text-dim);margin-left:2px">${cad.section||'—'} ${cad.numero||'—'}</span>
+        ${cad.idu ? `<span style="font-size:9.5px;color:var(--text-muted);margin-left:2px;font-family:monospace">${cad.idu}</span>` : ''}
+      </div>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>` : ''}
     <div class="card">
       <div class="card-title">Bâtiment · BDNB</div>
       <div class="info-grid" style="margin-bottom:6px">
