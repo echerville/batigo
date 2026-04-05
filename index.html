@@ -71,15 +71,20 @@
   .addr-marker{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2.5px solid #fff;box-shadow:0 0 0 3px rgba(43,181,115,.35),var(--shadow-sm)}
   /* ── PANEL ── */
   #panel{width:var(--panel-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;box-shadow:-4px 0 20px rgba(15,28,46,0.05)}
-  #panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);padding:0 8px;gap:4px}
-  .panel-tab{flex:1;height:44px;background:none;border:none;border-bottom:2.5px solid transparent;color:var(--text-muted);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.01em}
-  .panel-tab:hover{color:var(--text-dim)}
-  .panel-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent)}
   #panel-content{flex:1;overflow-y:auto;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--border-med) transparent}
   #panel-content::-webkit-scrollbar{width:4px}
   #panel-content::-webkit-scrollbar-thumb{background:var(--border-med);border-radius:4px}
-  .panel-section{display:none;padding:12px}
-  .panel-section.active{display:block}
+  /* ── ENERGY TABLE ── */
+  .energy-table{display:flex;flex-direction:column;gap:5px}
+  .energy-row{display:grid;grid-template-columns:34px 1fr 1fr;gap:6px;align-items:start}
+  .energy-source{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);padding-top:4px;text-align:right}
+  .energy-cell{background:var(--surface2);border-radius:var(--radius-sm);padding:6px 8px;border:1px solid var(--border)}
+  .energy-cell .field-label{margin-bottom:2px}
+  .energy-cell .field-value{font-size:12px}
+  .energy-surf-row{grid-column:2/-1;background:var(--surface2);border-radius:var(--radius-sm);padding:5px 8px;border:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .source-pill{display:inline-flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;border-radius:4px;padding:1px 5px;flex-shrink:0}
+  .source-pill-bdnb{background:rgba(43,181,115,.12);color:var(--accent-dark)}
+  .source-pill-dpe{background:rgba(248,113,113,.12);color:#b91c1c}
   .empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
   .empty-state .icon{font-size:36px;margin-bottom:12px;opacity:.5}
   .empty-state p{font-size:12px;line-height:1.7}
@@ -175,18 +180,10 @@
     </div>
   </div>
   <div id="panel">
-    <div id="panel-tabs">
-      <button class="panel-tab active" data-tab="batiment">Bâtiment</button>
-      <button class="panel-tab" data-tab="dpe">DPE</button>
-    </div>
     <div id="panel-content">
-      <div class="panel-section active" id="tab-batiment">
+      <div style="padding:12px">
         <div class="empty-state" id="empty-batiment"><div class="icon">◈</div><p>Saisir une adresse<br>pour afficher les données bâtiment</p></div>
         <div id="batiment-data" style="display:none"></div>
-      </div>
-      <div class="panel-section" id="tab-dpe">
-        <div class="empty-state" id="empty-dpe"><div class="icon">◈</div><p>Saisir une adresse<br>pour afficher les DPE réalisés</p></div>
-        <div id="dpe-data" style="display:none"></div>
       </div>
     </div>
   </div>
@@ -233,6 +230,8 @@ let streetviewActive = null;
 let _canonicalBanId = null;
 let _lastDPEApplyArgs = null; // stocké par loadDPE, consommé par le idle de selectAddress
 let _pmtilesDpeGrade = null;  // note DPE issue des tuiles PMTiles (ancienne norme)
+let _dpeResultsReady = null;  // DPE arrivé avant le DOM batiment → appliqué par renderBatiment
+let _rncQueryParams = null;   // params pour le lazy-load copro
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -368,15 +367,6 @@ document.getElementById('toggle-gsv').addEventListener('click', function() {
 });
 document.getElementById('panoramax-close').addEventListener('click', closeStreetview);
 
-document.querySelectorAll('.panel-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const t = tab.dataset.tab;
-    document.querySelectorAll('.panel-tab').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tab-' + t).classList.add('active');
-  });
-});
 
 let suggestTimeout = null;
 document.getElementById('search-input').addEventListener('input', function() {
@@ -476,8 +466,51 @@ function parseIdu(idu) {
   return { idu, section, numero };
 }
 
+async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
+  const BASE = 'https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/';
+  function closest(data, maxDistSq) {
+    let best = null, bestDist = Infinity;
+    for (const e of data) {
+      if (e.lat != null && e.long != null) {
+        const d = (e.long-lng)**2 + (e.lat-lat)**2;
+        if (d < bestDist) { bestDist = d; best = e; }
+      }
+    }
+    return (best && bestDist < maxDistSq) ? best : null;
+  }
+  // Stratégie 1 : IDU cadastral exact
+  if (idu) {
+    const [ra, rb, rc] = await Promise.all([
+      fetch(`${BASE}?page_size=5&reference_cadastrale_1__exact=${encodeURIComponent(idu)}`),
+      fetch(`${BASE}?page_size=5&reference_cadastrale_2__exact=${encodeURIComponent(idu)}`),
+      fetch(`${BASE}?page_size=5&reference_cadastrale_3__exact=${encodeURIComponent(idu)}`),
+    ]);
+    for (const r of [ra, rb, rc]) {
+      if (r.ok) { const d = await r.json(); if (d.data?.length) return d.data[0]; }
+    }
+  }
+  if (!cc) return null;
+  // Stratégie 2 : numéro de voirie + GPS 150m
+  if (hn) {
+    const r = await fetch(`${BASE}?page_size=50&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(hn)}`);
+    if (r.ok) {
+      const d = await r.json();
+      const cands = (d.data||[]).filter(e => { const a=(e.adresse_de_reference||'').trim(); return a===hn||a.startsWith(hn+' ')||a.startsWith(hn+','); });
+      const res = closest(cands, 0.000003);
+      if (res) return res;
+    }
+  }
+  // Stratégie 3 : mot-clé rue + GPS 80m
+  if (streetKey) {
+    const r = await fetch(`${BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(streetKey)}`);
+    if (r.ok) { const d = await r.json(); return closest(d.data||[], 0.0000008); }
+  }
+  return null;
+}
+
 async function loadBatiment(lat, lng, label, feature, bldGroupId) {
-  _canonicalBanId = null; // reset avant chaque nouveau chargement
+  _canonicalBanId = null;
+  _dpeResultsReady = null; // reset pour la course ADEME vs BDNB
   const el = document.getElementById('batiment-data');
   document.getElementById('empty-batiment').style.display = 'none';
   el.style.display = 'block';
@@ -531,74 +564,16 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
       cadastreData = parseIdu(bdnbUdu);
     }
 
-    let rncData = null;
-    try {
-      const cc = feature?.properties?.citycode||'';
-      const hn = (feature?.properties?.housenumber||'').trim();
-      const street = (feature?.properties?.street||feature?.properties?.name||'').trim();
-      const RNC_BASE = 'https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/';
-      // idu : BDNB d'abord, sinon WFS cadastre
-      const rncUdu = bdnbUdu || cadastreData?.idu;
+    // Stocker les params RNIC pour le lazy-load de l'accordéon copropriété
+    const cc = feature?.properties?.citycode || '';
+    const hn = (feature?.properties?.housenumber || '').trim();
+    const street = (feature?.properties?.street || feature?.properties?.name || '').trim();
+    const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
+    const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP.test(w)) || '';
+    _rncQueryParams = (cc || bdnbUdu) ? { idu: bdnbUdu || cadastreData?.idu, cc, hn, streetKey, lat, lng } : null;
 
-      // Proximité GPS — retourne le candidat le plus proche si sous le seuil (en degrés²)
-      function rncClosest(data, maxDistSq) {
-        let best = null, bestDist = Infinity;
-        for (const e of data) {
-          if (e.lat != null && e.long != null) {
-            const dx = e.long - lng, dy = e.lat - lat;
-            const dist = dx*dx + dy*dy;
-            if (dist < bestDist) { bestDist = dist; best = e; }
-          }
-        }
-        return (best && bestDist < maxDistSq) ? best : null;
-      }
-
-      // Stratégie 1 : référence cadastrale exacte
-      // idu BDNB en priorité (l_parcelle_id), sinon WFS IGN — match parfait, zéro faux positif
-      if (rncUdu) {
-        const idu = rncUdu;
-        const [ra, rb, rc] = await Promise.all([
-          fetch(`${RNC_BASE}?page_size=5&reference_cadastrale_1__exact=${encodeURIComponent(idu)}`),
-          fetch(`${RNC_BASE}?page_size=5&reference_cadastrale_2__exact=${encodeURIComponent(idu)}`),
-          fetch(`${RNC_BASE}?page_size=5&reference_cadastrale_3__exact=${encodeURIComponent(idu)}`),
-        ]);
-        for (const r of [ra, rb, rc]) {
-          if (r.ok) { const d = await r.json(); if (d.data?.length) { rncData = d.data[0]; break; } }
-        }
-      }
-
-      if (!rncData && cc) {
-        // Stratégie 2 : numéro de voirie dans l'adresse RNIC + seuil GPS 150m
-        if (hn) {
-          const r2 = await fetch(`${RNC_BASE}?page_size=50&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(hn)}`);
-          if (r2.ok) {
-            const d2 = await r2.json();
-            const cands = (d2.data||[]).filter(e => {
-              const addr = (e.adresse_de_reference||'').trim();
-              return addr === hn || addr.startsWith(hn+' ') || addr.startsWith(hn+',');
-            });
-            rncData = rncClosest(cands, 0.000003);
-          }
-        }
-
-        // Stratégie 3 : mot-clé de rue + seuil GPS strict 80m
-        if (!rncData && street) {
-          const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
-          const words = street.split(/\s+/);
-          const keyWord = words.find(w => w.length >= 4 && !SKIP.test(w)) || '';
-          if (keyWord) {
-            const r3 = await fetch(`${RNC_BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(keyWord)}`);
-            if (r3.ok) {
-              const d3 = await r3.json();
-              rncData = rncClosest(d3.data||[], 0.0000008);
-            }
-          }
-        }
-      }
-    } catch(e) {}
-    // DVF : on ne précharge plus, le fetch se fait à la demande (accordéon)
     const dvfIdu = bdnbUdu || cadastreData?.idu;
-    renderBatiment(bdnbData, rncData, label, cadastreData, dvfIdu, bldGroupId);
+    renderBatiment(bdnbData, label, cadastreData, dvfIdu, bldGroupId);
     setStatus('Prêt');
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
@@ -618,71 +593,103 @@ function buildDVFTable(dvf) {
   return `<table class="dpe-table" style="width:100%"><thead><tr><th>Date</th><th>Bien</th><th>Prix</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-function renderBatiment(bdnb, rnc, label, cad, dvfIdu, bldGroupId) {
+function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
   const el = document.getElementById('batiment-data');
-  // N'écraser l'adresse avec BDNB que si le bâtiment a été identifié par clic carte (bldGroupId confirmé)
-  // Si recherche texte (bldGroupId null) : garder l'adresse tapée par l'utilisateur
   const addrLabel = (bldGroupId && bdnb?.libelle_adr_principale_ban) ? bdnb.libelle_adr_principale_ban : label;
   if (bldGroupId && bdnb?.libelle_adr_principale_ban) {
     document.getElementById('search-input').value = bdnb.libelle_adr_principale_ban;
   }
-  const na = v => v ? `<span class="field-value">${v}</span>` : `<span class="field-value na">Non renseigné</span>`;
-  const v = val => (val!==null&&val!==undefined&&val!=='') ? val : null;
+  const [addrL1, addrL2] = splitAddress(addrLabel);
+  const fv = v => (v != null && v !== '') ? `<span class="field-value">${v}</span>` : `<span class="field-value na">—</span>`;
+
+  // Énergie BDNB
+  const bdnbCh = formatEnergie(bdnb?.type_energie_chauffage);
+  const bdnbChInst = shortInstall(bdnb?.type_installation_chauffage_n1);
+  const bdnbEcs = formatEnergie(bdnb?.type_generateur_ecs);
+  const bdnbEcsInst = shortInstall(bdnb?.type_installation_ecs_n1);
+
   el.innerHTML = `
-    <div class="addr-banner">
+    <!-- Adresse -->
+    <div class="addr-banner" style="margin-bottom:${cad?'6px':'10px'}">
       <div class="addr-banner-pin">📍</div>
       <div style="flex:1;min-width:0">
-        <div class="addr-banner-main">${addrLabel.split(',')[0]||addrLabel}</div>
-        <div class="addr-banner-sub">${addrLabel.split(',').slice(1).join(',').trim()||''}</div>
+        <div class="addr-banner-main">${addrL1||addrLabel}</div>
+        ${addrL2 ? `<div class="addr-banner-sub">${addrL2}</div>` : ''}
       </div>
     </div>
-    ${cad ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;margin-top:-4px">
+
+    <!-- Section cadastrale -->
+    ${cad?.section ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
       <div style="flex:1;height:1px;background:var(--border)"></div>
-      <div style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 8px;flex-shrink:0">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        <span style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase">Section</span>
-        <span style="font-size:11px;font-weight:700;color:var(--text-dim);margin-left:2px">${cad.section||'—'}</span>
+      <div style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 8px">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span style="font-size:9.5px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase">Section</span>
+        <span style="font-size:11px;font-weight:700;color:var(--text-dim)">${cad.section}</span>
       </div>
       <div style="flex:1;height:1px;background:var(--border)"></div>
     </div>` : ''}
-    <div class="card">
-      <div class="card-title">Bâtiment · BDNB</div>
-      <div class="info-grid" style="margin-bottom:6px">
-        <div class="info-cell"><div class="field-label">Construction</div>${na(v(bdnb?.annee_construction))}</div>
-        <div class="info-cell"><div class="field-label">Surface emprise</div>${na(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+'m²' : null)}</div>
-        <div class="info-cell"><div class="field-label">Logements</div>${na(v(bdnb?.nb_log))}</div>
-        <div class="info-cell"><div class="field-label">Usage</div>${na(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
-      </div>
+
+    <!-- Info principale : 4 cellules -->
+    <div class="card" style="padding:10px 12px;margin-bottom:10px">
       <div class="info-grid">
-        <div class="info-cell"><div class="field-label">Chauffage</div>${formatEnergie(bdnb?.type_energie_chauffage) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_energie_chauffage)}</span>${formatInstall(bdnb?.type_installation_chauffage_n1)}` : `<span class="field-value na">Non renseigné</span>`}</div>
-        <div class="info-cell"><div class="field-label">ECS</div>${formatEnergie(bdnb?.type_generateur_ecs) ? `<span class="pill pill-blue">${formatEnergie(bdnb.type_generateur_ecs)}</span>${formatInstall(bdnb?.type_installation_ecs_n1)}` : `<span class="field-value na">Non renseigné</span>`}</div>
+        <div class="info-cell"><div class="field-label">Construit (BDNB)</div>${fv(bdnb?.annee_construction)}</div>
+        <div class="info-cell"><div class="field-label">DPE (année)</div><span class="field-value" id="panel-dpe-year">—</span></div>
+        <div class="info-cell"><div class="field-label">Usage</div>${fv(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
+        <div class="info-cell"><div class="field-label">Emprise sol</div>${fv(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+' m²' : null)}</div>
       </div>
-      ${!bdnb?'<p style="font-size:11px;color:var(--text-muted);margin-top:10px;">Aucune donnée BDNB à cette adresse.</p>':''}
     </div>
-    <details class="card dvf-accordion"${dvfIdu ? ` data-idu="${dvfIdu}"` : ''} style="padding:0;overflow:hidden">
+
+    <!-- Systèmes énergétiques -->
+    <div class="card" style="padding:10px 12px;margin-bottom:10px">
+      <div class="card-title">Systèmes énergétiques</div>
+      <div class="energy-table">
+        <div class="energy-row">
+          <div class="energy-source">BDNB</div>
+          <div class="energy-cell"><div class="field-label">Chauffage</div><span class="field-value" style="font-size:12px">${bdnbCh ? bdnbCh+bdnbChInst : '<span class="field-value na" style="font-size:11px">—</span>'}</span></div>
+          <div class="energy-cell"><div class="field-label">ECS</div><span class="field-value" style="font-size:12px">${bdnbEcs ? bdnbEcs+bdnbEcsInst : '<span class="field-value na" style="font-size:11px">—</span>'}</span></div>
+        </div>
+        <div class="energy-row" id="panel-dpe-nrj-row">
+          <div class="energy-source">DPE</div>
+          <div class="energy-cell" id="panel-dpe-ch"><div class="field-label">Chauffage</div><span class="field-value na" style="font-size:11px">—</span></div>
+          <div class="energy-cell" id="panel-dpe-ecs"><div class="field-label">ECS</div><span class="field-value na" style="font-size:11px">—</span></div>
+        </div>
+        <div class="energy-row" id="panel-dpe-surf-row" style="display:none">
+          <div class="energy-source"></div>
+          <div class="energy-surf-row">
+            <span style="font-size:9.5px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase">Surface DPE</span>
+            <span class="field-value" style="font-size:12px" id="panel-dpe-surf">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Module DPE (rempli par renderDPE) -->
+    <div id="dpe-data"><div class="loading-block" style="padding:16px"><span class="spinner"></span> Chargement DPE ADEME…</div></div>
+
+    <!-- Copropriété lazy -->
+    <details class="card rnc-accordion" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none;padding:12px 14px">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0"></span>
+        <span style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);flex:1">Copropriété · RNIC</span>
+        <span style="font-size:9px;color:var(--text-muted)">▶</span>
+      </summary>
+      <div class="rnc-content"></div>
+    </details>
+
+    <!-- DVF lazy -->
+    <details class="card dvf-accordion"${dvfIdu ? ` data-idu="${dvfIdu}"` : ''} style="padding:0;overflow:hidden;margin-bottom:10px">
       <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none;padding:12px 14px">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d97706;flex-shrink:0"></span>
         <span style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);flex:1">Transactions · DVF</span>
-        <span class="dvf-chevron" style="font-size:9px;color:var(--text-muted)">▶</span>
+        <span style="font-size:9px;color:var(--text-muted)">▶</span>
       </summary>
       <div class="dvf-content" style="padding:0 14px 12px">${dvfIdu ? '' : '<div style="font-size:11px;color:var(--text-muted)">Parcelle non identifiée</div>'}</div>
-    </details>
-    <div class="card">
-      <div class="card-title">Copropriété · RNIC</div>
-      ${rnc ? `
-      <div style="margin-bottom:8px"><div class="field-label">Nom</div>${na(v(rnc.nom_d_usage_de_la_copropriete))}</div>
-      <div style="margin-bottom:8px"><div class="field-label">Syndic</div>${na(v(rnc.raison_sociale_du_representant_legal))}</div>
-      <div class="info-grid">
-        <div class="info-cell"><div class="field-label">Lots total</div>${na(v(rnc.nombre_total_de_lots))}</div>
-        <div class="info-cell"><div class="field-label">Dont habitation</div>${na(v(rnc.nombre_de_lots_a_usage_d_habitation))}</div>
-        <div class="info-cell"><div class="field-label">Stationnement</div>${na(v(rnc.nombre_de_lots_de_stationnement))}</div>
-        <div class="info-cell"><div class="field-label">Période construction</div>${na(v(rnc.periode_de_construction))}</div>
-      </div>` : `<p style="font-size:11px;color:var(--text-muted)">Aucune copropriété répertoriée au RNIC à cette adresse.</p>`}
-    </div>`;
-  // Lazy-load DVF au premier dépliage de l'accordéon
+    </details>`;
+
+  // Lazy-load DVF
   const dvfDetails = el.querySelector('.dvf-accordion');
   if (dvfDetails && dvfIdu) {
-    dvfDetails.addEventListener('toggle', async function handler() {
+    dvfDetails.addEventListener('toggle', async function() {
       if (!this.open || this.dataset.loaded) return;
       this.dataset.loaded = '1';
       const content = this.querySelector('.dvf-content');
@@ -695,6 +702,32 @@ function renderBatiment(bdnb, rnc, label, cad, dvfIdu, bldGroupId) {
         content.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Erreur de chargement</div>';
       }
     });
+  }
+
+  // Lazy-load Copropriété RNIC
+  const rncDetails = el.querySelector('.rnc-accordion');
+  if (rncDetails && _rncQueryParams) {
+    rncDetails.addEventListener('toggle', async function() {
+      if (!this.open || this.dataset.loaded) return;
+      this.dataset.loaded = '1';
+      const content = this.querySelector('.rnc-content');
+      content.innerHTML = '<div style="text-align:center;padding:10px;color:var(--text-muted);font-size:11px"><span class="spinner"></span> Chargement…</div>';
+      try {
+        const rnc = await fetchRNC(_rncQueryParams);
+        content.innerHTML = buildRNCContent(rnc);
+      } catch(e) {
+        content.innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Erreur de chargement</p>';
+      }
+    });
+  } else if (rncDetails) {
+    rncDetails.querySelector('.rnc-content').innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Adresse non identifiée</p>';
+  }
+
+  // Si DPE déjà arrivé avant le DOM (race condition inverse), l'appliquer maintenant
+  if (_dpeResultsReady) {
+    const { results, resultsNeufs } = _dpeResultsReady;
+    _dpeResultsReady = null;
+    renderDPE(results, resultsNeufs);
   }
 }
 
@@ -716,10 +749,52 @@ function formatEnergie(val) {
 }
 function formatUsage(val) {
   if (!val) return null;
-  if (val.toLowerCase().includes('individuel')) return 'Résidentiel individuel';
-  if (val.toLowerCase().includes('collectif')) return 'Résidentiel collectif';
+  if (val.toLowerCase().includes('individuel')) return 'Résidentiel indiv.';
+  if (val.toLowerCase().includes('collectif')) return 'Résidentiel coll.';
   if (val.toLowerCase().includes('tertiaire')) return 'Tertiaire';
   return val;
+}
+
+// Découpe une adresse "5 Rue Racine, 44000 Nantes" ou "5 RUE RACINE 44000 NANTES"
+// en [ligne1, ligne2] → ligne2 = code postal + ville
+function splitAddress(addr) {
+  if (!addr) return ['', ''];
+  const ci = addr.indexOf(',');
+  if (ci > 0) return [addr.slice(0, ci).trim(), addr.slice(ci + 1).trim()];
+  const m = addr.match(/^(.+?)\s{1,3}(\d{5}\s+.+)$/);
+  if (m) return [m[1].trim(), m[2].trim()];
+  return [addr, ''];
+}
+
+// Résumé énergie DPE : chauffage, ECS, année la plus récente, surface
+function getDPEEnergySummary(results, resultsNeufs) {
+  const all = [...(results || []), ...(resultsNeufs || [])];
+  if (!all.length) return null;
+  const imm = all.find(r => r.methode_application_dpe === 'dpe immeuble collectif');
+  const ref = imm || [...all].sort((a, b) => (b.date_reception_dpe || '').localeCompare(a.date_reception_dpe || ''))[0];
+  const ch = shortEnergie(ref.type_energie_principale_chauffage) + shortInstall(ref.type_installation_chauffage_n1);
+  const ecs = shortEnergie(ref.type_energie_principale_ecs) + shortInstall(ref.type_installation_ecs_n1);
+  const year = (ref.date_reception_dpe || '').slice(0, 4) || '—';
+  const surfs = all.map(r => parseFloat(r.surface_habitable_logement || r.surface_habitable_immeuble)).filter(v => v > 0);
+  const mn = Math.round(Math.min(...surfs)), mx = Math.round(Math.max(...surfs));
+  const surf = surfs.length === 0 ? '—' : mn === mx ? mn + ' m²' : mn + '–' + mx + ' m²';
+  return { ch, ecs, year, surf };
+}
+
+// Rendu HTML du contenu copropriété RNIC
+function buildRNCContent(rnc) {
+  if (!rnc) return '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Aucune copropriété répertoriée au RNIC à cette adresse.</p>';
+  const na = v => v != null && v !== '' ? `<span class="field-value">${v}</span>` : `<span class="field-value na">—</span>`;
+  return `<div style="padding:0 14px 12px">
+    <div style="margin-bottom:8px"><div class="field-label">Nom</div>${na(rnc.nom_d_usage_de_la_copropriete)}</div>
+    <div style="margin-bottom:8px"><div class="field-label">Syndic</div>${na(rnc.raison_sociale_du_representant_legal)}</div>
+    <div class="info-grid">
+      <div class="info-cell"><div class="field-label">Lots total</div>${na(rnc.nombre_total_de_lots)}</div>
+      <div class="info-cell"><div class="field-label">Habitation</div>${na(rnc.nombre_de_lots_a_usage_d_habitation)}</div>
+      <div class="info-cell"><div class="field-label">Stationnement</div>${na(rnc.nombre_de_lots_de_stationnement)}</div>
+      <div class="info-cell"><div class="field-label">Période constr.</div>${na(rnc.periode_de_construction)}</div>
+    </div>
+  </div>`;
 }
 
 const DPE_GRADE_NUM = {A:1,B:2,C:3,D:4,E:5,F:6,G:7};
@@ -830,10 +905,8 @@ function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
 }
 
 async function loadDPE(feature, clickLng, clickLat) {
-  const el = document.getElementById('dpe-data');
-  document.getElementById('empty-dpe').style.display = 'none';
-  el.style.display = 'block';
-  el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement DPE ADEME…</div>';
+  // #dpe-data est créé par renderBatiment — s'il n'existe pas encore, on continue quand même
+  // renderDPE le trouvera ou stockera dans _dpeResultsReady
   const p = feature.properties;
   // Priorité : clé d'interopérabilité BDNB (lien bâtiment→BAN fiable) > BAN reverse geocode
   const banId = _canonicalBanId || p.id||'', citycode = p.citycode||'';
@@ -880,7 +953,26 @@ async function loadDPE(feature, clickLng, clickLat) {
 
 function renderDPE(results, resultsNeufs=[]) {
   const el = document.getElementById('dpe-data');
-  if (!results.length && !resultsNeufs.length) { el.innerHTML=`<div class="empty-state"><div class="icon">◇</div><p>Aucun DPE disponible dans le registre ADEME.</p><p style="font-size:10px;margin-top:6px;color:var(--text-muted)">La couleur sur la carte provient du BDNB et peut correspondre à un DPE antérieur à 2021, non disponible en open data.</p></div>`; return; }
+  if (!el) { _dpeResultsReady = { results, resultsNeufs }; return; }
+
+  // Mettre à jour les cellules énergie + année dans le panneau bâtiment
+  const summary = getDPEEnergySummary(results, resultsNeufs);
+  if (summary) {
+    const yearEl = document.getElementById('panel-dpe-year');
+    if (yearEl) yearEl.textContent = summary.year;
+    const chEl = document.getElementById('panel-dpe-ch');
+    if (chEl) chEl.innerHTML = `<div class="field-label">Chauffage</div><span class="field-value" style="font-size:12px">${summary.ch}</span>`;
+    const ecsEl = document.getElementById('panel-dpe-ecs');
+    if (ecsEl) ecsEl.innerHTML = `<div class="field-label">ECS</div><span class="field-value" style="font-size:12px">${summary.ecs}</span>`;
+    if (summary.surf !== '—') {
+      const surfRow = document.getElementById('panel-dpe-surf-row');
+      const surfEl = document.getElementById('panel-dpe-surf');
+      if (surfRow) surfRow.style.display = '';
+      if (surfEl) surfEl.textContent = summary.surf;
+    }
+  }
+
+  if (!results.length && !resultsNeufs.length) { el.innerHTML=`<div class="empty-state" style="padding:24px 16px"><div class="icon">◇</div><p>Aucun DPE disponible dans le registre ADEME.</p><p style="font-size:10px;margin-top:6px;color:var(--text-muted)">La couleur sur la carte provient du BDNB et peut correspondre à un DPE antérieur à 2021, non disponible en open data.</p></div>`; return; }
   const ORDER=['A','B','C','D','E','F','G'];
 
   // Séparer DPE immeuble collectif des DPE logements individuels
