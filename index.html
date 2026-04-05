@@ -450,21 +450,13 @@ async function fetchCadastre(lat, lng, idu) {
         if (res?.idu) return res;
       }
     }
-    // Stratégie 2 : point géographique — filtre BBOX 20m + INTERSECTS
+    // Stratégie 2 : BBOX ±10m autour du point cliqué
     const d = 0.0001;
     const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
-    const r2 = await fetch(BASE + `&BBOX=${bbox},EPSG:4326`
-      + `&CQL_FILTER=INTERSECTS(geom,POINT(${lng} ${lat}))`);
-    if (r2.ok) {
-      const d2 = await r2.json();
-      const res = parseParcel(d2.features?.[0]);
-      if (res?.idu) return res;
-    }
-    // Stratégie 3 : BBOX seule (fallback)
-    const r3 = await fetch(BASE + `&BBOX=${bbox},EPSG:4326`);
-    if (!r3.ok) return null;
-    const d3 = await r3.json();
-    return parseParcel(d3.features?.[0]);
+    const r2 = await fetch(BASE + `&BBOX=${bbox},EPSG:4326`);
+    if (!r2.ok) return null;
+    const d2 = await r2.json();
+    return parseParcel(d2.features?.[0]);
   } catch(e) { return null; }
 }
 
