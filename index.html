@@ -420,14 +420,20 @@ function selectAddress(feature, clickLng, clickLat, bldGroupId) {
   loadDPE(feature, mLng, mLat);
 }
 
-// API Carto IGN — parcelle contenant le point lat/lng (infaillible, pas de BBOX)
-// https://apicarto.ign.fr/api/cadastre/parcelle?lon=&lat=
+// WFS IGN CADASTRALPARCELS — BBOX ±10m autour du point cliqué
+// Testé et validé : retourne section/numero/idu de la parcelle sous le curseur
 async function fetchCadastre(lat, lng) {
+  const d = 0.0001; // ~10m
+  const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
   try {
-    const r = await fetch(`https://apicarto.ign.fr/api/cadastre/parcelle?lon=${lng}&lat=${lat}&_limit=1`);
+    const r = await fetch(
+      `https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature` +
+      `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle` +
+      `&OUTPUTFORMAT=application/json&COUNT=1&BBOX=${bbox},EPSG:4326`
+    );
     if (!r.ok) return null;
-    const d = await r.json();
-    const p = d.features?.[0]?.properties;
+    const js = await r.json();
+    const p = js.features?.[0]?.properties;
     if (!p) return null;
     const section = (p.section || '').replace(/^0+(?=[A-Z])/, '') || p.section || '';
     const numero  = (p.numero  || '').replace(/^0+/, '')           || p.numero  || '';
