@@ -420,20 +420,26 @@ function selectAddress(feature, clickLng, clickLat, bldGroupId) {
   loadDPE(feature, mLng, mLat);
 }
 
-// WFS IGN CADASTRALPARCELS — BBOX ±10m autour du point cliqué
-// Testé et validé : retourne section/numero/idu de la parcelle sous le curseur
+// WFS IGN CADASTRALPARCELS — point-in-polygon exact via turf.js
+// Fetch jusqu'à 10 parcelles dans un BBOX ±20m, puis filtre par containment géographique
 async function fetchCadastre(lat, lng) {
-  const d = 0.0001; // ~10m
+  const d = 0.0002; // ~20m
   const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
   try {
     const r = await fetch(
       `https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature` +
       `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle` +
-      `&OUTPUTFORMAT=application/json&COUNT=1&BBOX=${bbox},EPSG:4326`
+      `&OUTPUTFORMAT=application/json&COUNT=10&BBOX=${bbox},EPSG:4326`
     );
     if (!r.ok) return null;
     const js = await r.json();
-    const p = js.features?.[0]?.properties;
+    if (!js.features?.length) return null;
+    // Point-in-polygon exact : trouver la parcelle qui contient le point cliqué
+    const pt = turf.point([lng, lat]);
+    const match = js.features.find(f => {
+      try { return turf.booleanPointInPolygon(pt, f); } catch(e) { return false; }
+    }) || js.features[0]; // fallback : première parcelle si aucun match
+    const p = match?.properties;
     if (!p) return null;
     const section = (p.section || '').replace(/^0+(?=[A-Z])/, '') || p.section || '';
     const numero  = (p.numero  || '').replace(/^0+/, '')           || p.numero  || '';
