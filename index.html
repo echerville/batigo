@@ -600,7 +600,7 @@ function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
       <div style="flex:1;height:1px;background:var(--border)"></div>
       <div style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 8px">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        <span style="font-size:9.5px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase">Section</span>
+        <span style="font-size:9.5px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase">Cadastre</span>
         <span style="font-size:11px;font-weight:700;color:var(--text-dim)">${cad.section}${cad.numero ? ' · ' + cad.numero : ''}</span>
       </div>
       <div style="flex:1;height:1px;background:var(--border)"></div>
@@ -610,7 +610,7 @@ function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
       <div class="info-grid">
         <div class="info-cell"><div class="field-label">Construit (BDNB)</div>${fv(bdnb?.annee_construction)}</div>
-        <div class="info-cell"><div class="field-label">DPE (année)</div><span class="field-value" id="panel-dpe-year">—</span></div>
+        <div class="info-cell"><div class="field-label">Construit (DPE)</div><span class="field-value" id="panel-dpe-year">—</span></div>
         <div class="info-cell"><div class="field-label">Usage</div>${fv(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
         <div class="info-cell"><div class="field-label">Emprise sol</div>${fv(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+' m²' : null)}</div>
       </div>
@@ -751,7 +751,9 @@ function getDPEEnergySummary(results, resultsNeufs) {
   const ref = imm || [...all].sort((a, b) => (b.date_reception_dpe || '').localeCompare(a.date_reception_dpe || ''))[0];
   const ch = shortEnergie(ref.type_energie_principale_chauffage) + shortInstall(ref.type_installation_chauffage_n1);
   const ecs = shortEnergie(ref.type_energie_principale_ecs) + shortInstall(ref.type_installation_ecs_n1);
-  const year = (ref.date_reception_dpe || '').slice(0, 4) || '—';
+  // Année de construction du bien (pas la date du DPE)
+  const constrVals = all.map(r => r.annee_construction || r.periode_construction).filter(Boolean);
+  const year = constrVals.length ? constrVals.sort((a,b) => String(b).localeCompare(String(a)))[0] : '—';
   const surfs = all.map(r => parseFloat(r.surface_habitable_logement || r.surface_habitable_immeuble)).filter(v => v > 0);
   const mn = Math.round(Math.min(...surfs)), mx = Math.round(Math.max(...surfs));
   const surf = surfs.length === 0 ? '—' : mn === mx ? mn + ' m²' : mn + '–' + mx + ' m²';
