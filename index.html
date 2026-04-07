@@ -97,7 +97,7 @@
   #panoramax-close{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background .15s}
   #panoramax-close:hover{background:rgba(255,255,255,.3)}
   #measure-result{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--radius);color:var(--accent-dark);font-family:inherit;font-size:13px;font-weight:700;padding:7px 20px;pointer-events:none;white-space:nowrap;display:none;z-index:50;box-shadow:var(--shadow-md)}
-  .addr-marker{font-size:20px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25));cursor:default;user-select:none}
+  .addr-marker{line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));cursor:default;user-select:none}
   /* ── PANEL ── */
   #panel{width:var(--panel-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;box-shadow:-4px 0 20px rgba(15,28,46,0.05)}
   #panel-content{flex:1;overflow-y:auto;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--border-med) transparent}
@@ -470,7 +470,8 @@ function selectAddress(feature, clickLng, clickLat, bldGroupId) {
     if (_lastDPEApplyArgs) applySelectedDPE(..._lastDPEApplyArgs);
   });
   if (addrMarker) addrMarker.remove();
-  const el = document.createElement('div'); el.className='addr-marker'; el.textContent='📍';
+  const el = document.createElement('div'); el.className='addr-marker';
+  el.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="22" height="30" viewBox="0 0 22 30"><path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 19 11 19s11-11.3 11-19C22 4.9 17.1 0 11 0z" fill="#2bb573" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="4.5" fill="white" opacity=".9"/></svg>';
   addrMarker = new maplibregl.Marker({element:el, anchor:'bottom'}).setLngLat([mLng, mLat]).addTo(map);
   loadBatiment(mLat, mLng, label, feature, bldGroupId);
   loadDPE(feature, mLng, mLat);
@@ -644,7 +645,7 @@ function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
   el.innerHTML = `
     <!-- Adresse -->
     <div class="addr-banner" style="margin-bottom:${cad?'6px':'10px'}">
-      <div class="addr-banner-pin">📍</div>
+      <div class="addr-banner-pin"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="22" viewBox="0 0 22 30"><path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 19 11 19s11-11.3 11-19C22 4.9 17.1 0 11 0z" fill="#2bb573" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="4.5" fill="white" opacity=".9"/></svg></div>
       <div style="flex:1;min-width:0">
         <div class="addr-banner-main">${addrL1||addrLabel}</div>
         ${addrL2 ? `<div class="addr-banner-sub">${addrL2}</div>` : ''}
