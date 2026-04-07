@@ -60,6 +60,8 @@
   .src-table tr:last-child td{border-bottom:none}
   .src-table tr:hover td{background:var(--surface2)}
   .src-table .src-name{font-weight:700;color:var(--text);white-space:nowrap}
+  .src-toggle{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-dim);cursor:pointer;user-select:none}
+  .src-toggle input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer}
   #src-test-btn{font-size:10px;padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text-dim);font-weight:600;transition:background .15s}
   #src-test-btn:hover{background:var(--border);color:var(--text)}
   #src-test-btn:disabled{opacity:.5;cursor:default}
@@ -201,7 +203,7 @@
           <tr><td class="src-name">BDNB <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Données bâtiments</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-bdnb"></td></tr>
           <tr><td class="src-name">ADEME</td><td>DPE — diagnostics énergétiques</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-ademe"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Cadastre parcellaire</td><td><span class="src-badge src-api">API WFS</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-wfs"></td></tr>
-          <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobilières</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-dvf"></td></tr>
+          <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobilières</td><td><span class="src-badge src-api">API REST</span></td><td><label class="src-toggle"><input type="checkbox" id="dvf-enable" onchange="toggleDVF(this.checked)"> Activer</label></td><td class="src-status" id="src-st-dvf"></td></tr>
           <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriétés</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-rnic"></td></tr>
           <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>04/04/2026 <button id="btn-update-pmtiles" onclick="triggerPMTilesUpdate()" title="Relancer la génération des tuiles DPE via GitHub Actions (~20 min)" style="margin-left:6px;font-size:9px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-dim);font-weight:600;font-family:inherit">↺ Màj</button></td><td class="src-status" id="src-st-pmtiles"></td></tr>
           <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
@@ -286,6 +288,8 @@ let _canonicalBanId = null;
 let _lastDPEApplyArgs = null; // stocké par loadDPE, consommé par le idle de selectAddress
 let _pmtilesDpeGrade = null;  // note DPE issue des tuiles PMTiles (ancienne norme)
 let _dpeResultsReady = null;  // DPE arrivé avant le DOM batiment → appliqué par renderBatiment
+let dvfEnabled = localStorage.getItem('dvf-enabled') === 'true';
+document.getElementById('dvf-enable').checked = dvfEnabled;
 let _rncQueryParams = null;   // params pour le lazy-load copro
 
 const DPE_COLOR = ['match',['get','dpe'],
@@ -711,7 +715,7 @@ function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
     </details>
 
     <!-- DVF lazy -->
-    <details class="card dvf-accordion"${dvfIdu ? ` data-idu="${dvfIdu}"` : ''} style="padding:0;overflow:hidden;margin-bottom:10px">
+    <details class="card dvf-accordion"${dvfIdu ? ` data-idu="${dvfIdu}"` : ''} style="padding:0;overflow:hidden;margin-bottom:10px;${dvfEnabled?'':'display:none'}"
       <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none;padding:12px 14px">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d97706;flex-shrink:0"></span>
         <span style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);flex:1">Transactions · DVF</span>
@@ -1277,6 +1281,13 @@ async function testSources() {
 
   btn.disabled = false;
   btn.textContent = '↺ Retester';
+}
+
+function toggleDVF(checked) {
+  dvfEnabled = checked;
+  localStorage.setItem('dvf-enabled', checked);
+  const el = document.querySelector('.dvf-accordion');
+  if (el) el.style.display = checked ? '' : 'none';
 }
 
 async function triggerPMTilesUpdate() {
