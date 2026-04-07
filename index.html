@@ -1105,21 +1105,22 @@ function renderDPE(results, resultsNeufs=[]) {
         if(tableCount>=TABLE_MAX) return;
         const date=r['date_reception_dpe']?r['date_reception_dpe'].substring(0,10):'—';
         const surf=r['surface_habitable_logement']?Math.round(r['surface_habitable_logement'])+'m²':'—';
+        const constr=r['annee_construction']||r['periode_construction']||'—';
         const num=r['numero_dpe']||'';
         const link=num?`<a href="https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:13px;line-height:1" title="Voir sur ADEME">↗</a>`:'';
         const oldGrade = preCoeffGrade(r);
         const badgeLabel = (oldGrade && oldGrade !== note) ? `${oldGrade}→${note}` : note;
         const badgeWidth = (oldGrade && oldGrade !== note) ? 'width:auto;padding:0 5px;min-width:38px;font-size:10px;' : '';
-        tableRows+=`<tr><td><span class="dpe-badge dpe-${note}${h}" style="${badgeWidth}">${badgeLabel}</span></td><td>${surf}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
+        tableRows+=`<tr><td><span class="dpe-badge dpe-${note}${h}" style="${badgeWidth}">${badgeLabel}</span></td><td>${surf}</td><td style="color:var(--text-muted)">${constr}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
         tableCount++;
       });
     });
     const hiddenCount=rows.length-tableCount;
-    if(hiddenCount>0) tableRows+=`<tr><td colspan="6" style="text-align:center;color:var(--text-muted);font-size:10px;padding:8px">… et ${hiddenCount} autre${hiddenCount>1?'s':''} DPE</td></tr>`;
     const title = hatch
       ? `<div class="dpe-summary-title"><span class="dpe-neuf-badge">✓ Neuf</span>Distribution — ${rows.length} DPE</div>`
       : `<div class="dpe-summary-title">Distribution — ${rows.length} DPE</div>`;
-    return `<div class="dpe-summary">${title}<div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}${constrHtml}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${tableRows}</tbody></table>`;
+    if(hiddenCount>0) tableRows+=`<tr><td colspan="7" style="text-align:center;color:var(--text-muted);font-size:10px;padding:8px">… et ${hiddenCount} autre${hiddenCount>1?'s':''} DPE</td></tr>`;
+    return `<div class="dpe-summary">${title}<div class="dpe-dist">${distHtml}</div>${topCh.length?`<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Systèmes chauffage</div>${chHtml}</div>`:''}${constrHtml}</div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Constr.</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${tableRows}</tbody></table>`;
   }
 
   let out = '';
