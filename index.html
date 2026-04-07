@@ -199,7 +199,7 @@
           <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
           <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
-          <tr><td class="src-name">Esri</td><td>Surcouche rues &amp; noms (Plan)</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-esri"></td></tr>
+          <tr><td class="src-name">OpenFreeMap <span style="font-weight:400;color:var(--text-muted)">OSM</span></td><td>Surcouche rues &amp; noms (Plan)</td><td><span class="src-badge src-tile">Tuiles vecteur</span></td><td>Temps réel</td><td class="src-status" id="src-st-ofm"></td></tr>
         </tbody>
       </table>
     </div>
@@ -300,15 +300,64 @@ map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
 map.on('load', () => {
   map.addSource('cadastre', CADASTRE_SOURCE);
   map.addLayer({id:'cadastre-layer',type:'raster',source:'cadastre',layout:{visibility:'none'},paint:{'raster-opacity':0.7}});
-  // Surcouche rues transparente (ESRI Reference Overlay)
-  map.addSource('streets-overlay', {
-    type:'raster',
-    tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}'],
-    tileSize:256, maxzoom:19, attribution:'© Esri'
+  // Surcouche rues vectorielle transparente (OpenFreeMap — OpenStreetMap)
+  map.addSource('ofm', { type:'vector', url:'https://tiles.openfreemap.org/planet' });
+  const NONE = {visibility:'none'};
+  // Routes
+  map.addLayer({id:'overlay-road', type:'line', source:'ofm', 'source-layer':'transportation',
+    layout:{...NONE, 'line-cap':'round','line-join':'round'},
+    filter:['in',['get','class'],['literal',['motorway','trunk','primary','secondary','tertiary','minor','service']]],
+    paint:{
+      'line-color':['match',['get','class'],
+        'motorway','#e8602b','trunk','#e8922b',
+        'primary','#fcd93a','secondary','#ffffff',
+        '#cccccc'],
+      'line-width':['interpolate',['exponential',2],['zoom'],
+        8, ['match',['get','class'],'motorway',1.5,'trunk',1,'primary',0.8,0.4],
+        13,['match',['get','class'],'motorway',5,'trunk',4,'primary',3,'secondary',2,1],
+        18,['match',['get','class'],'motorway',14,'trunk',12,'primary',10,'secondary',8,4]
+      ],
+      'line-opacity':0.85
+    }
   });
-  map.addLayer({id:'streets-overlay-layer',type:'raster',source:'streets-overlay',
-    layout:{visibility:'none'},
-    paint:{'raster-opacity':0.85}
+  // Bordures routes (casing)
+  map.addLayer({id:'overlay-road-casing', type:'line', source:'ofm', 'source-layer':'transportation',
+    layout:{...NONE, 'line-cap':'butt','line-join':'round'},
+    filter:['in',['get','class'],['literal',['motorway','trunk','primary','secondary']]],
+    paint:{
+      'line-color':'rgba(0,0,0,0.25)',
+      'line-width':['interpolate',['exponential',2],['zoom'],
+        10,['match',['get','class'],'motorway',2.5,'trunk',2,'primary',1.5,1],
+        16,['match',['get','class'],'motorway',18,'trunk',15,'primary',12,9]
+      ],
+      'line-gap-width':['interpolate',['exponential',2],['zoom'],
+        10,['match',['get','class'],'motorway',1.5,'trunk',1,'primary',0.8,0.4],
+        16,['match',['get','class'],'motorway',12,'trunk',10,'primary',8,6]
+      ],
+      'line-opacity':0.5
+    }
+  }, 'overlay-road');
+  // Noms de rues
+  map.addLayer({id:'overlay-road-label', type:'symbol', source:'ofm', 'source-layer':'transportation_name',
+    minzoom:12,
+    layout:{...NONE,
+      'symbol-placement':'line',
+      'text-field':['coalesce',['get','name:fr'],['get','name']],
+      'text-font':['Noto Sans Regular'],
+      'text-size':['interpolate',['linear'],['zoom'],12,9,16,13],
+      'text-max-angle':30,'text-padding':5
+    },
+    paint:{'text-color':'#222','text-halo-color':'rgba(255,255,255,0.85)','text-halo-width':1.5}
+  });
+  // Noms de lieux
+  map.addLayer({id:'overlay-place', type:'symbol', source:'ofm', 'source-layer':'place',
+    layout:{...NONE,
+      'text-field':['coalesce',['get','name:fr'],['get','name']],
+      'text-font':['Noto Sans Regular'],
+      'text-size':['interpolate',['linear'],['zoom'],4,8,10,12,14,15],
+      'text-anchor':'center','text-max-width':8
+    },
+    paint:{'text-color':'#111','text-halo-color':'rgba(255,255,255,0.9)','text-halo-width':2}
   });
   // Couche DPE bâtiments (PMTiles statique Loire-Atlantique)
   map.addSource('dpe-src', {
@@ -397,9 +446,11 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
 });
 
 let streetsOn = false;
+const OVERLAY_LAYERS = ['overlay-road-casing','overlay-road','overlay-road-label','overlay-place'];
 document.getElementById('toggle-streets').addEventListener('click', function() {
   streetsOn = !streetsOn;
-  map.setLayoutProperty('streets-overlay-layer', 'visibility', streetsOn ? 'visible' : 'none');
+  const vis = streetsOn ? 'visible' : 'none';
+  OVERLAY_LAYERS.forEach(id => map.setLayoutProperty(id, 'visibility', vis));
   this.classList.toggle('on', streetsOn);
 });
 
@@ -1275,7 +1326,7 @@ async function testSources() {
     { id:'carto',    fn: () => testTile('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png') },
     { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
     { id:'google',   fn: () => testTile(TILE_URLS['google-plan']) },
-    { id:'esri',     fn: () => testTile('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer/tile/8/88/128') },
+    { id:'ofm',      fn: () => fetch('https://tiles.openfreemap.org/planet', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
   ];
 
   tests.forEach(t => pending(t.id));
