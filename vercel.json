@@ -1,5 +1,6 @@
 {
   "name": "scope",
+  "alias": ["scope-echervilles-projects.vercel.app"],
   "outputDirectory": ".",
   "headers": [
     {
