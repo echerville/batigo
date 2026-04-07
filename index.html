@@ -82,8 +82,7 @@
   #layer-bar .layer-btn.active,#layer-bar .layer-toggle.on,#layer-bar .measure-btn.active{background:var(--accent-dim2);color:var(--accent-dark);font-weight:700}
   .lb-sep{width:1px;height:18px;background:var(--border);margin:0 3px;flex-shrink:0}
   /* ── MAP ── */
-  #map{flex:1;position:relative}
-  #streets-map{position:absolute;inset:0;mix-blend-mode:multiply;pointer-events:none;display:none;z-index:1}
+  #map{flex:1}
   #panoramax-panel{height:420px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
   #panoramax-panel iframe{width:100%;height:100%;border:none}
@@ -200,7 +199,6 @@
           <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
           <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
-          <tr><td class="src-name">CartoDB / OSM</td><td>Surcouche rues &amp; noms (Plan)</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ofm"></td></tr>
         </tbody>
       </table>
     </div>
@@ -217,12 +215,11 @@
       <div class="lb-sep"></div>
       <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
       <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
-      <button class="layer-toggle" id="toggle-streets" title="Surcouche rues et noms (utile sur vues satellites)">Plan</button>
       <div class="lb-sep"></div>
       <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
       <button class="layer-toggle" id="toggle-gsv">Street View</button>
     </div>
-    <div id="map"><div id="streets-map"></div></div>
+    <div id="map"></div>
     <div id="measure-result"></div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
@@ -301,7 +298,6 @@ map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
 map.on('load', () => {
   map.addSource('cadastre', CADASTRE_SOURCE);
   map.addLayer({id:'cadastre-layer',type:'raster',source:'cadastre',layout:{visibility:'none'},paint:{'raster-opacity':0.7}});
-  // (overlay Plan géré par streetsMap — second canvas avec mix-blend-mode:multiply)
   // Couche DPE bâtiments (PMTiles statique Loire-Atlantique)
   map.addSource('dpe-src', {
     type: 'vector',
@@ -388,66 +384,6 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
   this.classList.toggle('on', cadastreOn);
 });
 
-// ── Overlay Plan (second MapLibre + mix-blend-mode:multiply) ──────────────
-let streetsOn = false;
-let streetsMap = null;
-function initStreetsMap() {
-  if (streetsMap) return;
-  streetsMap = new maplibregl.Map({
-    container: 'streets-map',
-    style: {
-      version: 8,
-      sources: { plan: {
-        type:'raster',
-        tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],
-        tileSize:256, maxzoom:19
-      }},
-      layers: [{id:'plan-layer', type:'raster', source:'plan',
-        paint:{
-          'raster-contrast': 0.6,
-          'raster-saturation': -0.5,
-          'raster-brightness-max': 0.95
-        }
-      }]
-    },
-    center: map.getCenter(),
-    zoom: map.getZoom(),
-    bearing: map.getBearing(),
-    pitch: map.getPitch(),
-    interactive: false,
-    attributionControl: false
-  });
-  // Sync caméra : main → overlay
-  function syncCamera() {
-    if (!streetsOn) return;
-    streetsMap.jumpTo({
-      center: map.getCenter(),
-      zoom: map.getZoom(),
-      bearing: map.getBearing(),
-      pitch: map.getPitch()
-    });
-  }
-  map.on('move', syncCamera);
-  map.on('zoom', syncCamera);
-  map.on('rotate', syncCamera);
-  map.on('pitch', syncCamera);
-}
-
-document.getElementById('toggle-streets').addEventListener('click', function() {
-  streetsOn = !streetsOn;
-  this.classList.toggle('on', streetsOn);
-  const el = document.getElementById('streets-map');
-  if (streetsOn) {
-    el.style.display = 'block';
-    initStreetsMap();
-    if (streetsMap) streetsMap.jumpTo({
-      center: map.getCenter(), zoom: map.getZoom(),
-      bearing: map.getBearing(), pitch: map.getPitch()
-    });
-  } else {
-    el.style.display = 'none';
-  }
-});
 
 document.getElementById('toggle-dpe-layer').addEventListener('click', function() {
   dpeLayerOn = !dpeLayerOn;
@@ -1321,7 +1257,6 @@ async function testSources() {
     { id:'carto',    fn: () => testTile('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png') },
     { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
     { id:'google',   fn: () => testTile(TILE_URLS['google-plan']) },
-    { id:'ofm',      fn: () => testTile('https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png') },
   ];
 
   tests.forEach(t => pending(t.id));
