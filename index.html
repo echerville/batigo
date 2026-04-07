@@ -1228,8 +1228,8 @@ async function testSources() {
   btn.disabled = true;
   btn.textContent = '…';
   // Afficher colonne état
-  document.querySelectorAll('.src-status').forEach(el => { el.style.display=''; el.textContent='·'; });
-  document.getElementById('src-status-th').style.display = '';
+  document.querySelectorAll('.src-status').forEach(el => { el.style.display='table-cell'; el.textContent='·'; });
+  document.getElementById('src-status-th').style.display = 'table-cell';
 
   function pending(id) {
     const el = document.getElementById('src-st-' + id);
@@ -1257,9 +1257,9 @@ async function testSources() {
   const tests = [
     { id:'ban',      fn: () => fetch('https://api-adresse.data.gouv.fr/search/?q=nantes&limit=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'bdnb',     fn: () => fetch('/api/bdnb?bbox='+encodeURIComponent('-1.56,47.20,-1.54,47.22'), {signal:AbortSignal.timeout(8000)}).then(r=>r.status<500) },
-    { id:'ademe',    fn: () => fetch('https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines?size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'ademe',    fn: () => fetch('https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'ign-wfs',  fn: () => fetch('https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
-    { id:'dvf',      fn: () => fetch('https://files.data.gouv.fr/geo-dvf/latest/csv/', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'dvf',      fn: () => fetch('/api/dvf?idpar=440109000B0100', {signal:AbortSignal.timeout(8000)}).then(r=>r.status<500) },
     { id:'rnic',     fn: () => fetch('https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'pmtiles',  fn: () => fetch('/public/dpe-44.pmtiles', {method:'HEAD', headers:{'Range':'bytes=0-1'}, signal:AbortSignal.timeout(6000)}).then(r=>r.ok||r.status===206) },
     { id:'carto',    fn: () => testTile('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png') },
