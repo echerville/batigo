@@ -59,6 +59,11 @@
   .src-table tr:last-child td{border-bottom:none}
   .src-table tr:hover td{background:var(--surface2)}
   .src-table .src-name{font-weight:700;color:var(--text);white-space:nowrap}
+  #src-test-btn{font-size:10px;padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text-dim);font-weight:600;transition:background .15s}
+  #src-test-btn:hover{background:var(--border);color:var(--text)}
+  #src-test-btn:disabled{opacity:.5;cursor:default}
+  .src-status{text-align:center;display:none;width:28px;font-size:13px;padding-left:0!important;padding-right:8px!important}
+  #src-status-th{display:none;text-align:center;padding-left:0!important;padding-right:8px!important}
   .src-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:1px 6px;white-space:nowrap}
   .src-api{background:rgba(43,181,115,.12);color:#1e9459}
   .src-dl{background:rgba(245,158,11,.12);color:#b45309}
@@ -178,21 +183,22 @@
     <div id="info-panel">
       <div id="info-panel-header">
         <h3>Sources de données · Scope</h3>
-        <button onclick="document.getElementById('info-panel').classList.remove('open')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0">×</button>
+        <button id="src-test-btn" onclick="testSources()">⬡ Tester</button>
+        <button onclick="document.getElementById('info-panel').classList.remove('open')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0;margin-left:4px">×</button>
       </div>
       <table class="src-table">
-        <thead><tr><th>Source</th><th>Jeu de données</th><th>Accès</th><th>Mise à jour</th></tr></thead>
+        <thead><tr><th>Source</th><th>Jeu de données</th><th>Accès</th><th>Mise à jour</th><th id="src-status-th">État</th></tr></thead>
         <tbody>
-          <tr><td class="src-name">BAN <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Géocodage d'adresses</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
-          <tr><td class="src-name">BDNB <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Données bâtiments</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
-          <tr><td class="src-name">ADEME</td><td>DPE — diagnostics énergétiques</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
-          <tr><td class="src-name">IGN Géoplateforme</td><td>Cadastre parcellaire</td><td><span class="src-badge src-api">API WFS</span></td><td>Temps réel</td></tr>
-          <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobilières</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
-          <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriétés</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
-          <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>Téléchargé le 04/04/2026</td></tr>
-          <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td></tr>
-          <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td></tr>
-          <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">BAN <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Géocodage d'adresses</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-ban"></td></tr>
+          <tr><td class="src-name">BDNB <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Données bâtiments</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-bdnb"></td></tr>
+          <tr><td class="src-name">ADEME</td><td>DPE — diagnostics énergétiques</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-ademe"></td></tr>
+          <tr><td class="src-name">IGN Géoplateforme</td><td>Cadastre parcellaire</td><td><span class="src-badge src-api">API WFS</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-wfs"></td></tr>
+          <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobilières</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-dvf"></td></tr>
+          <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriétés</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-rnic"></td></tr>
+          <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>Téléchargé le 04/04/2026</td><td class="src-status" id="src-st-pmtiles"></td></tr>
+          <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
+          <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
+          <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
         </tbody>
       </table>
     </div>
@@ -1207,6 +1213,62 @@ function setStatus(msg,type=''){
   if(!btn)return;
   btn.className=type; // loading | error | ''
 }
+// ── Test sources ──────────────────────────────────────────────────────────
+async function testSources() {
+  const btn = document.getElementById('src-test-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  // Afficher colonne état
+  document.querySelectorAll('.src-status').forEach(el => { el.style.display=''; el.textContent='·'; });
+  document.getElementById('src-status-th').style.display = '';
+
+  function pending(id) {
+    const el = document.getElementById('src-st-' + id);
+    if (el) el.innerHTML = '<span style="color:var(--text-muted);font-size:10px">…</span>';
+  }
+  function setOk(id, ok) {
+    const el = document.getElementById('src-st-' + id);
+    if (!el) return;
+    el.innerHTML = ok
+      ? '<span style="color:#2bb573;font-size:13px" title="OK">✓</span>'
+      : '<span style="color:#e53e3e;font-size:13px" title="Erreur">✗</span>';
+  }
+
+  function testTile(urlTemplate) {
+    const url = urlTemplate.replace('{z}','8').replace('{x}','128').replace('{y}','88');
+    return new Promise(resolve => {
+      const img = new Image();
+      const t = setTimeout(() => { img.src=''; resolve(false); }, 6000);
+      img.onload  = () => { clearTimeout(t); resolve(true);  };
+      img.onerror = () => { clearTimeout(t); resolve(false); };
+      img.src = url;
+    });
+  }
+
+  const tests = [
+    { id:'ban',      fn: () => fetch('https://api-adresse.data.gouv.fr/search/?q=nantes&limit=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'bdnb',     fn: () => fetch('/api/bdnb?bbox='+encodeURIComponent('-1.56,47.20,-1.54,47.22'), {signal:AbortSignal.timeout(8000)}).then(r=>r.status<500) },
+    { id:'ademe',    fn: () => fetch('https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines?size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'ign-wfs',  fn: () => fetch('https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'dvf',      fn: () => fetch('https://files.data.gouv.fr/geo-dvf/latest/csv/', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'rnic',     fn: () => fetch('https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'pmtiles',  fn: () => fetch('/public/dpe-44.pmtiles', {method:'HEAD', headers:{'Range':'bytes=0-1'}, signal:AbortSignal.timeout(6000)}).then(r=>r.ok||r.status===206) },
+    { id:'carto',    fn: () => testTile('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png') },
+    { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
+    { id:'google',   fn: () => testTile(TILE_URLS['google-plan']) },
+  ];
+
+  tests.forEach(t => pending(t.id));
+
+  await Promise.all(tests.map(async ({id, fn}) => {
+    try { setOk(id, await fn()); }
+    catch(e) { setOk(id, false); }
+  }));
+
+  btn.disabled = false;
+  btn.textContent = '↺ Retester';
+}
+
 // Toggle info panel
 document.getElementById('info-btn').addEventListener('click',function(e){
   e.stopPropagation();
