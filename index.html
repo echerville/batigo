@@ -199,6 +199,7 @@
           <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
           <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
+          <tr><td class="src-name">Esri</td><td>Surcouche rues &amp; noms (Plan)</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-esri"></td></tr>
         </tbody>
       </table>
     </div>
@@ -215,6 +216,7 @@
       <div class="lb-sep"></div>
       <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
       <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
+      <button class="layer-toggle" id="toggle-streets" title="Surcouche rues et noms (utile sur vues satellites)">Plan</button>
       <div class="lb-sep"></div>
       <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
       <button class="layer-toggle" id="toggle-gsv">Street View</button>
@@ -298,6 +300,16 @@ map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
 map.on('load', () => {
   map.addSource('cadastre', CADASTRE_SOURCE);
   map.addLayer({id:'cadastre-layer',type:'raster',source:'cadastre',layout:{visibility:'none'},paint:{'raster-opacity':0.7}});
+  // Surcouche rues transparente (ESRI Reference Overlay)
+  map.addSource('streets-overlay', {
+    type:'raster',
+    tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}'],
+    tileSize:256, maxzoom:19, attribution:'© Esri'
+  });
+  map.addLayer({id:'streets-overlay-layer',type:'raster',source:'streets-overlay',
+    layout:{visibility:'none'},
+    paint:{'raster-opacity':0.85}
+  });
   // Couche DPE bâtiments (PMTiles statique Loire-Atlantique)
   map.addSource('dpe-src', {
     type: 'vector',
@@ -382,6 +394,13 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
   cadastreOn = !cadastreOn;
   map.setLayoutProperty('cadastre-layer', 'visibility', cadastreOn ? 'visible' : 'none');
   this.classList.toggle('on', cadastreOn);
+});
+
+let streetsOn = false;
+document.getElementById('toggle-streets').addEventListener('click', function() {
+  streetsOn = !streetsOn;
+  map.setLayoutProperty('streets-overlay-layer', 'visibility', streetsOn ? 'visible' : 'none');
+  this.classList.toggle('on', streetsOn);
 });
 
 document.getElementById('toggle-dpe-layer').addEventListener('click', function() {
@@ -1256,6 +1275,7 @@ async function testSources() {
     { id:'carto',    fn: () => testTile('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png') },
     { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
     { id:'google',   fn: () => testTile(TILE_URLS['google-plan']) },
+    { id:'esri',     fn: () => testTile('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer/tile/8/88/128') },
   ];
 
   tests.forEach(t => pending(t.id));
