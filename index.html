@@ -402,7 +402,13 @@ function initStreetsMap() {
         tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],
         tileSize:256, maxzoom:19
       }},
-      layers: [{id:'plan-layer', type:'raster', source:'plan'}]
+      layers: [{id:'plan-layer', type:'raster', source:'plan',
+        paint:{
+          'raster-contrast': 0.6,
+          'raster-saturation': -0.5,
+          'raster-brightness-max': 0.95
+        }
+      }]
     },
     center: map.getCenter(),
     zoom: map.getZoom(),
