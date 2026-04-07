@@ -82,7 +82,8 @@
   #layer-bar .layer-btn.active,#layer-bar .layer-toggle.on,#layer-bar .measure-btn.active{background:var(--accent-dim2);color:var(--accent-dark);font-weight:700}
   .lb-sep{width:1px;height:18px;background:var(--border);margin:0 3px;flex-shrink:0}
   /* ── MAP ── */
-  #map{flex:1}
+  #map{flex:1;position:relative}
+  #streets-map{position:absolute;inset:0;mix-blend-mode:multiply;pointer-events:none;display:none;z-index:1}
   #panoramax-panel{height:420px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
   #panoramax-panel iframe{width:100%;height:100%;border:none}
@@ -221,7 +222,7 @@
       <button class="measure-btn" id="btn-measure-poly">⬡ Surface</button>
       <button class="layer-toggle" id="toggle-gsv">Street View</button>
     </div>
-    <div id="map"></div>
+    <div id="map"><div id="streets-map"></div></div>
     <div id="measure-result"></div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
@@ -300,29 +301,7 @@ map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
 map.on('load', () => {
   map.addSource('cadastre', CADASTRE_SOURCE);
   map.addLayer({id:'cadastre-layer',type:'raster',source:'cadastre',layout:{visibility:'none'},paint:{'raster-opacity':0.7}});
-  // Surcouche rues transparente — CartoDB light (fond blanc → transparent via raster-color)
-  map.addSource('streets-overlay', {
-    type:'raster',
-    tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],
-    tileSize:256, maxzoom:19,
-    attribution:'© CartoDB © OpenStreetMap contributors'
-  });
-  map.addLayer({id:'streets-overlay-layer', type:'raster', source:'streets-overlay',
-    layout:{visibility:'none'},
-    paint:{
-      'raster-opacity':1,
-      'raster-color-mix':[0.2126, 0.7152, 0.0722, 0],
-      'raster-color-range':[0, 1],
-      'raster-color':[
-        'interpolate',['linear'],['raster-value'],
-        0,    'rgba(30,30,30,0.95)',
-        0.30, 'rgba(30,30,30,0.75)',
-        0.55, 'rgba(30,30,30,0.2)',
-        0.75, 'rgba(0,0,0,0)',
-        1,    'rgba(0,0,0,0)'
-      ]
-    }
-  });
+  // (overlay Plan géré par streetsMap — second canvas avec mix-blend-mode:multiply)
   // Couche DPE bâtiments (PMTiles statique Loire-Atlantique)
   map.addSource('dpe-src', {
     type: 'vector',
@@ -409,11 +388,59 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
   this.classList.toggle('on', cadastreOn);
 });
 
+// ── Overlay Plan (second MapLibre + mix-blend-mode:multiply) ──────────────
 let streetsOn = false;
+let streetsMap = null;
+function initStreetsMap() {
+  if (streetsMap) return;
+  streetsMap = new maplibregl.Map({
+    container: 'streets-map',
+    style: {
+      version: 8,
+      sources: { plan: {
+        type:'raster',
+        tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],
+        tileSize:256, maxzoom:19
+      }},
+      layers: [{id:'plan-layer', type:'raster', source:'plan'}]
+    },
+    center: map.getCenter(),
+    zoom: map.getZoom(),
+    bearing: map.getBearing(),
+    pitch: map.getPitch(),
+    interactive: false,
+    attributionControl: false
+  });
+  // Sync caméra : main → overlay
+  function syncCamera() {
+    if (!streetsOn) return;
+    streetsMap.jumpTo({
+      center: map.getCenter(),
+      zoom: map.getZoom(),
+      bearing: map.getBearing(),
+      pitch: map.getPitch()
+    });
+  }
+  map.on('move', syncCamera);
+  map.on('zoom', syncCamera);
+  map.on('rotate', syncCamera);
+  map.on('pitch', syncCamera);
+}
+
 document.getElementById('toggle-streets').addEventListener('click', function() {
   streetsOn = !streetsOn;
-  map.setLayoutProperty('streets-overlay-layer', 'visibility', streetsOn ? 'visible' : 'none');
   this.classList.toggle('on', streetsOn);
+  const el = document.getElementById('streets-map');
+  if (streetsOn) {
+    el.style.display = 'block';
+    initStreetsMap();
+    if (streetsMap) streetsMap.jumpTo({
+      center: map.getCenter(), zoom: map.getZoom(),
+      bearing: map.getBearing(), pitch: map.getPitch()
+    });
+  } else {
+    el.style.display = 'none';
+  }
 });
 
 document.getElementById('toggle-dpe-layer').addEventListener('click', function() {
