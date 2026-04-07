@@ -40,13 +40,30 @@
   .suggestion-item:last-child{border-bottom:none}
   .suggestion-item:hover{background:var(--accent-dim);color:var(--text)}
   .suggestion-item strong{color:var(--text);font-weight:600}
-  #status-bar{margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:600;white-space:nowrap;display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px}
-  #status-bar::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--border-med);flex-shrink:0;transition:background .2s}
-  #status-bar.loading::before{background:var(--accent);animation:pulse 1s ease-in-out infinite}
-  #status-bar.loading{color:var(--accent-dark)}
-  #status-bar.error::before{background:var(--danger)}
-  #status-bar.error{color:var(--danger)}
+  /* ── INFO BUTTON ── */
+  #info-wrap{margin-left:auto;position:relative;flex-shrink:0}
+  #info-btn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);font-weight:600;white-space:nowrap;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;transition:all .15s;font-family:inherit}
+  #info-btn:hover{border-color:var(--accent);color:var(--accent-dark);background:var(--accent-dim)}
+  #info-btn .info-dot{width:6px;height:6px;border-radius:50%;background:var(--border-med);flex-shrink:0;transition:background .2s}
+  #info-btn.loading .info-dot{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+  #info-btn.loading{color:var(--accent-dark)}
+  #info-btn.error .info-dot{background:var(--danger)}
+  #info-btn.error{color:var(--danger)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  #info-panel{display:none;position:absolute;top:calc(100% + 8px);right:0;width:480px;max-width:calc(100vw - 40px);background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;overflow:hidden}
+  #info-panel.open{display:block}
+  #info-panel-header{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  #info-panel-header h3{font-size:12px;font-weight:700;color:var(--text);flex:1;letter-spacing:-.1px}
+  .src-table{width:100%;border-collapse:collapse;font-size:11px}
+  .src-table th{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);padding:6px 12px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border)}
+  .src-table td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text-dim)}
+  .src-table tr:last-child td{border-bottom:none}
+  .src-table tr:hover td{background:var(--surface2)}
+  .src-table .src-name{font-weight:700;color:var(--text);white-space:nowrap}
+  .src-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:1px 6px;white-space:nowrap}
+  .src-api{background:rgba(43,181,115,.12);color:#1e9459}
+  .src-dl{background:rgba(245,158,11,.12);color:#b45309}
+  .src-tile{background:rgba(99,102,241,.12);color:#4338ca}
   /* ── BODY ── */
   #body{flex:1;display:flex;overflow:hidden}
   #map-area{flex:1;display:flex;flex-direction:column;position:relative}
@@ -155,7 +172,33 @@
     <button id="search-btn">⌕</button>
     <div id="suggestions"></div>
   </div>
-  <div id="status-bar">Prêt</div>
+  <div id="info-wrap">
+    <button id="info-btn" title="Sources de données">
+      <span class="info-dot"></span>
+      ⓘ Sources
+    </button>
+    <div id="info-panel">
+      <div id="info-panel-header">
+        <h3>Sources de données · BâtiGo</h3>
+        <button onclick="document.getElementById('info-panel').classList.remove('open')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0">×</button>
+      </div>
+      <table class="src-table">
+        <thead><tr><th>Source</th><th>Jeu de données</th><th>Accès</th><th>Mise à jour</th></tr></thead>
+        <tbody>
+          <tr><td class="src-name">BAN <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Géocodage d'adresses</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">BDNB <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Données bâtiments</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">ADEME</td><td>DPE — diagnostics énergétiques</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">IGN Géoplateforme</td><td>Cadastre parcellaire</td><td><span class="src-badge src-api">API WFS</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobilières</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriétés</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>Téléchargé le 04/04/2026</td></tr>
+          <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td></tr>
+          <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 <div id="body">
   <div id="map-area">
@@ -1161,7 +1204,20 @@ function clearMeasure(){
   const src=map.getSource('measure-src');if(src)src.setData({type:'FeatureCollection',features:[]});
 }
 function showMeasureResult(text){const el=document.getElementById('measure-result');el.textContent=text;el.style.display='block';}
-function setStatus(msg,type=''){const el=document.getElementById('status-bar');el.textContent=msg;el.className=type;}
+function setStatus(msg,type=''){
+  const btn=document.getElementById('info-btn');
+  if(!btn)return;
+  btn.className=type; // loading | error | ''
+}
+// Toggle info panel
+document.getElementById('info-btn').addEventListener('click',function(e){
+  e.stopPropagation();
+  document.getElementById('info-panel').classList.toggle('open');
+});
+document.addEventListener('click',function(e){
+  if(!document.getElementById('info-wrap').contains(e.target))
+    document.getElementById('info-panel').classList.remove('open');
+});
 </script>
 </body>
 </html>
