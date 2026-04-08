@@ -173,6 +173,11 @@
   .maplibregl-popup-tip{display:none!important}
   .maplibregl-ctrl-group{border-radius:var(--radius-sm)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--border)!important}
   .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
+  /* ── COMPASS ── */
+  #compass-widget{position:absolute;bottom:42px;right:12px;z-index:50;width:72px;height:72px;pointer-events:none;opacity:.3;transition:opacity .25s}
+  #compass-widget.active{opacity:1}
+  #compass-label{position:absolute;bottom:120px;right:12px;z-index:50;background:var(--surface);border:1.5px solid var(--accent);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--accent-dark);box-shadow:var(--shadow-sm);pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;text-align:center}
+  #compass-label.active{opacity:1}
 </style>
 </head>
 <body>
@@ -234,6 +239,26 @@
       <button class="layer-toggle" id="toggle-gsv"><svg width="12" height="18" viewBox="0 0 12 18" style="vertical-align:middle;margin-right:4px"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>Street View</button>
     </div>
     <div id="map"></div>
+    <div id="compass-widget">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="36" cy="36" r="34" fill="white" stroke="#E1E8F0" stroke-width="1.5"/>
+        <circle cx="36" cy="36" r="28" fill="#F7F9FC"/>
+        <line x1="36" y1="6" x2="36" y2="11" stroke="#C8D5E2" stroke-width="1.5"/>
+        <line x1="36" y1="61" x2="36" y2="66" stroke="#C8D5E2" stroke-width="1.5"/>
+        <line x1="6" y1="36" x2="11" y2="36" stroke="#C8D5E2" stroke-width="1.5"/>
+        <line x1="61" y1="36" x2="66" y2="36" stroke="#C8D5E2" stroke-width="1.5"/>
+        <text x="36" y="21" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="700" fill="#3D5166" font-family="Inter,sans-serif">N</text>
+        <text x="36" y="51" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="700" fill="#7E96B0" font-family="Inter,sans-serif">S</text>
+        <text x="21" y="37" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="700" fill="#7E96B0" font-family="Inter,sans-serif">O</text>
+        <text x="51" y="37" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="700" fill="#7E96B0" font-family="Inter,sans-serif">E</text>
+        <g id="compass-needle" style="transform-origin:36px 36px;transform:rotate(0deg);transition:transform .3s ease">
+          <polygon points="36,14 33,36 36,40 39,36" fill="#2bb573"/>
+          <polygon points="36,58 33,36 36,40 39,36" fill="#C8D5E2"/>
+        </g>
+        <circle cx="36" cy="36" r="3.5" fill="white" stroke="#C8D5E2" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div id="compass-label"></div>
     <div id="measure-result"></div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
@@ -379,6 +404,9 @@ map.on('load', () => {
   map.addSource('measure-src', {type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'measure-fill',type:'fill',source:'measure-src',paint:{'fill-color':'#e06090','fill-opacity':0.12},filter:['==','$type','Polygon']});
   map.addLayer({id:'measure-line',type:'line',source:'measure-src',paint:{'line-color':'#e06090','line-width':2,'line-dasharray':[4,2]}});
+  // Façade surlignée
+  map.addSource('facade-src',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'facade-layer',type:'line',source:'facade-src',paint:{'line-color':'#2bb573','line-width':4,'line-opacity':.9,'line-cap':'round'}});
   setStatus('Prêt');
 });
 
@@ -1195,6 +1223,62 @@ async function reverseGeocode(lng, lat, markerLng, markerLat, bldGroupId) {
     setTimeout(() => setStatus('Prêt'), 2000);
   }
 }
+// ── BOUSSOLE FAÇADE ──
+function ptSegDist(pt,p1,p2){
+  const dx=p2[0]-p1[0],dy=p2[1]-p1[1];
+  if(!dx&&!dy)return Math.hypot(pt[0]-p1[0],pt[1]-p1[1]);
+  const t=Math.max(0,Math.min(1,((pt[0]-p1[0])*dx+(pt[1]-p1[1])*dy)/(dx*dx+dy*dy)));
+  return Math.hypot(pt[0]-(p1[0]+t*dx),pt[1]-(p1[1]+t*dy));
+}
+function facadeBearing(p1,p2,cx,cy){
+  const dLng=p2[0]-p1[0],dLat=p2[1]-p1[1];
+  const nx=-dLat,ny=dLng;
+  const mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2;
+  const dot=(cx-mx)*nx+(cy-my)*ny;
+  const s=dot>0?-1:1;
+  let b=Math.atan2(s*nx,s*ny)*180/Math.PI;
+  return((b%360)+360)%360;
+}
+function bearingCardinal(b){return['N','N-E','E','S-E','S','S-O','O','N-O'][Math.round(b/45)%8]}
+function findClosestFacade(feat,mouse){
+  const geom=feat.geometry;
+  const rings=geom.type==='Polygon'?[geom.coordinates[0]]:geom.type==='MultiPolygon'?geom.coordinates.map(p=>p[0]):[];
+  let best=null,bestDist=Infinity,bestB=0;
+  for(const ring of rings){
+    const xs=ring.map(p=>p[0]),ys=ring.map(p=>p[1]);
+    const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
+    for(let i=0;i<ring.length-1;i++){
+      const p1=ring[i],p2=ring[i+1];
+      if(Math.hypot(p2[0]-p1[0],p2[1]-p1[1])<0.000004)continue;
+      const d=ptSegDist(mouse,p1,p2);
+      if(d<bestDist){bestDist=d;best=[p1,p2];bestB=facadeBearing(p1,p2,cx,cy);}
+    }
+  }
+  return best?{edge:best,bearing:bestB}:null;
+}
+function clearCompass(){
+  document.getElementById('compass-widget').classList.remove('active');
+  document.getElementById('compass-label').classList.remove('active');
+  const s=map.getSource('facade-src');if(s)s.setData({type:'FeatureCollection',features:[]});
+}
+map.on('mousemove',e=>{
+  if(measureMode||map.getZoom()<13){clearCompass();return;}
+  const {lng,lat}=e.lngLat;
+  const pt=map.project([lng,lat]);
+  const feats=map.queryRenderedFeatures([{x:pt.x-30,y:pt.y-30},{x:pt.x+30,y:pt.y+30}],{layers:['dpe-query']});
+  if(!feats.length){clearCompass();return;}
+  const res=findClosestFacade(feats[0],[lng,lat]);
+  if(!res){clearCompass();return;}
+  const {edge,bearing}=res;
+  map.getSource('facade-src').setData({type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'LineString',coordinates:edge}}]});
+  document.getElementById('compass-needle').style.transform=`rotate(${bearing}deg)`;
+  document.getElementById('compass-widget').classList.add('active');
+  const lbl=document.getElementById('compass-label');
+  lbl.textContent=bearingCardinal(bearing)+' · '+Math.round(bearing)+'°';
+  lbl.classList.add('active');
+});
+document.getElementById('map').addEventListener('mouseleave',clearCompass);
+
 map.on('dblclick',e=>{
   if(!measureMode)return; e.preventDefault();
   if(measurePoints.length>=3)finalizeMeasure();
