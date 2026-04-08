@@ -1262,7 +1262,7 @@ function clearCompass(){
   const s=map.getSource('facade-src');if(s)s.setData({type:'FeatureCollection',features:[]});
 }
 map.on('mousemove',e=>{
-  if(measureMode||map.getZoom()<13){clearCompass();return;}
+  if(measureMode||map.getZoom()<15){clearCompass();return;}
   const {lng,lat}=e.lngLat;
   const pt=map.project([lng,lat]);
   const feats=map.queryRenderedFeatures([{x:pt.x-30,y:pt.y-30},{x:pt.x+30,y:pt.y+30}],{layers:['dpe-query']});
