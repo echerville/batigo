@@ -443,8 +443,8 @@ document.getElementById('toggle-panoramax').addEventListener('click', async func
     const js = await r.json();
     const pic = js.features?.[0]?.id;
     const url = pic
-      ? `https://panoramax.ign.fr/?focus=pic&pic=${pic}&map=18/${lat}/${lng}`
-      : `https://panoramax.ign.fr/?focus=map&map=18/${lat}/${lng}`;
+      ? `https://api.panoramax.xyz/?focus=pic&pic=${pic}&map=18/${lat}/${lng}`
+      : `https://api.panoramax.xyz/?focus=map&map=18/${lat}/${lng}`;
     if (!pic) setStatus('Aucune photo Panoramax à proximité', 'error'), setTimeout(() => setStatus('Prêt'), 3000);
     else setStatus('Prêt');
     openImmersive(url, 'panoramax');
