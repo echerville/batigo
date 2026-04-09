@@ -480,7 +480,7 @@ function selectAddress(feature, clickLng, clickLat, bldGroupId) {
   });
   if (addrMarker) addrMarker.remove();
   const el = document.createElement('div'); el.className='addr-marker';
-  el.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="22" height="30" viewBox="0 0 22 30"><path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 19 11 19s11-11.3 11-19C22 4.9 17.1 0 11 0z" fill="#2bb573" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="4.5" fill="white" opacity=".9"/></svg>';
+  el.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="22" height="30" viewBox="0 0 22 30"><path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 19 11 19s11-11.3 11-19C22 4.9 17.1 0 11 0z" fill="#2bb573"/><circle cx="11" cy="11" r="4.5" fill="white" opacity=".9"/></svg>';
   addrMarker = new maplibregl.Marker({element:el, anchor:'bottom'}).setLngLat([mLng, mLat]).addTo(map);
   loadBatiment(mLat, mLng, label, feature, bldGroupId);
   loadDPE(feature, mLng, mLat);
