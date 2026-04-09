@@ -92,7 +92,6 @@
   #btn-measure-poly.active{background:var(--accent-dark)!important}
   /* ── MAP ── */
   #map{flex:1}
-  #map.measuring{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath d='M15 1l4 4L7 17l-5 2 2-5Z' fill='%232bb573' stroke='white' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M13 3l4 4' stroke='rgba(0,0,0,0.25)' stroke-width='1'/%3E%3C/svg%3E") 2 17, crosshair}
   #panoramax-panel{height:420px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
   #panoramax-panel iframe{width:100%;height:100%;border:none}
@@ -168,7 +167,6 @@
   /* ── MISC ── */
   .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border-med);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle;flex-shrink:0}
   @keyframes spin{to{transform:rotate(360deg)}}
-  #map.measuring{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath d='M15 1l4 4L7 17l-5 2 2-5Z' fill='%232bb573' stroke='white' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M13 3l4 4' stroke='rgba(0,0,0,0.25)' stroke-width='1'/%3E%3C/svg%3E") 2 17, crosshair}
   .maplibregl-popup-content{background:var(--surface)!important;color:var(--text)!important;border:1.5px solid var(--border)!important;border-radius:var(--radius)!important;padding:12px 16px!important;font-family:inherit!important;font-size:12px!important;box-shadow:var(--shadow-md)!important}
   .maplibregl-popup-tip{display:none!important}
   .maplibregl-ctrl-group{border-radius:var(--radius-sm)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--border)!important}
@@ -1149,12 +1147,15 @@ function shortEnergie(val) {
   return {'Électricité':'Élec.','Gaz naturel':'Gaz','Réseau de chaleur urbain':'RCU','Fioul domestique':'Fioul','Bois – Granulés (pellets) ou briquettes':'Pellets','Bois – Bûches':'Bois','GPL':'GPL','Charbon':'Charbon','Propane':'Propane','Autre':'Autre'}[val]||val.substring(0,12);
 }
 
+const CURSOR_PENCIL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath d='M15 1l4 4L7 17l-5 2 2-5Z' fill='%232bb573' stroke='white' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M13 3l4 4' stroke='rgba(0,0,0,0.25)' stroke-width='1'/%3E%3C/svg%3E") 2 17, crosshair`;
+
 document.getElementById('btn-measure-poly').addEventListener('click', ()=>toggleMeasure('poly'));
 
 function toggleMeasure(mode) {
   if(measureMode===mode){ clearMeasure(); return; }
   clearMeasure(); measureMode=mode;
   document.getElementById('map').classList.add('measuring');
+  map.getCanvas().style.cursor = CURSOR_PENCIL;
   document.getElementById('btn-measure-poly').classList.add('active');
 }
 map.on('click',e=>{
@@ -1229,10 +1230,11 @@ function updateMeasureGeom(){
   }
   const src=map.getSource('measure-src'); if(src&&geojson)src.setData({type:'FeatureCollection',features:[geojson]});
 }
-function finalizeMeasure(){measureMode=null;document.getElementById('map').classList.remove('measuring');document.getElementById('btn-measure-poly').classList.remove('active');}
+function finalizeMeasure(){measureMode=null;document.getElementById('map').classList.remove('measuring');map.getCanvas().style.cursor='';document.getElementById('btn-measure-poly').classList.remove('active');}
 function clearMeasure(){
   measureMode=null;measurePoints=[];measureMarkers.forEach(m=>m.remove());measureMarkers=[];
   document.getElementById('map').classList.remove('measuring');
+  map.getCanvas().style.cursor='';
   document.getElementById('btn-measure-poly').classList.remove('active');
   document.getElementById('measure-result').style.display='none';
   const src=map.getSource('measure-src');if(src)src.setData({type:'FeatureCollection',features:[]});
