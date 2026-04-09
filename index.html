@@ -445,17 +445,16 @@ document.addEventListener('click', e => { if (!e.target.closest('#search-wrap'))
 
 async function fetchSuggestions(q, autoSelect=false) {
   try {
-    const r44 = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&departmentcode=44&limit=6`);
-    const feats44 = (await r44.json()).features || [];
+    // Biais géographique vers le centre de Loire-Atlantique + limite large pour filtrer côté client
+    const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&lat=47.25&lon=-1.6&limit=15`);
+    const all = (await r.json()).features || [];
+    const feats44 = all.filter(f => (f.properties.postcode || '').startsWith('44'));
     if (autoSelect) {
-      if (feats44.length) { hideSuggestions(); selectAddress(feats44[0]); return; }
-      // Fallback général si aucun résultat en Loire-Atlantique
-      const rGen = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=1`);
-      const featsGen = (await rGen.json()).features || [];
-      if (featsGen.length) { hideSuggestions(); selectAddress(featsGen[0]); }
+      const best = feats44[0] || all[0];
+      if (best) { hideSuggestions(); selectAddress(best); }
       return;
     }
-    renderSuggestions(feats44);
+    renderSuggestions(feats44.slice(0, 6));
   } catch(e) { setStatus('Erreur BAN','error'); }
 }
 function renderSuggestions(features) {
