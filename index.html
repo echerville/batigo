@@ -820,7 +820,7 @@ function getDPEEnergySummary(results, resultsNeufs) {
   // Année de construction du bien (pas la date du DPE)
   const constrVals = all.map(r => r.annee_construction || r.periode_construction).filter(Boolean);
   const year = constrVals.length ? constrVals.sort((a,b) => String(b).localeCompare(String(a)))[0] : '—';
-  const surfs = all.map(r => parseFloat(r.surface_habitable_logement || r.surface_habitable_immeuble)).filter(v => v > 0);
+  const surfs = all.filter(r => r.methode_application_dpe !== 'dpe immeuble collectif').map(r => parseFloat(r.surface_habitable_logement)).filter(v => v > 0);
   const mn = Math.round(Math.min(...surfs)), mx = Math.round(Math.max(...surfs));
   const surf = surfs.length === 0 ? '—' : mn === mx ? mn + ' m²' : mn + '–' + mx + ' m²';
   return { ch, ecs, year, surf };
