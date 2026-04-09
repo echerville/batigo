@@ -684,8 +684,8 @@ function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
     <!-- Info principale : 4 cellules -->
     <div class="card" style="padding:10px 12px;margin-bottom:10px">
       <div class="info-grid">
-        <div class="info-cell"><div class="field-label">Construit (BDNB)</div>${fv(bdnb?.annee_construction)}</div>
-        <div class="info-cell"><div class="field-label">Construit (DPE)</div><span class="field-value" id="panel-dpe-year">—</span></div>
+        <div class="info-cell"><div class="field-label">Date (BDNB)</div>${fv(bdnb?.annee_construction)}</div>
+        <div class="info-cell"><div class="field-label">Date (DPE)</div><span class="field-value" id="panel-dpe-year">—</span></div>
         <div class="info-cell"><div class="field-label">Usage</div>${fv(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
         <div class="info-cell"><div class="field-label">Emprise sol</div>${fv(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+' m²' : null)}</div>
       </div>
