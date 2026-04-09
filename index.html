@@ -508,14 +508,18 @@ async function fetchCadastre(lat, lng) {
     if (!js.features?.length) return null;
     // Point-in-polygon exact : trouver la parcelle qui contient le point cliqué
     const pt = turf.point([lng, lat]);
-    const match = js.features.find(f => {
+    const pip = js.features.find(f => {
       try { return turf.booleanPointInPolygon(pt, f); } catch(e) { return false; }
-    }) || js.features[0]; // fallback : première parcelle si aucun match
+    });
+    const match = pip || js.features[0]; // fallback : première parcelle si aucun match
+    // Score de confiance : exact si le point est dans la parcelle,
+    // ou s'il n'y a qu'une seule parcelle dans la zone (pas d'ambiguïté)
+    const confident = !!pip || js.features.length === 1;
     const p = match?.properties;
     if (!p) return null;
     const section = (p.section || '').replace(/^0+(?=[A-Z])/, '') || p.section || '';
     const numero  = (p.numero  || '').replace(/^0+/, '')           || p.numero  || '';
-    return { idu: p.idu || '', section, numero, code_insee: p.code_insee || '' };
+    return { idu: p.idu || '', section, numero, code_insee: p.code_insee || '', confident };
   } catch(e) { return null; }
 }
 
@@ -673,7 +677,7 @@ function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
       <div style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 8px">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         <span style="font-size:9.5px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase">Cadastre</span>
-        <span style="font-size:11px;font-weight:700;color:var(--text-dim)">${cad.section}${cad.numero ? ' · ' + cad.numero : ''}</span>
+        <span style="font-size:11px;font-weight:700;color:var(--text-dim)">${cad.section}${cad.confident && cad.numero ? ' · ' + cad.numero : ''}</span>
       </div>
       <div style="flex:1;height:1px;background:var(--border)"></div>
     </div>` : ''}
