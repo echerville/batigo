@@ -95,8 +95,10 @@
   #panoramax-panel{height:420px;border-top:1px solid var(--border);display:none;background:#111;position:relative;flex-shrink:0}
   #panoramax-panel.visible{display:flex}
   #panoramax-panel iframe{width:100%;height:100%;border:none}
-  #panoramax-close{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background .15s}
-  #panoramax-close:hover{background:rgba(255,255,255,.3)}
+  #panoramax-close,#panoramax-fs{position:absolute;top:10px;width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background .15s}
+  #panoramax-close{left:50%;transform:translateX(-50%)}
+  #panoramax-fs{right:10px}
+  #panoramax-close:hover,#panoramax-fs:hover{background:rgba(255,255,255,.3)}
   #measure-result{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--radius);color:var(--accent-dark);font-family:inherit;font-size:13px;font-weight:700;padding:7px 20px;pointer-events:none;white-space:nowrap;display:none;z-index:50;box-shadow:var(--shadow-md)}
   .addr-marker{line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));cursor:default;user-select:none}
   /* ── PANEL ── */
@@ -237,6 +239,7 @@
     <div id="measure-result"></div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
+      <button id="panoramax-fs" title="Plein écran"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4V1h3M8 1h3v3M11 8v3H8M4 11H1V8"/></svg></button>
       <iframe id="panoramax-iframe" src="" allow="fullscreen; xr-spatial-tracking; geolocation" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
   </div>
@@ -454,6 +457,11 @@ document.getElementById('toggle-panoramax').addEventListener('click', async func
 });
 
 document.getElementById('panoramax-close').addEventListener('click', closeStreetview);
+document.getElementById('panoramax-fs').addEventListener('click', () => {
+  const panel = document.getElementById('panoramax-panel');
+  if (!document.fullscreenElement) panel.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
 
 
 let suggestTimeout = null;
