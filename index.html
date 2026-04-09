@@ -445,11 +445,17 @@ document.addEventListener('click', e => { if (!e.target.closest('#search-wrap'))
 
 async function fetchSuggestions(q, autoSelect=false) {
   try {
-    const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=6`);
-    const d = await r.json();
-    const features = d.features || [];
-    if (autoSelect && features.length>0) { hideSuggestions(); selectAddress(features[0]); return; }
-    renderSuggestions(features);
+    const r44 = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&departmentcode=44&limit=6`);
+    const feats44 = (await r44.json()).features || [];
+    if (autoSelect) {
+      if (feats44.length) { hideSuggestions(); selectAddress(feats44[0]); return; }
+      // Fallback général si aucun résultat en Loire-Atlantique
+      const rGen = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=1`);
+      const featsGen = (await rGen.json()).features || [];
+      if (featsGen.length) { hideSuggestions(); selectAddress(featsGen[0]); }
+      return;
+    }
+    renderSuggestions(feats44);
   } catch(e) { setStatus('Erreur BAN','error'); }
 }
 function renderSuggestions(features) {
