@@ -214,6 +214,7 @@
           <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobilières</td><td><span class="src-badge src-api">API REST</span></td><td><label class="src-toggle"><input type="checkbox" id="dvf-enable" onchange="toggleDVF(this.checked)"> Activer</label></td><td class="src-status" id="src-st-dvf"></td></tr>
           <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriétés</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-rnic"></td></tr>
           <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>04/04/2026 <button id="btn-update-pmtiles" onclick="triggerPMTilesUpdate()" title="Relancer la génération des tuiles DPE via GitHub Actions (~20 min)" style="margin-left:6px;font-size:9px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-dim);font-weight:600;font-family:inherit">↺ Màj</button></td><td class="src-status" id="src-st-pmtiles"></td></tr>
+          <tr><td class="src-name">France Chaleur Urbaine</td><td>Réseaux de chaleur (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-rcu"></td></tr>
           <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
           <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
@@ -1387,6 +1388,7 @@ async function testSources() {
     { id:'dvf',      fn: () => fetch('/api/dvf?idpar=440109000B0100', {signal:AbortSignal.timeout(8000)}).then(r=>r.status<500) },
     { id:'rnic',     fn: () => fetch('https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'pmtiles',  fn: () => fetch('/public/dpe-44.pmtiles', {method:'HEAD', headers:{'Range':'bytes=0-1'}, signal:AbortSignal.timeout(6000)}).then(r=>r.ok||r.status===206) },
+    { id:'rcu',      fn: () => fetch('/public/rcu-44.json', {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'carto',    fn: () => testTile('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png') },
     { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
     { id:'google',   fn: () => testTile(TILE_URLS['google-plan']) },
