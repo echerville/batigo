@@ -438,14 +438,17 @@ document.getElementById('toggle-rcu').addEventListener('click', async function()
     let features;
     if (cached) {
       features = JSON.parse(cached);
-    } else {
+      if (!features.length) { sessionStorage.removeItem('rcu-44'); features = null; } // purge cache vide
+    }
+    if (!features) {
       const r = await fetch('/public/rcu-44.json');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
       const geojson = await r.json();
       features = geojson.features || [];
-      sessionStorage.setItem('rcu-44', JSON.stringify(features));
+      if (features.length) sessionStorage.setItem('rcu-44', JSON.stringify(features));
     }
     map.getSource('rcu-src').setData({type:'FeatureCollection', features});
-    rcuLoaded = true;
+    rcuLoaded = !!features.length;
     setStatus(`${features.length} réseau${features.length>1?'x':''} de chaleur`, 'ok');
     setTimeout(() => setStatus('Prêt'), 3000);
   } catch(e) {
