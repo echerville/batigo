@@ -84,8 +84,11 @@
   #layer-bar button:hover{background:var(--surface2);color:var(--text)}
   #layer-bar .layer-btn.active,#layer-bar .layer-toggle.on,#layer-bar .measure-btn.active{background:var(--accent-dim2);color:var(--accent-dark);font-weight:700}
   .lb-sep{width:1px;height:18px;background:var(--border);margin:0 3px;flex-shrink:0}
-  #toggle-dpe-layer,#toggle-cadastre{position:relative;overflow:visible;padding-bottom:6px;border:1.5px solid var(--accent)!important;color:var(--accent-dark)!important;font-weight:600!important}
-  #toggle-dpe-layer:hover,#toggle-cadastre:hover{background:var(--accent-dim2)!important}
+  #toggle-dpe-layer,#toggle-cadastre,#toggle-rcu{position:relative;overflow:visible;padding-bottom:6px;border:1.5px solid var(--accent)!important;color:var(--accent-dark)!important;font-weight:600!important}
+  #toggle-dpe-layer:hover,#toggle-cadastre:hover,#toggle-rcu:hover{background:var(--accent-dim2)!important}
+  #toggle-rcu{border-color:#e05c00!important;color:#e05c00!important}
+  #toggle-rcu:hover{background:rgba(224,92,0,.10)!important}
+  #toggle-rcu.on{background:rgba(224,92,0,.15)!important}
   .btn-plus{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:13px;height:13px;border-radius:50%;background:#fff;color:var(--accent);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--accent);line-height:1;pointer-events:none}
   #btn-measure-poly,#toggle-gsv,#toggle-panoramax{background:var(--accent)!important;color:#fff!important;font-weight:600!important}
   #btn-measure-poly:hover,#toggle-gsv:hover,#toggle-panoramax:hover{background:var(--accent-dark)!important;color:#fff!important}
@@ -230,6 +233,7 @@
       <div class="lb-sep"></div>
       <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE<span class="btn-plus">+</span></button>
       <button class="layer-toggle" id="toggle-cadastre">Cadastre<span class="btn-plus">+</span></button>
+      <button class="layer-toggle" id="toggle-rcu" title="Réseaux de chaleur urbain (Loire-Atlantique)">RCU<span class="btn-plus" style="background:#fff;color:#e05c00;border-color:#e05c00">+</span></button>
       <div class="lb-sep"></div>
       <button class="measure-btn" id="btn-measure-poly"><span style="font-size:17px">⬡</span></button>
       <button class="layer-toggle" id="toggle-gsv"><svg width="14" height="20" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg></button>
@@ -380,6 +384,10 @@ map.on('load', () => {
   });
   map.on('mouseleave','dpe-fill', () => { map.getCanvas().style.cursor=''; dpePopup.remove(); });
 
+  // Réseaux de chaleur urbain
+  map.addSource('rcu-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'rcu-layer', type:'line', source:'rcu-src', layout:{visibility:'none'},
+    paint:{'line-color':'#e05c00','line-width':['interpolate',['linear'],['zoom'],12,2,16,4],'line-opacity':0.85}});
   map.addSource('measure-src', {type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'measure-fill',type:'fill',source:'measure-src',paint:{'fill-color':'#e06090','fill-opacity':0.12},filter:['==','$type','Polygon']});
   map.addLayer({id:'measure-line',type:'line',source:'measure-src',paint:{'line-color':'#e06090','line-width':2,'line-dasharray':[4,2]}});
@@ -402,6 +410,61 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
   cadastreOn = !cadastreOn;
   map.setLayoutProperty('cadastre-layer', 'visibility', cadastreOn ? 'visible' : 'none');
   this.classList.toggle('on', cadastreOn);
+});
+
+// ── RÉSEAUX DE CHALEUR (Loire-Atlantique) ──
+let rcuOn = false, rcuLoaded = false;
+const RCU_BOUNDS = {minLng:-2.55, maxLng:-0.85, minLat:46.85, maxLat:47.95};
+
+function inLoire(geom) {
+  const {minLng,maxLng,minLat,maxLat} = RCU_BOUNDS;
+  for (const ls of (geom?.coordinates || [])) {
+    for (const pt of ls) {
+      const [x,y] = Array.isArray(pt[0]) ? pt[0] : pt;
+      if (x>minLng && x<maxLng && y>minLat && y<maxLat) return true;
+    }
+  }
+  return false;
+}
+
+document.getElementById('toggle-rcu').addEventListener('click', async function() {
+  rcuOn = !rcuOn;
+  this.classList.toggle('on', rcuOn);
+  map.setLayoutProperty('rcu-layer', 'visibility', rcuOn ? 'visible' : 'none');
+  if (!rcuOn || rcuLoaded) return;
+  setStatus('Chargement réseaux de chaleur…', 'loading');
+  try {
+    const cached = sessionStorage.getItem('rcu-44');
+    let features;
+    if (cached) {
+      features = JSON.parse(cached);
+    } else {
+      const r = await fetch('https://france-chaleur-urbaine.beta.gouv.fr/api/v1/networks');
+      const data = await r.json();
+      features = data
+        .filter(n => n.geom && inLoire(n.geom))
+        .map(n => ({
+          type: 'Feature',
+          geometry: n.geom,
+          properties: {
+            nom: n['nom_reseau'] || '',
+            gestionnaire: n['Gestionnaire'] || '',
+            enr: n['Taux EnR&R'] != null ? n['Taux EnR&R'] + ' %' : '—',
+            co2: n['contenu CO2'] != null ? n['contenu CO2'] + ' kg/kWh' : '—'
+          }
+        }));
+      sessionStorage.setItem('rcu-44', JSON.stringify(features));
+    }
+    map.getSource('rcu-src').setData({type:'FeatureCollection', features});
+    rcuLoaded = true;
+    setStatus(`${features.length} réseau${features.length>1?'x':''} de chaleur`, 'ok');
+    setTimeout(() => setStatus('Prêt'), 3000);
+  } catch(e) {
+    setStatus('Erreur chargement RCU', 'error');
+    setTimeout(() => setStatus('Prêt'), 3000);
+    rcuOn = false; this.classList.remove('on');
+    map.setLayoutProperty('rcu-layer', 'visibility', 'none');
+  }
 });
 
 
