@@ -439,20 +439,9 @@ document.getElementById('toggle-rcu').addEventListener('click', async function()
     if (cached) {
       features = JSON.parse(cached);
     } else {
-      const r = await fetch('https://france-chaleur-urbaine.beta.gouv.fr/api/v1/networks');
-      const data = await r.json();
-      features = data
-        .filter(n => n.geom && inLoire(n.geom))
-        .map(n => ({
-          type: 'Feature',
-          geometry: n.geom,
-          properties: {
-            nom: n['nom_reseau'] || '',
-            gestionnaire: n['Gestionnaire'] || '',
-            enr: n['Taux EnR&R'] != null ? n['Taux EnR&R'] + ' %' : '—',
-            co2: n['contenu CO2'] != null ? n['contenu CO2'] + ' kg/kWh' : '—'
-          }
-        }));
+      const r = await fetch('/api/rcu');
+      const geojson = await r.json();
+      features = geojson.features || [];
       sessionStorage.setItem('rcu-44', JSON.stringify(features));
     }
     map.getSource('rcu-src').setData({type:'FeatureCollection', features});
