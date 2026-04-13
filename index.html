@@ -439,7 +439,7 @@ document.getElementById('toggle-rcu').addEventListener('click', async function()
     if (cached) {
       features = JSON.parse(cached);
     } else {
-      const r = await fetch('/api/rcu');
+      const r = await fetch('/public/rcu-44.json');
       const geojson = await r.json();
       features = geojson.features || [];
       sessionStorage.setItem('rcu-44', JSON.stringify(features));
