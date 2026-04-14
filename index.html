@@ -75,16 +75,14 @@
   #body{flex:1;display:flex;overflow:hidden}
   #map-area{flex:1;display:flex;flex-direction:column;position:relative}
   /* ── FLOATING LAYER BAR ── */
-  #layer-bar{position:absolute;top:12px;right:12px;z-index:50;
-    background:var(--surface);border:1px solid var(--border);border-radius:14px;
-    box-shadow:0 4px 24px rgba(0,0,0,.13);display:flex;align-items:center;gap:2px;padding:4px;
-    overflow:visible;white-space:nowrap}
+  #header{overflow:visible}
+  #layer-bar{display:flex;align-items:center;gap:2px;padding:0;overflow:visible;white-space:nowrap;flex-shrink:0}
   .lb-group{position:relative;flex-shrink:0}
   .lb-group-toggle{height:32px;padding:0 11px;border:none;background:none;font-size:11px;font-weight:700;letter-spacing:.3px;color:var(--text-dim);cursor:pointer;font-family:inherit;border-radius:9px;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
   .lb-group-toggle:hover,.lb-group.open>.lb-group-toggle{background:rgba(0,0,0,.05);color:var(--text)}
   .lb-arrow{font-size:9px;transition:transform .25s ease;display:inline-block;opacity:.5}
   .lb-group.open>.lb-group-toggle .lb-arrow{transform:rotate(90deg);opacity:1}
-  .lb-group-panel{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(-6px);display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;box-shadow:0 4px 20px rgba(0,0,0,.13);min-width:130px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:60}
+  .lb-group-panel{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(-6px);display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;box-shadow:0 4px 20px rgba(0,0,0,.13);min-width:130px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:300}
   .lb-group.open>.lb-group-panel{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
   .lb-group-panel button{width:100%;justify-content:flex-start}
   #layer-bar button{height:32px;padding:0 11px;border:none;border-radius:7px;font-size:11.5px;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text-dim);font-family:inherit;background:none;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
@@ -196,6 +194,34 @@
     <button id="search-btn">⌕</button>
     <div id="suggestions"></div>
   </div>
+  <div id="layer-bar">
+    <div class="lb-group" id="group-cartes">
+      <button class="lb-group-toggle">Cartes <span class="lb-arrow">›</span></button>
+      <div class="lb-group-panel">
+        <button class="layer-btn active" data-layer="voyager"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>Carto</button>
+        <button class="layer-btn" data-layer="ign-plan"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>IGN</button>
+        <button class="layer-btn" data-layer="google-plan"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>Google</button>
+        <button class="layer-btn" data-layer="ign-ortho"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#4a7c59"/><rect x="0" y="0" width="6.5" height="6.5" rx="1.5" fill="#5a9e6f"/><rect x="7.5" y="0" width="6.5" height="6.5" rx="1.5" fill="#8B7355"/><rect x="0" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#2a7fc1"/><rect x="7.5" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#6b9e4a"/></svg>IGN sat</button>
+        <button class="layer-btn" data-layer="google-sat"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#4a7c59"/><rect x="0" y="0" width="6.5" height="6.5" rx="1.5" fill="#5a9e6f"/><rect x="7.5" y="0" width="6.5" height="6.5" rx="1.5" fill="#8B7355"/><rect x="0" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#2a7fc1"/><rect x="7.5" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#6b9e4a"/></svg>Google sat</button>
+      </div>
+    </div>
+    <div class="lb-group" id="group-surcouche">
+      <button class="lb-group-toggle">Surcouche <span class="lb-arrow">›</span></button>
+      <div class="lb-group-panel">
+        <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
+        <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
+        <button class="layer-toggle" id="toggle-rcu" title="Réseaux de chaleur urbain (Loire-Atlantique)">RCU</button>
+      </div>
+    </div>
+    <div class="lb-group" id="group-outils">
+      <button class="lb-group-toggle">Outils <span class="lb-arrow">›</span></button>
+      <div class="lb-group-panel">
+        <button class="measure-btn" id="btn-measure-poly">⬡ m²</button>
+        <button class="layer-toggle" id="toggle-gsv"><svg width="11" height="16" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>S.View</button>
+        <button class="layer-toggle" id="toggle-panoramax"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#FBBC05" stroke-width="1.5"/><circle cx="7" cy="7" r="2.5" fill="#FBBC05"/><line x1="7" y1="1" x2="7" y2="3" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="11" x2="7" y2="13" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="3" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="7" x2="13" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/></svg>Panor.</button>
+      </div>
+    </div>
+  </div>
   <div id="info-wrap">
     <button id="info-btn" title="Sources de données">
       <span class="info-dot"></span>
@@ -228,34 +254,6 @@
 </div>
 <div id="body">
   <div id="map-area">
-    <div id="layer-bar">
-      <div class="lb-group" id="group-cartes">
-        <button class="lb-group-toggle">Cartes <span class="lb-arrow">›</span></button>
-        <div class="lb-group-panel">
-          <button class="layer-btn active" data-layer="voyager"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>Carto</button>
-          <button class="layer-btn" data-layer="ign-plan"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>IGN</button>
-          <button class="layer-btn" data-layer="google-plan"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>Google</button>
-          <button class="layer-btn" data-layer="ign-ortho"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#4a7c59"/><rect x="0" y="0" width="6.5" height="6.5" rx="1.5" fill="#5a9e6f"/><rect x="7.5" y="0" width="6.5" height="6.5" rx="1.5" fill="#8B7355"/><rect x="0" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#2a7fc1"/><rect x="7.5" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#6b9e4a"/></svg>IGN sat</button>
-          <button class="layer-btn" data-layer="google-sat"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#4a7c59"/><rect x="0" y="0" width="6.5" height="6.5" rx="1.5" fill="#5a9e6f"/><rect x="7.5" y="0" width="6.5" height="6.5" rx="1.5" fill="#8B7355"/><rect x="0" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#2a7fc1"/><rect x="7.5" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#6b9e4a"/></svg>Google sat</button>
-        </div>
-      </div>
-      <div class="lb-group" id="group-surcouche">
-        <button class="lb-group-toggle">Surcouche <span class="lb-arrow">›</span></button>
-        <div class="lb-group-panel">
-          <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
-          <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
-          <button class="layer-toggle" id="toggle-rcu" title="Réseaux de chaleur urbain (Loire-Atlantique)">RCU</button>
-        </div>
-      </div>
-      <div class="lb-group" id="group-outils">
-        <button class="lb-group-toggle">Outils <span class="lb-arrow">›</span></button>
-        <div class="lb-group-panel">
-          <button class="measure-btn" id="btn-measure-poly">⬡ m²</button>
-          <button class="layer-toggle" id="toggle-gsv"><svg width="11" height="16" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>S.View</button>
-          <button class="layer-toggle" id="toggle-panoramax"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#FBBC05" stroke-width="1.5"/><circle cx="7" cy="7" r="2.5" fill="#FBBC05"/><line x1="7" y1="1" x2="7" y2="3" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="11" x2="7" y2="13" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="3" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="7" x2="13" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/></svg>Panor.</button>
-        </div>
-      </div>
-    </div>
     <div id="map"></div>
 
     <div id="measure-result"></div>
