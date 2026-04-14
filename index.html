@@ -75,7 +75,7 @@
   #body{flex:1;display:flex;overflow:hidden}
   #map-area{flex:1;display:flex;flex-direction:column;position:relative}
   /* ── FLOATING LAYER BAR ── */
-  #layer-bar{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:50;
+  #layer-bar{position:absolute;top:12px;right:12px;z-index:50;
     background:var(--surface);border:1px solid var(--border);border-radius:14px;
     box-shadow:0 4px 24px rgba(0,0,0,.13);display:flex;align-items:center;gap:2px;padding:4px;
     overflow:visible;white-space:nowrap}
@@ -83,8 +83,8 @@
   .lb-group-toggle{height:32px;padding:0 11px;border:none;background:none;font-size:11px;font-weight:700;letter-spacing:.3px;color:var(--text-dim);cursor:pointer;font-family:inherit;border-radius:9px;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
   .lb-group-toggle:hover,.lb-group.open>.lb-group-toggle{background:rgba(0,0,0,.05);color:var(--text)}
   .lb-arrow{font-size:9px;transition:transform .25s ease;display:inline-block;opacity:.5}
-  .lb-group.open>.lb-group-toggle .lb-arrow{transform:rotate(-90deg);opacity:1}
-  .lb-group-panel{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(6px);display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;box-shadow:0 4px 20px rgba(0,0,0,.13);min-width:130px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:60}
+  .lb-group.open>.lb-group-toggle .lb-arrow{transform:rotate(90deg);opacity:1}
+  .lb-group-panel{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(-6px);display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;box-shadow:0 4px 20px rgba(0,0,0,.13);min-width:130px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:60}
   .lb-group.open>.lb-group-panel{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
   .lb-group-panel button{width:100%;justify-content:flex-start}
   #layer-bar button{height:32px;padding:0 11px;border:none;border-radius:7px;font-size:11.5px;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text-dim);font-family:inherit;background:none;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
