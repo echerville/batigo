@@ -641,9 +641,10 @@ async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
       if (res) return res;
     }
   }
-  // Stratégie 3 : mot-clé rue + GPS 80m
+  // Stratégie 3 : mot-clé rue + GPS 80m (accents retirés car l'API rejette les caractères non-ASCII)
   if (streetKey) {
-    const r = await fetch(`${BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(streetKey)}`);
+    const asciiKey = streetKey.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const r = await fetch(`${BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(asciiKey)}`);
     if (r.ok) { const d = await r.json(); return closest(d.data||[], 0.0000008); }
   }
   return null;
