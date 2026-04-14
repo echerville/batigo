@@ -196,7 +196,7 @@
   </div>
   <div id="layer-bar">
     <div class="lb-group" id="group-cartes">
-      <button class="lb-group-toggle">Cartes <span class="lb-arrow">›</span></button>
+      <button class="lb-group-toggle"><span class="lb-group-label">Cartes</span> <span class="lb-arrow">›</span></button>
       <div class="lb-group-panel">
         <button class="layer-btn active" data-layer="voyager"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>Carto</button>
         <button class="layer-btn" data-layer="ign-plan"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>IGN</button>
@@ -206,7 +206,7 @@
       </div>
     </div>
     <div class="lb-group" id="group-surcouche">
-      <button class="lb-group-toggle">Surcouche <span class="lb-arrow">›</span></button>
+      <button class="lb-group-toggle"><span class="lb-group-label">Surcouche</span> <span class="lb-arrow">›</span></button>
       <div class="lb-group-panel">
         <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE (Loire-Atlantique, zoom ≥ 13)">DPE</button>
         <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
@@ -214,7 +214,7 @@
       </div>
     </div>
     <div class="lb-group" id="group-outils">
-      <button class="lb-group-toggle">Outils <span class="lb-arrow">›</span></button>
+      <button class="lb-group-toggle"><span class="lb-group-label">Outils</span> <span class="lb-arrow">›</span></button>
       <div class="lb-group-panel">
         <button class="measure-btn" id="btn-measure-poly">⬡ m²</button>
         <button class="layer-toggle" id="toggle-gsv"><svg width="11" height="16" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>S.View</button>
@@ -497,6 +497,7 @@ function closeStreetview() {
   document.getElementById('panoramax-iframe').src = '';
   document.getElementById('toggle-gsv').classList.remove('on');
   document.getElementById('toggle-panoramax').classList.remove('on');
+  updateGroupLabel('group-outils');
 }
 
 document.getElementById('toggle-gsv').addEventListener('click', function() {
@@ -1253,12 +1254,37 @@ function shortEnergie(val) {
 
 const CURSOR_PENCIL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath d='M15 1l4 4L7 17l-5 2 2-5Z' fill='%232bb573' stroke='white' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M13 3l4 4' stroke='rgba(0,0,0,0.25)' stroke-width='1'/%3E%3C/svg%3E") 2 17, crosshair`;
 
+function updateGroupLabel(groupId) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  const label = group.querySelector('.lb-group-label');
+  if (groupId === 'group-cartes') {
+    const active = group.querySelector('.layer-btn.active');
+    label.textContent = active ? active.textContent.trim() : 'Cartes';
+  } else if (groupId === 'group-surcouche') {
+    const names = [...group.querySelectorAll('.layer-toggle.on')].map(b => b.textContent.trim());
+    label.textContent = names.length ? names.join(' · ') : 'Surcouche';
+  } else if (groupId === 'group-outils') {
+    const active = [...group.querySelectorAll('.on, .measure-btn.active')].map(b => b.textContent.trim());
+    label.textContent = active.length ? active.join(' · ') : 'Outils';
+  }
+}
+// Init label Cartes (Carto actif par défaut)
+updateGroupLabel('group-cartes');
+
 document.querySelectorAll('.lb-group-toggle').forEach(btn => {
   btn.addEventListener('click', function() {
     const group = this.closest('.lb-group');
     const opening = !group.classList.contains('open');
     document.querySelectorAll('.lb-group').forEach(g => g.classList.remove('open'));
     if (opening) group.classList.add('open');
+  });
+});
+
+// Mise à jour des labels après chaque clic dans un panel
+document.querySelectorAll('.lb-group-panel').forEach(panel => {
+  panel.addEventListener('click', () => {
+    setTimeout(() => updateGroupLabel(panel.closest('.lb-group').id), 0);
   });
 });
 
@@ -1356,7 +1382,7 @@ function updateMeasureGeom(){
   }
   const src=map.getSource('measure-src'); if(src&&geojson)src.setData({type:'FeatureCollection',features:[geojson]});
 }
-function finalizeMeasure(){measureMode=null;document.getElementById('map').classList.remove('measuring');setCursorMeasure(false);document.getElementById('btn-measure-poly').classList.remove('active');}
+function finalizeMeasure(){measureMode=null;document.getElementById('map').classList.remove('measuring');setCursorMeasure(false);document.getElementById('btn-measure-poly').classList.remove('active');updateGroupLabel('group-outils');}
 function clearMeasure(){
   measureMode=null;measurePoints=[];measureMarkers.forEach(m=>m.remove());measureMarkers=[];
   document.getElementById('map').classList.remove('measuring');
