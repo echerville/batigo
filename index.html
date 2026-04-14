@@ -86,6 +86,8 @@
   #toggle-dpe-layer:hover,#toggle-cadastre:hover,#toggle-dpe-layer.on,#toggle-cadastre.on{background:var(--accent)!important;color:#fff!important}
   #toggle-rcu{color:#e05c00!important;font-weight:600!important;background:rgba(224,92,0,.09)!important;border:1px solid rgba(224,92,0,.3)!important}
   #toggle-rcu:hover,#toggle-rcu.on{background:#e05c00!important;color:#fff!important}
+  #toggle-gaz{color:#b08800!important;font-weight:600!important;background:rgba(212,160,0,.1)!important;border:1px solid rgba(212,160,0,.35)!important}
+  #toggle-gaz:hover,#toggle-gaz.on{background:#d4a000!important;color:#fff!important}
   #btn-measure-poly,#toggle-gsv,#toggle-panoramax{background:var(--accent)!important;color:#fff!important;font-weight:600!important}
   #btn-measure-poly:hover,#toggle-gsv:hover,#toggle-panoramax:hover{background:var(--accent-dark)!important}
   #btn-measure-poly.active{background:var(--accent-dark)!important;box-shadow:inset 0 1px 3px rgba(0,0,0,.2)!important}
@@ -211,6 +213,7 @@
           <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriétés</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-rnic"></td></tr>
           <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>04/04/2026 <button id="btn-update-pmtiles" onclick="triggerPMTilesUpdate()" title="Relancer la génération des tuiles DPE via GitHub Actions (~20 min)" style="margin-left:6px;font-size:9px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-dim);font-weight:600;font-family:inherit">↺ Màj</button></td><td class="src-status" id="src-st-pmtiles"></td></tr>
           <tr><td class="src-name">France Chaleur Urbaine</td><td>Réseaux de chaleur (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-rcu"></td></tr>
+          <tr><td class="src-name">GRDF Open Data</td><td>Réseau de gaz (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-gaz"></td></tr>
           <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
           <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
@@ -229,6 +232,7 @@
     <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE">DPE</button>
     <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
     <button class="layer-toggle" id="toggle-rcu" title="Réseaux de chaleur urbain (Loire-Atlantique)">RCU</button>
+    <button class="layer-toggle" id="toggle-gaz" title="Réseau de gaz GRDF (Loire-Atlantique)">Gaz</button>
     <div class="lb-sep"></div>
     <button class="measure-btn" id="btn-measure-poly">⬡ m²</button>
     <button class="layer-toggle" id="toggle-gsv"><svg width="10" height="14" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>S.View</button>
@@ -386,6 +390,9 @@ map.on('load', () => {
   map.addSource('rcu-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'rcu-layer', type:'line', source:'rcu-src', layout:{visibility:'none'},
     paint:{'line-color':'#e05c00','line-width':['interpolate',['linear'],['zoom'],12,2,16,4],'line-opacity':0.85}});
+  map.addSource('gaz-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'gaz-layer', type:'line', source:'gaz-src', layout:{visibility:'none'},
+    paint:{'line-color':'#d4a000','line-width':['interpolate',['linear'],['zoom'],12,1.5,16,3.5],'line-opacity':0.9}});
   map.addSource('measure-src', {type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'measure-fill',type:'fill',source:'measure-src',paint:{'fill-color':'#e06090','fill-opacity':0.12},filter:['==','$type','Polygon']});
   map.addLayer({id:'measure-line',type:'line',source:'measure-src',paint:{'line-color':'#e06090','line-width':2,'line-dasharray':[4,2]}});
@@ -454,6 +461,41 @@ document.getElementById('toggle-rcu').addEventListener('click', async function()
     setTimeout(() => setStatus('Prêt'), 3000);
     rcuOn = false; this.classList.remove('on');
     map.setLayoutProperty('rcu-layer', 'visibility', 'none');
+  }
+});
+
+let gazOn = false, gazLoaded = false;
+document.getElementById('toggle-gaz').addEventListener('click', async function() {
+  gazOn = !gazOn;
+  this.classList.toggle('on', gazOn);
+  map.setLayoutProperty('gaz-layer', 'visibility', gazOn ? 'visible' : 'none');
+  if (!gazOn || gazLoaded) return;
+  setStatus('Chargement réseau de gaz…', 'loading');
+  try {
+    const cached = sessionStorage.getItem('gaz-44');
+    let features;
+    if (cached) {
+      features = JSON.parse(cached);
+      if (!features.length) { sessionStorage.removeItem('gaz-44'); features = null; }
+    }
+    if (!features) {
+      const r = await fetch('/public/gaz-44.json');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const geojson = await r.json();
+      features = geojson.features || [];
+      if (features.length) {
+        try { sessionStorage.setItem('gaz-44', JSON.stringify(features)); } catch(e) { /* quota */ }
+      }
+    }
+    map.getSource('gaz-src').setData({type:'FeatureCollection', features});
+    gazLoaded = !!features.length;
+    setStatus(`${features.length.toLocaleString()} tronçons gaz`, 'ok');
+    setTimeout(() => setStatus('Prêt'), 3000);
+  } catch(e) {
+    setStatus('Erreur chargement réseau gaz', 'error');
+    setTimeout(() => setStatus('Prêt'), 3000);
+    gazOn = false; this.classList.remove('on');
+    map.setLayoutProperty('gaz-layer', 'visibility', 'none');
   }
 });
 
@@ -1387,6 +1429,7 @@ async function testSources() {
     { id:'rnic',     fn: () => fetch('https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'pmtiles',  fn: () => fetch('/public/dpe-44.pmtiles', {method:'HEAD', headers:{'Range':'bytes=0-1'}, signal:AbortSignal.timeout(6000)}).then(r=>r.ok||r.status===206) },
     { id:'rcu',      fn: () => fetch('/public/rcu-44.json', {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'gaz',      fn: () => fetch('/public/gaz-44.json', {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'carto',    fn: () => testTile('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png') },
     { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
     { id:'google',   fn: () => testTile(TILE_URLS['google-plan']) },
