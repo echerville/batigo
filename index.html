@@ -633,10 +633,10 @@ async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
   if (!cc) return null;
   // Stratégie 2 : numéro de voirie + GPS 150m
   if (hn) {
-    const r = await fetch(`${BASE}?page_size=50&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(hn)}`);
+    const r = await fetch(`${BASE}?page_size=50&code_officiel_commune__exact=${cc}&adresse_reference__contains=${encodeURIComponent(hn)}`);
     if (r.ok) {
       const d = await r.json();
-      const cands = (d.data||[]).filter(e => { const a=(e.adresse_de_reference||'').trim(); return a===hn||a.startsWith(hn+' ')||a.startsWith(hn+','); });
+      const cands = (d.data||[]).filter(e => { const a=(e.adresse_reference||'').trim(); return a===hn||a.startsWith(hn+' ')||a.startsWith(hn+','); });
       const res = closest(cands, 0.000003);
       if (res) return res;
     }
@@ -644,7 +644,7 @@ async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
   // Stratégie 3 : mot-clé rue + GPS 80m (accents retirés car l'API rejette les caractères non-ASCII)
   if (streetKey) {
     const asciiKey = streetKey.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const r = await fetch(`${BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_de_reference__contains=${encodeURIComponent(asciiKey)}`);
+    const r = await fetch(`${BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_reference__contains=${encodeURIComponent(asciiKey)}`);
     if (r.ok) { const d = await r.json(); return closest(d.data||[], 0.0000008); }
   }
   return null;
