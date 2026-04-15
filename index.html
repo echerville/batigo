@@ -83,10 +83,11 @@
   #header-bottom button:hover{background:rgba(0,0,0,.06);color:var(--text)}
   /* ── MAP PICKER ── */
   #map-picker{position:relative;flex-shrink:0}
-  #map-picker-btn{width:52px;height:34px;padding:0;border-radius:6px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:none;position:relative;display:block;transition:border-color .15s;flex-shrink:0}
-  #map-picker-btn:hover{border-color:var(--accent)}
-  #map-picker-thumb{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-  #map-picker-lbl{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);color:#fff;font-size:7.5px;font-weight:700;text-align:center;padding:1px 2px;letter-spacing:.04em;text-transform:uppercase;line-height:1.4}
+  #map-picker-btn{width:58px;height:46px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#e8e4de;position:relative;display:block;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #map-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #map-picker-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+  #map-picker-overlay{position:absolute;bottom:0;left:0;right:0;height:52%;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,0.88));backdrop-filter:blur(1px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
+  #map-picker-lbl{color:var(--accent);font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;line-height:1}
   #map-picker-panel{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:8px;display:none;gap:6px;flex-wrap:wrap;width:224px;z-index:200}
   #map-picker-panel.open{display:flex}
   .map-opt{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid transparent;transition:border-color .12s;flex:0 0 auto}
@@ -239,7 +240,7 @@
     <div id="map-picker">
       <button id="map-picker-btn" title="Changer le fond de carte">
         <img id="map-picker-thumb" src="https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png" />
-        <span id="map-picker-lbl">Carto</span>
+        <div id="map-picker-overlay"><span id="map-picker-lbl">Cartes</span></div>
       </button>
       <div id="map-picker-panel">
         <div class="map-opt active" data-layer="voyager">
@@ -464,7 +465,6 @@ document.querySelectorAll('.map-opt').forEach(opt => {
     document.querySelectorAll('.map-opt').forEach(o => o.classList.remove('active'));
     opt.classList.add('active');
     mapPickerThumb.src = THUMB_URLS[lId];
-    mapPickerLbl.textContent = LAYER_LABELS[lId];
     mapPickerPanel.classList.remove('open');
   });
 });
