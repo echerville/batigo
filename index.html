@@ -968,13 +968,13 @@ function buildRNCContent(rnc) {
   if (!rnc) return '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Aucune copropriété répertoriée au RNIC à cette adresse.</p>';
   const na = v => v != null && v !== '' ? `<span class="field-value">${v}</span>` : `<span class="field-value na">—</span>`;
   return `<div style="padding:0 14px 12px">
-    <div style="margin-bottom:8px"><div class="field-label">Nom</div>${na(rnc.nom_d_usage_de_la_copropriete)}</div>
-    <div style="margin-bottom:8px"><div class="field-label">Syndic</div>${na(rnc.raison_sociale_du_representant_legal)}</div>
+    <div style="margin-bottom:8px"><div class="field-label">Nom</div>${na(rnc.nom_usage_copropriete)}</div>
+    <div style="margin-bottom:8px"><div class="field-label">Syndic</div>${na(rnc.raison_sociale_representant_legal)}</div>
     <div class="info-grid">
-      <div class="info-cell"><div class="field-label">Lots total</div>${na(rnc.nombre_total_de_lots)}</div>
-      <div class="info-cell"><div class="field-label">Habitation</div>${na(rnc.nombre_de_lots_a_usage_d_habitation)}</div>
-      <div class="info-cell"><div class="field-label">Stationnement</div>${na(rnc.nombre_de_lots_de_stationnement)}</div>
-      <div class="info-cell"><div class="field-label">Période constr.</div>${na(rnc.periode_de_construction)}</div>
+      <div class="info-cell"><div class="field-label">Lots total</div>${na(rnc.nombre_total_lots)}</div>
+      <div class="info-cell"><div class="field-label">Habitation</div>${na(rnc.nombre_lots_habitation)}</div>
+      <div class="info-cell"><div class="field-label">Stationnement</div>${na(rnc.nombre_lots_stationnement)}</div>
+      <div class="info-cell"><div class="field-label">Période constr.</div>${na(rnc.periode_construction)}</div>
     </div>
   </div>`;
 }
