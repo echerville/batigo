@@ -81,7 +81,20 @@
   .lb-sep{width:1px;height:16px;background:var(--border);margin:0 4px;flex-shrink:0}
   #header-bottom button{height:28px;padding:0 10px;border:none;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text-dim);font-family:inherit;background:none;transition:all .15s;display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
   #header-bottom button:hover{background:rgba(0,0,0,.06);color:var(--text)}
-  #header-bottom .layer-btn.active{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.1);border:1px solid var(--border)}
+  /* ── MAP PICKER ── */
+  #map-picker{position:relative;flex-shrink:0}
+  #map-picker-btn{width:52px;height:34px;padding:0;border-radius:6px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:none;position:relative;display:block;transition:border-color .15s;flex-shrink:0}
+  #map-picker-btn:hover{border-color:var(--accent)}
+  #map-picker-thumb{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+  #map-picker-lbl{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);color:#fff;font-size:7.5px;font-weight:700;text-align:center;padding:1px 2px;letter-spacing:.04em;text-transform:uppercase;line-height:1.4}
+  #map-picker-panel{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:8px;display:none;gap:6px;flex-wrap:wrap;width:224px;z-index:200}
+  #map-picker-panel.open{display:flex}
+  .map-opt{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid transparent;transition:border-color .12s;flex:0 0 auto}
+  .map-opt:hover{border-color:var(--border-med)}
+  .map-opt.active{border-color:var(--accent)}
+  .map-opt img{width:62px;height:46px;object-fit:cover;border-radius:4px;display:block}
+  .map-opt span{font-size:10px;font-weight:600;color:var(--text-dim)}
+  .map-opt.active span{color:var(--accent-dark)}
   #toggle-dpe-layer,#toggle-cadastre{color:var(--accent-dark)!important;font-weight:600!important;background:var(--accent-dim2)!important;border:1px solid rgba(43,181,115,.3)!important}
   #toggle-dpe-layer:hover,#toggle-cadastre:hover,#toggle-dpe-layer.on,#toggle-cadastre.on{background:var(--accent)!important;color:#fff!important}
   #toggle-rcu{color:#e05c00!important;font-weight:600!important;background:rgba(224,92,0,.09)!important;border:1px solid rgba(224,92,0,.3)!important}
@@ -223,11 +236,34 @@
   </div>
   </div>
   <div id="header-bottom">
-    <button class="layer-btn active" data-layer="voyager"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>Carto</button>
-    <button class="layer-btn" data-layer="ign-plan"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>IGN</button>
-    <button class="layer-btn" data-layer="google-plan"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#f0ede8"/><rect x="0" y="5.5" width="14" height="3" fill="#F4A228"/><rect x="5.5" y="0" width="3" height="14" fill="#F4A228"/><rect x="0" y="10.5" width="14" height="1.5" fill="#FECB3E"/><rect x="10.5" y="0" width="1.5" height="14" fill="#FECB3E"/></svg>Google</button>
-    <button class="layer-btn" data-layer="ign-ortho"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#4a7c59"/><rect x="0" y="0" width="6.5" height="6.5" rx="1.5" fill="#5a9e6f"/><rect x="7.5" y="0" width="6.5" height="6.5" rx="1.5" fill="#8B7355"/><rect x="0" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#2a7fc1"/><rect x="7.5" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#6b9e4a"/></svg>IGN sat</button>
-    <button class="layer-btn" data-layer="google-sat"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><rect width="14" height="14" rx="2" fill="#4a7c59"/><rect x="0" y="0" width="6.5" height="6.5" rx="1.5" fill="#5a9e6f"/><rect x="7.5" y="0" width="6.5" height="6.5" rx="1.5" fill="#8B7355"/><rect x="0" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#2a7fc1"/><rect x="7.5" y="7.5" width="6.5" height="6.5" rx="1.5" fill="#6b9e4a"/></svg>Google sat</button>
+    <div id="map-picker">
+      <button id="map-picker-btn" title="Changer le fond de carte">
+        <img id="map-picker-thumb" src="https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png" />
+        <span id="map-picker-lbl">Carto</span>
+      </button>
+      <div id="map-picker-panel">
+        <div class="map-opt active" data-layer="voyager">
+          <img src="https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png" loading="lazy" />
+          <span>Carto</span>
+        </div>
+        <div class="map-opt" data-layer="ign-plan">
+          <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
+          <span>IGN Plan</span>
+        </div>
+        <div class="map-opt" data-layer="google-plan">
+          <img src="https://mt1.google.com/vt/lyrs=m&x=4061&y=2882&z=13" loading="lazy" />
+          <span>Google</span>
+        </div>
+        <div class="map-opt" data-layer="ign-ortho">
+          <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
+          <span>IGN Sat</span>
+        </div>
+        <div class="map-opt" data-layer="google-sat">
+          <img src="https://mt1.google.com/vt/lyrs=s&x=4061&y=2882&z=13" loading="lazy" />
+          <span>Google Sat</span>
+        </div>
+      </div>
+    </div>
     <div class="lb-sep"></div>
     <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE">DPE</button>
     <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
@@ -400,14 +436,36 @@ map.on('load', () => {
 });
 
 
-document.querySelectorAll('.layer-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const lId = btn.dataset.layer;
-    if (lId === currentLayer) return;
-    document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+// ── Map picker ──
+const THUMB_URLS = {
+  'voyager':     'https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png',
+  'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061',
+  'google-plan': 'https://mt1.google.com/vt/lyrs=m&x=4061&y=2882&z=13',
+  'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061',
+  'google-sat':  'https://mt1.google.com/vt/lyrs=s&x=4061&y=2882&z=13',
+};
+const LAYER_LABELS = {'voyager':'Carto','ign-plan':'IGN Plan','google-plan':'Google','ign-ortho':'IGN Sat','google-sat':'Google Sat'};
+
+const mapPickerBtn = document.getElementById('map-picker-btn');
+const mapPickerPanel = document.getElementById('map-picker-panel');
+const mapPickerThumb = document.getElementById('map-picker-thumb');
+const mapPickerLbl = document.getElementById('map-picker-lbl');
+
+mapPickerBtn.addEventListener('click', e => { e.stopPropagation(); mapPickerPanel.classList.toggle('open'); });
+document.addEventListener('click', () => mapPickerPanel.classList.remove('open'));
+
+document.querySelectorAll('.map-opt').forEach(opt => {
+  opt.addEventListener('click', e => {
+    e.stopPropagation();
+    const lId = opt.dataset.layer;
+    if (lId === currentLayer) { mapPickerPanel.classList.remove('open'); return; }
     currentLayer = lId;
     map.getSource('base').setTiles([TILE_URLS[lId]]);
+    document.querySelectorAll('.map-opt').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    mapPickerThumb.src = THUMB_URLS[lId];
+    mapPickerLbl.textContent = LAYER_LABELS[lId];
+    mapPickerPanel.classList.remove('open');
   });
 });
 
