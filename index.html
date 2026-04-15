@@ -81,6 +81,30 @@
   .lb-sep{width:1px;height:16px;background:var(--border);margin:0 4px;flex-shrink:0}
   #header-bottom button{height:28px;padding:0 10px;border:none;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text-dim);font-family:inherit;background:none;transition:all .15s;display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
   #header-bottom button:hover{background:rgba(0,0,0,.06);color:var(--text)}
+  /* ── OVERLAY PICKER ── */
+  #toggle-dpe-layer,#toggle-cadastre,#toggle-rcu,#toggle-gaz{display:none!important}
+  #overlay-picker{position:relative;flex-shrink:0}
+  #overlay-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;position:relative;display:block;transition:border-color .15s,box-shadow .15s;flex-shrink:0;background:linear-gradient(to bottom,#c6eedd 0%,#c6eedd 25%,#ede6d6 25%,#ede6d6 50%,#fad8be 50%,#fad8be 75%,#fdf0b4 75%,#fdf0b4 100%)}
+  #overlay-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #overlay-picker-bar{position:absolute;bottom:0;left:0;right:0;height:48%;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,0.88));backdrop-filter:blur(1px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px}
+  #overlay-picker-lbl{color:var(--accent);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;line-height:1}
+  #overlay-badge{position:absolute;top:3px;right:3px;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;font-weight:700;display:none;align-items:center;justify-content:center;border:1.5px solid #fff;line-height:1}
+  #overlay-badge.show{display:flex}
+  #overlay-picker-panel{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px;display:none;gap:8px;flex-wrap:wrap;width:220px;z-index:200}
+  #overlay-picker-panel.open{display:flex}
+  .overlay-opt{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;border-radius:8px;padding:5px;border:1.5px solid var(--border);background:var(--surface2);transition:border-color .12s,background .12s,box-shadow .12s;flex:0 0 auto;width:92px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .overlay-opt:hover{box-shadow:0 2px 6px rgba(0,0,0,.12)}
+  .overlay-opt[data-overlay="dpe-layer"].active{border-color:var(--accent)!important;background:var(--accent-dim2)!important}
+  .overlay-opt[data-overlay="cadastre"].active{border-color:var(--accent)!important;background:var(--accent-dim2)!important}
+  .overlay-opt[data-overlay="rcu"].active{border-color:#e05c00!important;background:rgba(224,92,0,.07)!important}
+  .overlay-opt[data-overlay="gaz"].active{border-color:#d4a000!important;background:rgba(212,160,0,.07)!important}
+  .overlay-preview{width:100%;height:46px;border-radius:5px;overflow:hidden;flex-shrink:0}
+  .overlay-preview-dpe{background:linear-gradient(to right,#00a651,#50b748,#c8d400,#ffd400,#f7941d,#ed1c24,#8b0000)}
+  .overlay-preview-cadastre{background:#f5f0e8;background-image:repeating-linear-gradient(0deg,rgba(100,80,40,.18) 0,rgba(100,80,40,.18) 1px,transparent 1px,transparent 11px),repeating-linear-gradient(90deg,rgba(100,80,40,.18) 0,rgba(100,80,40,.18) 1px,transparent 1px,transparent 11px)}
+  .overlay-preview-rcu{background:#fff3ee;background-image:repeating-linear-gradient(30deg,transparent,transparent 5px,rgba(224,92,0,.3) 5px,rgba(224,92,0,.3) 7px)}
+  .overlay-preview-gaz{background:#fffbf0;background-image:repeating-linear-gradient(150deg,transparent,transparent 5px,rgba(212,160,0,.35) 5px,rgba(212,160,0,.35) 7px)}
+  .overlay-opt span{font-size:10.5px;font-weight:600;color:var(--text-dim);text-align:center}
+  .overlay-opt.active span{color:var(--text)}
   /* ── MAP PICKER ── */
   #map-picker{position:relative;flex-shrink:0}
   #map-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#e8e4de;position:relative;display:block;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
@@ -230,6 +254,30 @@
         <div class="map-opt" data-layer="google-sat">
           <img src="https://mt1.google.com/vt/lyrs=s&x=4061&y=2882&z=13" loading="lazy" />
           <span>Google Sat</span>
+        </div>
+      </div>
+    </div>
+    <div id="overlay-picker">
+      <button id="overlay-picker-btn" title="Surcouches">
+        <span id="overlay-badge"></span>
+        <div id="overlay-picker-bar"><span id="overlay-picker-lbl">Couches</span></div>
+      </button>
+      <div id="overlay-picker-panel">
+        <div class="overlay-opt" data-overlay="dpe-layer">
+          <div class="overlay-preview overlay-preview-dpe"></div>
+          <span>DPE</span>
+        </div>
+        <div class="overlay-opt" data-overlay="cadastre">
+          <div class="overlay-preview overlay-preview-cadastre"></div>
+          <span>Cadastre</span>
+        </div>
+        <div class="overlay-opt" data-overlay="rcu">
+          <div class="overlay-preview overlay-preview-rcu"></div>
+          <span>RCU</span>
+        </div>
+        <div class="overlay-opt" data-overlay="gaz">
+          <div class="overlay-preview overlay-preview-gaz"></div>
+          <span>Gaz</span>
         </div>
       </div>
     </div>
@@ -453,7 +501,10 @@ const mapPickerThumb = document.getElementById('map-picker-thumb');
 const mapPickerLbl = document.getElementById('map-picker-lbl');
 
 mapPickerBtn.addEventListener('click', e => { e.stopPropagation(); mapPickerPanel.classList.toggle('open'); });
-document.addEventListener('click', () => mapPickerPanel.classList.remove('open'));
+document.addEventListener('click', () => {
+  mapPickerPanel.classList.remove('open');
+  document.getElementById('overlay-picker-panel').classList.remove('open');
+});
 
 document.querySelectorAll('.map-opt').forEach(opt => {
   opt.addEventListener('click', e => {
@@ -468,6 +519,35 @@ document.querySelectorAll('.map-opt').forEach(opt => {
     mapPickerPanel.classList.remove('open');
   });
 });
+
+// ── Overlay picker ──
+(function() {
+  const btn = document.getElementById('overlay-picker-btn');
+  const panel = document.getElementById('overlay-picker-panel');
+  const badge = document.getElementById('overlay-badge');
+
+  btn.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('open'); });
+
+  function syncBadge() {
+    const n = document.querySelectorAll('.overlay-opt.active').length;
+    badge.textContent = n;
+    badge.classList.toggle('show', n > 0);
+  }
+
+  document.querySelectorAll('.overlay-opt').forEach(card => {
+    card.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = 'toggle-' + card.dataset.overlay;
+      document.getElementById(id).click(); // forward to existing handler
+      // sync card state after click (state is updated by the handler)
+      requestAnimationFrame(() => {
+        const isOn = document.getElementById(id).classList.contains('on');
+        card.classList.toggle('active', isOn);
+        syncBadge();
+      });
+    });
+  });
+})();
 
 document.getElementById('toggle-cadastre').addEventListener('click', function() {
   cadastreOn = !cadastreOn;
