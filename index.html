@@ -83,12 +83,12 @@
   #header-bottom button:hover{background:rgba(0,0,0,.06);color:var(--text)}
   /* ── MAP PICKER ── */
   #map-picker{position:relative;flex-shrink:0}
-  #map-picker-btn{width:58px;height:46px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#e8e4de;position:relative;display:block;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #map-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#e8e4de;position:relative;display:block;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
   #map-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
   #map-picker-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-  #map-picker-overlay{position:absolute;bottom:0;left:0;right:0;height:52%;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,0.88));backdrop-filter:blur(1px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
-  #map-picker-lbl{color:var(--accent);font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;line-height:1}
-  #map-picker-panel{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:8px;display:none;gap:6px;flex-wrap:wrap;width:224px;z-index:200}
+  #map-picker-overlay{position:absolute;bottom:0;left:0;right:0;height:48%;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,0.88));backdrop-filter:blur(1px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px}
+  #map-picker-lbl{color:var(--accent);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;line-height:1}
+  #map-picker-panel{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:8px;display:none;gap:6px;flex-wrap:wrap;width:224px;z-index:200}
   #map-picker-panel.open{display:flex}
   .map-opt{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border-radius:6px;padding:4px;border:2px solid transparent;transition:border-color .12s;flex:0 0 auto}
   .map-opt:hover{border-color:var(--border-med)}
@@ -205,6 +205,34 @@
       <button id="search-btn">⌕</button>
       <div id="suggestions"></div>
     </div>
+    <div id="map-picker">
+      <button id="map-picker-btn" title="Changer le fond de carte">
+        <img id="map-picker-thumb" src="https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png" />
+        <div id="map-picker-overlay"><span id="map-picker-lbl">Cartes</span></div>
+      </button>
+      <div id="map-picker-panel">
+        <div class="map-opt active" data-layer="voyager">
+          <img src="https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png" loading="lazy" />
+          <span>Carto</span>
+        </div>
+        <div class="map-opt" data-layer="ign-plan">
+          <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
+          <span>IGN Plan</span>
+        </div>
+        <div class="map-opt" data-layer="google-plan">
+          <img src="https://mt1.google.com/vt/lyrs=m&x=4061&y=2882&z=13" loading="lazy" />
+          <span>Google</span>
+        </div>
+        <div class="map-opt" data-layer="ign-ortho">
+          <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
+          <span>IGN Sat</span>
+        </div>
+        <div class="map-opt" data-layer="google-sat">
+          <img src="https://mt1.google.com/vt/lyrs=s&x=4061&y=2882&z=13" loading="lazy" />
+          <span>Google Sat</span>
+        </div>
+      </div>
+    </div>
     <div id="info-wrap">
     <button id="info-btn" title="Sources de données">
       <span class="info-dot"></span>
@@ -237,34 +265,6 @@
   </div>
   </div>
   <div id="header-bottom">
-    <div id="map-picker">
-      <button id="map-picker-btn" title="Changer le fond de carte">
-        <img id="map-picker-thumb" src="https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png" />
-        <div id="map-picker-overlay"><span id="map-picker-lbl">Cartes</span></div>
-      </button>
-      <div id="map-picker-panel">
-        <div class="map-opt active" data-layer="voyager">
-          <img src="https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png" loading="lazy" />
-          <span>Carto</span>
-        </div>
-        <div class="map-opt" data-layer="ign-plan">
-          <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
-          <span>IGN Plan</span>
-        </div>
-        <div class="map-opt" data-layer="google-plan">
-          <img src="https://mt1.google.com/vt/lyrs=m&x=4061&y=2882&z=13" loading="lazy" />
-          <span>Google</span>
-        </div>
-        <div class="map-opt" data-layer="ign-ortho">
-          <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
-          <span>IGN Sat</span>
-        </div>
-        <div class="map-opt" data-layer="google-sat">
-          <img src="https://mt1.google.com/vt/lyrs=s&x=4061&y=2882&z=13" loading="lazy" />
-          <span>Google Sat</span>
-        </div>
-      </div>
-    </div>
     <div class="lb-sep"></div>
     <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE">DPE</button>
     <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
