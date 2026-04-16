@@ -214,6 +214,29 @@
   .dpe-dist-item{display:flex;align-items:center;gap:5px;background:var(--surface2);border-radius:var(--radius-sm);padding:5px 9px;border:1.5px solid var(--border)}
   .dpe-dist-item .count{font-weight:800;color:var(--text);font-size:14px}
   .dpe-dist-item .label{font-size:10px;color:var(--text-muted)}
+  /* ── ONBOARDING ── */
+  #onboarding-overlay{position:fixed;inset:0;z-index:9000;pointer-events:none}
+  #onboarding-overlay.active{pointer-events:all}
+  .ob-backdrop{position:fixed;inset:0;background:rgba(15,28,46,0.55);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s}
+  #onboarding-overlay.active .ob-backdrop{opacity:1}
+  .ob-step{display:none;position:fixed;z-index:9001}
+  .ob-step.visible{display:block}
+  .ob-card{background:var(--surface);border-radius:14px;box-shadow:0 8px 40px rgba(15,28,46,0.22);padding:18px 20px 16px;width:230px;pointer-events:all;border:1.5px solid var(--border)}
+  .ob-card h4{font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px;display:flex;align-items:center;gap:7px}
+  .ob-card p{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-bottom:12px}
+  .ob-arrow{position:absolute;width:12px;height:12px;background:var(--surface);border:1.5px solid var(--border);transform:rotate(45deg)}
+  .ob-arrow.top{top:-7px;left:20px;border-bottom:none;border-right:none}
+  .ob-arrow.bottom{bottom:-7px;left:20px;border-top:none;border-left:none}
+  .ob-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .ob-dots{display:flex;gap:5px}
+  .ob-dot{width:6px;height:6px;border-radius:50%;background:var(--border-med);transition:background .2s}
+  .ob-dot.active{background:var(--accent)}
+  .ob-btn{padding:6px 14px;border-radius:20px;border:none;cursor:pointer;font-size:11.5px;font-weight:600;font-family:inherit;transition:background .15s}
+  .ob-btn-skip{background:none;color:var(--text-muted)}
+  .ob-btn-skip:hover{color:var(--text)}
+  .ob-btn-next{background:var(--accent);color:#fff}
+  .ob-btn-next:hover{background:var(--accent-dark)}
+  .ob-highlight{position:fixed;border-radius:10px;box-shadow:0 0 0 4px var(--accent),0 0 0 9000px rgba(15,28,46,0.55);z-index:9000;transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none;backdrop-filter:blur(2px)}
   /* ── MISC ── */
   .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border-med);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle;flex-shrink:0}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -1805,6 +1828,148 @@ document.getElementById('info-btn').addEventListener('click',function(e){
   closeAllPickers();
   if (!wasOpen) document.getElementById('info-panel').classList.add('open');
 });
+</script>
+
+<!-- ── ONBOARDING ── -->
+<div id="onboarding-overlay">
+  <div class="ob-backdrop"></div>
+  <div class="ob-highlight" id="ob-highlight"></div>
+</div>
+
+<script>
+(function() {
+  if (localStorage.getItem('scope-onboarding-done')) return;
+
+  const steps = [
+    {
+      targetId: 'search-input',
+      title: '🔍 Rechercher une adresse',
+      text: 'Tapez n\'importe quelle adresse pour afficher les données du bâtiment : DPE, BDNB, copropriété…',
+      arrowDir: 'top', offsetX: -10, offsetY: 14
+    },
+    {
+      targetId: 'map-picker-btn',
+      title: '🗺 Changer le fond de carte',
+      text: 'Passez de Carto à IGN, Google Maps ou vue satellite selon vos besoins.',
+      arrowDir: 'top', offsetX: -10, offsetY: 14
+    },
+    {
+      targetId: 'overlay-picker-btn',
+      title: '📦 Surcouches de données',
+      text: 'Affichez le DPE coloré des bâtiments, le cadastre, les réseaux de chaleur ou gaz.',
+      arrowDir: 'top', offsetX: -10, offsetY: 14
+    },
+    {
+      targetId: 'vues-picker-btn',
+      title: '📷 Vues de rue',
+      text: 'Ouvrez Google Street View ou Panoramax pour voir le bâtiment en situation réelle.',
+      arrowDir: 'top', offsetX: -10, offsetY: 14
+    },
+    {
+      targetId: 'surface-btn',
+      title: '📐 Mesurer une surface',
+      text: 'Cliquez sur la carte pour dessiner un polygone et calculer sa surface.',
+      arrowDir: 'top', offsetX: -10, offsetY: 14
+    },
+    {
+      targetId: 'geolocate-btn',
+      title: '📍 Me localiser',
+      text: 'Centrez la carte sur votre position GPS et suivez vos déplacements en temps réel.',
+      arrowDir: 'top', offsetX: -10, offsetY: 14
+    }
+  ];
+
+  let current = 0;
+  const overlay = document.getElementById('onboarding-overlay');
+  const highlight = document.getElementById('ob-highlight');
+
+  // Créer la card
+  const card = document.createElement('div');
+  card.className = 'ob-step';
+  card.innerHTML = `
+    <div class="ob-arrow" id="ob-arrow"></div>
+    <div class="ob-card">
+      <h4 id="ob-title"></h4>
+      <p id="ob-text"></p>
+      <div class="ob-footer">
+        <div class="ob-dots" id="ob-dots"></div>
+        <div style="display:flex;gap:6px">
+          <button class="ob-btn ob-btn-skip" id="ob-skip">Passer</button>
+          <button class="ob-btn ob-btn-next" id="ob-next">Suivant →</button>
+        </div>
+      </div>
+    </div>`;
+  overlay.appendChild(card);
+
+  // Dots
+  const dotsEl = card.querySelector('#ob-dots');
+  steps.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'ob-dot';
+    dotsEl.appendChild(d);
+  });
+
+  function show(idx) {
+    const step = steps[idx];
+    const target = document.getElementById(step.targetId);
+    if (!target) { next(); return; }
+
+    const rect = target.getBoundingClientRect();
+    const pad = 5;
+
+    // Highlight
+    highlight.style.cssText = `
+      left:${rect.left - pad}px;top:${rect.top - pad}px;
+      width:${rect.width + pad*2}px;height:${rect.height + pad*2}px;
+    `;
+
+    // Card position
+    const cardTop = rect.bottom + step.offsetY;
+    const cardLeft = Math.min(rect.left + step.offsetX, window.innerWidth - 250);
+    card.style.cssText = `display:block;left:${cardLeft}px;top:${cardTop}px;`;
+    card.className = 'ob-step visible';
+
+    // Arrow
+    const arrow = card.querySelector('#ob-arrow');
+    arrow.className = `ob-arrow ${step.arrowDir}`;
+    arrow.style.left = (rect.left - cardLeft + rect.width/2 - 6) + 'px';
+
+    // Content
+    card.querySelector('#ob-title').textContent = step.title;
+    card.querySelector('#ob-text').textContent = step.text;
+
+    // Dots
+    dotsEl.querySelectorAll('.ob-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+    });
+
+    // Last step
+    const nextBtn = card.querySelector('#ob-next');
+    nextBtn.textContent = idx === steps.length - 1 ? 'Terminer ✓' : 'Suivant →';
+  }
+
+  function next() {
+    current++;
+    if (current >= steps.length) finish();
+    else show(current);
+  }
+
+  function finish() {
+    overlay.classList.remove('active');
+    highlight.style.cssText = 'display:none';
+    card.className = 'ob-step';
+    localStorage.setItem('scope-onboarding-done', '1');
+  }
+
+  card.querySelector('#ob-next').addEventListener('click', next);
+  card.querySelector('#ob-skip').addEventListener('click', finish);
+
+  // Lancer après le chargement de la carte
+  setTimeout(() => {
+    overlay.classList.add('active');
+    show(0);
+  }, 800);
+})();
 </script>
 </body>
 </html>
