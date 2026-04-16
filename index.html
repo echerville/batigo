@@ -95,6 +95,11 @@
   #surface-btn{width:44px;height:44px;padding:0;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
   #surface-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
   #surface-btn.active{border-color:var(--accent);background:var(--accent-dim2)}
+  /* ── GEOLOCATION BUTTON ── */
+  #geolocate-btn{width:44px;height:44px;padding:0;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #geolocate-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #geolocate-btn.active{border-color:var(--accent);background:var(--accent-dim2)}
+  #geolocate-btn.locating{border-color:var(--accent);animation:pulse 1s ease-in-out infinite}
   #overlay-picker{position:relative;flex-shrink:0}
   #overlay-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0;background:#f0f4f1}
   #overlay-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
@@ -330,6 +335,12 @@
         <circle cx="18" cy="20" r="1.8" fill="#2bb573"/>
         <circle cx="6"  cy="20" r="1.8" fill="#2bb573"/>
         <circle cx="3"  cy="9"  r="1.8" fill="#2bb573"/>
+      </svg>
+    </button>
+    <button id="geolocate-btn" title="Me localiser">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+        <circle cx="12" cy="12" r="4" stroke="#2bb573" stroke-width="2"/>
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#2bb573" stroke-width="2" stroke-linecap="round"/>
       </svg>
     </button>
     <div id="info-wrap">
@@ -669,6 +680,63 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
     surfBtn.classList.toggle('active', measureBtn.classList.contains('active'));
   });
   observer.observe(measureBtn, { attributes: true, attributeFilter: ['class'] });
+})();
+
+// ── GEOLOCATION ──
+(function() {
+  const btn = document.getElementById('geolocate-btn');
+  let marker = null;
+  let watching = false;
+  let watchId = null;
+
+  function placeMarker(lng, lat) {
+    if (marker) marker.remove();
+    const el = document.createElement('div');
+    el.style.cssText = `
+      width:18px;height:18px;border-radius:50%;
+      background:#2bb573;border:3px solid #fff;
+      box-shadow:0 0 0 3px rgba(43,181,115,0.35);
+    `;
+    marker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+  }
+
+  btn.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      alert('La géolocalisation n\'est pas disponible sur cet appareil.');
+      return;
+    }
+    if (watching) {
+      // Désactiver
+      navigator.geolocation.clearWatch(watchId);
+      watching = false;
+      watchId = null;
+      btn.classList.remove('active', 'locating');
+      if (marker) { marker.remove(); marker = null; }
+      return;
+    }
+    btn.classList.add('locating');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { longitude: lng, latitude: lat } = pos.coords;
+        btn.classList.remove('locating');
+        btn.classList.add('active');
+        watching = true;
+        placeMarker(lng, lat);
+        map.flyTo({ center: [lng, lat], zoom: 17, speed: 1.6 });
+        // Suivi continu
+        watchId = navigator.geolocation.watchPosition(
+          p => placeMarker(p.coords.longitude, p.coords.latitude),
+          null,
+          { enableHighAccuracy: true }
+        );
+      },
+      err => {
+        btn.classList.remove('locating');
+        alert('Impossible d\'obtenir votre position.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
 })();
 
 // ── RÉSEAUX DE CHALEUR (Loire-Atlantique) ──
