@@ -237,9 +237,14 @@
     </div>
     <div id="map-picker">
       <button id="map-picker-btn" title="Changer le fond de carte">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#2bb573"/>
-          <circle cx="12" cy="9" r="2.8" fill="white"/>
+        <svg width="27" height="27" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <!-- Carte dépliée 3 volets -->
+          <path d="M1 10 L7 8.5 L7 23 L1 24.5 Z" stroke="#2bb573" stroke-width="1.6" stroke-linejoin="round" fill="rgba(43,181,115,0.08)"/>
+          <path d="M7 8.5 L17 8.5 L17 23 L7 23 Z" stroke="#2bb573" stroke-width="1.6" stroke-linejoin="round" fill="rgba(43,181,115,0.08)"/>
+          <path d="M17 8.5 L23 10 L23 24.5 L17 23 Z" stroke="#2bb573" stroke-width="1.6" stroke-linejoin="round" fill="rgba(43,181,115,0.08)"/>
+          <!-- Pin de localisation centré sur la carte -->
+          <path d="M12 1C9.8 1 8 2.8 8 5C8 7.8 12 13 12 13S16 7.8 16 5C16 2.8 14.2 1 12 1Z" stroke="#2bb573" stroke-width="1.7" fill="rgba(43,181,115,0.15)"/>
+          <circle cx="12" cy="5" r="1.6" stroke="#2bb573" stroke-width="1.5" fill="none"/>
         </svg>
       </button>
       <div id="map-picker-panel">
