@@ -559,11 +559,21 @@ const LAYER_LABELS = {'voyager':'Carto','ign-plan':'IGN Plan','google-plan':'Goo
 const mapPickerBtn = document.getElementById('map-picker-btn');
 const mapPickerPanel = document.getElementById('map-picker-panel');
 
-mapPickerBtn.addEventListener('click', e => { e.stopPropagation(); mapPickerPanel.classList.toggle('open'); });
-document.addEventListener('click', () => {
+function closeAllPickers() {
   mapPickerPanel.classList.remove('open');
   document.getElementById('overlay-picker-panel').classList.remove('open');
+  document.getElementById('vues-picker-panel').classList.remove('open');
+  document.getElementById('vues-picker-btn').classList.remove('open');
+  document.getElementById('info-panel').classList.remove('open');
+}
+
+mapPickerBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const wasOpen = mapPickerPanel.classList.contains('open');
+  closeAllPickers();
+  if (!wasOpen) mapPickerPanel.classList.add('open');
 });
+document.addEventListener('click', () => closeAllPickers());
 
 document.querySelectorAll('.map-opt').forEach(opt => {
   opt.addEventListener('click', e => {
@@ -584,7 +594,12 @@ document.querySelectorAll('.map-opt').forEach(opt => {
   const panel = document.getElementById('overlay-picker-panel');
   const badge = document.getElementById('overlay-badge');
 
-  btn.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('open'); });
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = panel.classList.contains('open');
+    closeAllPickers();
+    if (!wasOpen) panel.classList.add('open');
+  });
 
   function syncBadge() {
     const n = document.querySelectorAll('.overlay-opt.active').length;
@@ -619,8 +634,9 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
   const panel = document.getElementById('vues-picker-panel');
   btn.addEventListener('click', e => {
     e.stopPropagation();
-    panel.classList.toggle('open');
-    btn.classList.toggle('open', panel.classList.contains('open'));
+    const wasOpen = panel.classList.contains('open');
+    closeAllPickers();
+    if (!wasOpen) { panel.classList.add('open'); btn.classList.add('open'); }
   });
   document.querySelectorAll('.vue-opt').forEach(card => {
     card.addEventListener('click', e => {
@@ -1717,11 +1733,9 @@ async function triggerPMTilesUpdate() {
 // Toggle info panel
 document.getElementById('info-btn').addEventListener('click',function(e){
   e.stopPropagation();
-  document.getElementById('info-panel').classList.toggle('open');
-});
-document.addEventListener('click',function(e){
-  if(!document.getElementById('info-wrap').contains(e.target))
-    document.getElementById('info-panel').classList.remove('open');
+  const wasOpen = document.getElementById('info-panel').classList.contains('open');
+  closeAllPickers();
+  if (!wasOpen) document.getElementById('info-panel').classList.add('open');
 });
 </script>
 </body>
