@@ -84,10 +84,8 @@
   /* ── OVERLAY PICKER ── */
   #toggle-dpe-layer,#toggle-cadastre,#toggle-rcu,#toggle-gaz{display:none!important}
   #overlay-picker{position:relative;flex-shrink:0}
-  #overlay-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;position:relative;display:block;transition:border-color .15s,box-shadow .15s;flex-shrink:0;background:linear-gradient(to bottom,#c6eedd 0%,#c6eedd 25%,#ede6d6 25%,#ede6d6 50%,#fad8be 50%,#fad8be 75%,#fdf0b4 75%,#fdf0b4 100%)}
+  #overlay-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0;background:#f0f4f1}
   #overlay-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
-  #overlay-picker-bar{position:absolute;bottom:0;left:0;right:0;height:48%;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,0.88));backdrop-filter:blur(1px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px}
-  #overlay-picker-lbl{color:var(--accent);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;line-height:1}
   #overlay-badge{position:absolute;top:3px;right:3px;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;font-weight:700;display:none;align-items:center;justify-content:center;border:1.5px solid #fff;line-height:1}
   #overlay-badge.show{display:flex}
   #overlay-picker-panel{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px;display:none;gap:8px;flex-wrap:wrap;width:220px;z-index:200}
@@ -257,7 +255,11 @@
     <div id="overlay-picker">
       <button id="overlay-picker-btn" title="Surcouches">
         <span id="overlay-badge"></span>
-        <div id="overlay-picker-bar"><span id="overlay-picker-lbl">Couches</span></div>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <path d="M12 2L2 7l10 5 10-5z" fill="#2bb573"/>
+          <path d="M2 12l10 5 10-5" stroke="#f97316" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="#d4a000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </button>
       <div id="overlay-picker-panel">
         <div class="overlay-opt" data-overlay="dpe-layer">
