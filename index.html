@@ -98,9 +98,8 @@
   .overlay-opt[data-overlay="cadastre"].active{border-color:var(--accent)!important;background:var(--accent-dim2)!important}
   .overlay-opt[data-overlay="rcu"].active{border-color:#e05c00!important;background:rgba(224,92,0,.07)!important}
   .overlay-opt[data-overlay="gaz"].active{border-color:#d4a000!important;background:rgba(212,160,0,.07)!important}
-  .overlay-preview{width:100%;height:50px;border-radius:5px;overflow:hidden;flex-shrink:0;position:relative}
-  .overlay-preview img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-  .ovl-svg{position:absolute;inset:0;width:100%;height:100%}
+  .overlay-preview{width:100%;height:50px;border-radius:5px;overflow:hidden;flex-shrink:0}
+  .overlay-preview img{width:100%;height:100%;object-fit:cover;display:block}
   .overlay-opt span{font-size:10.5px;font-weight:600;color:var(--text-dim);text-align:center}
   .overlay-opt.active span{color:var(--text)}
   /* ── MAP PICKER ── */
@@ -263,53 +262,25 @@
       <div id="overlay-picker-panel">
         <div class="overlay-opt" data-overlay="dpe-layer">
           <div class="overlay-preview">
-            <img src="https://a.basemaps.cartocdn.com/rastertiles/voyager/15/16239/11524.png" loading="lazy"/>
-            <svg class="ovl-svg" viewBox="0 0 62 50" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4"  y="7"  width="9"  height="13" fill="#00a651" opacity=".88" rx="1.5"/>
-              <rect x="16" y="11" width="8"  height="10" fill="#ffd400" opacity=".88" rx="1.5"/>
-              <rect x="27" y="5"  width="12" height="17" fill="#f7941d" opacity=".88" rx="1.5"/>
-              <rect x="43" y="9"  width="11" height="15" fill="#ed1c24" opacity=".88" rx="1.5"/>
-              <rect x="4"  y="27" width="7"  height="10" fill="#50b748" opacity=".88" rx="1.5"/>
-              <rect x="15" y="29" width="10" height="8"  fill="#c8d400" opacity=".88" rx="1.5"/>
-              <rect x="29" y="26" width="9"  height="11" fill="#f7941d" opacity=".88" rx="1.5"/>
-              <rect x="42" y="28" width="13" height="9"  fill="#00a651" opacity=".88" rx="1.5"/>
-            </svg>
+            <img src="/public/thumb-dpe.jpg" loading="lazy"/>
           </div>
           <span>DPE</span>
         </div>
         <div class="overlay-opt" data-overlay="cadastre">
           <div class="overlay-preview">
-            <img src="https://a.basemaps.cartocdn.com/rastertiles/voyager/15/16239/11524.png" loading="lazy"/>
-            <svg class="ovl-svg" viewBox="0 0 62 50" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 17 L24 11 L39 21 L62 15" stroke="#e06a00" stroke-width="1.5" fill="none" opacity=".85"/>
-              <path d="M0 33 L22 28 L37 36 L62 30" stroke="#e06a00" stroke-width="1.5" fill="none" opacity=".85"/>
-              <path d="M24 11 L22 50" stroke="#e06a00" stroke-width="1.5" fill="none" opacity=".85"/>
-              <path d="M39 21 L37 50" stroke="#e06a00" stroke-width="1.5" fill="none" opacity=".85"/>
-              <path d="M0 17 L0 50"  stroke="#e06a00" stroke-width="1.5" fill="none" opacity=".85"/>
-              <path d="M62 15 L62 50" stroke="#e06a00" stroke-width="1.5" fill="none" opacity=".85"/>
-            </svg>
+            <img src="/public/thumb-cad.jpg" loading="lazy"/>
           </div>
           <span>Cadastre</span>
         </div>
         <div class="overlay-opt" data-overlay="rcu">
           <div class="overlay-preview">
-            <img src="https://a.basemaps.cartocdn.com/rastertiles/voyager/15/16239/11524.png" loading="lazy"/>
-            <svg class="ovl-svg" viewBox="0 0 62 50" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 22 C10 22 12 30 24 27 C36 24 38 14 48 17 C56 19 58 25 62 23" stroke="#e05c00" stroke-width="3.5" fill="none" opacity=".9" stroke-linecap="round"/>
-              <path d="M6 40 C16 37 22 32 34 34 C46 36 50 42 58 40" stroke="#e05c00" stroke-width="2.5" fill="none" opacity=".75" stroke-linecap="round"/>
-            </svg>
+            <img src="/public/thumb-rcu.jpg" loading="lazy"/>
           </div>
           <span>RCU</span>
         </div>
         <div class="overlay-opt" data-overlay="gaz">
           <div class="overlay-preview">
-            <img src="https://a.basemaps.cartocdn.com/rastertiles/voyager/15/16239/11524.png" loading="lazy"/>
-            <svg class="ovl-svg" viewBox="0 0 62 50" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 13 C8 13 14 18 24 16 C34 14 38 9 48 11 C56 13 58 17 62 15" stroke="#d4a000" stroke-width="2.5" fill="none" opacity=".9" stroke-linecap="round"/>
-              <path d="M0 28 C10 26 18 33 28 31 C38 29 42 22 52 24 C58 26 60 30 62 28" stroke="#d4a000" stroke-width="2" fill="none" opacity=".85" stroke-linecap="round"/>
-              <line x1="24" y1="16" x2="28" y2="31" stroke="#d4a000" stroke-width="1.5" opacity=".7"/>
-              <line x1="48" y1="11" x2="52" y2="24" stroke="#d4a000" stroke-width="1.5" opacity=".7"/>
-            </svg>
+            <img src="/public/thumb-gaz.jpg" loading="lazy"/>
           </div>
           <span>Gaz</span>
         </div>
@@ -434,8 +405,9 @@ const DPE_COLOR = ['match',['get','dpe'],
 const map = new maplibregl.Map({
   container: 'map',
   style: { version:8, sources:{'base':LAYERS['voyager']}, layers:[{id:'base-layer',type:'raster',source:'base'}], glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf' },
-  center: [-2.28, 47.27], zoom: 10, attributionControl: false
+  center: [-2.28, 47.27], zoom: 10, attributionControl: false, preserveDrawingBuffer: true
 });
+window._map = map;
 map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
 map.addControl(new maplibregl.AttributionControl({compact:true}), 'bottom-right');
 map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
