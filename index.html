@@ -26,7 +26,7 @@
   /* ── HEADER ── */
   #header{background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;z-index:100;box-shadow:0 2px 12px rgba(15,28,46,0.07)}
   #header-top{height:var(--header-h);display:flex;align-items:center;gap:16px;padding:0 20px}
-  #header-bottom{display:flex;align-items:center;gap:3px;padding:5px 20px;border-top:1px solid var(--border);background:rgba(0,0,0,.018);overflow-x:auto;scrollbar-width:none}
+  #header-bottom{display:none}
   #header-bottom::-webkit-scrollbar{display:none}
   #logo{display:flex;align-items:center;gap:10px;white-space:nowrap;text-decoration:none}
   #logo-box{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;box-shadow:0 2px 8px rgba(43,181,115,.30);flex-shrink:0}
@@ -82,7 +82,21 @@
   #header-bottom button{height:28px;padding:0 10px;border:none;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text-dim);font-family:inherit;background:none;transition:all .15s;display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
   #header-bottom button:hover{background:rgba(0,0,0,.06);color:var(--text)}
   /* ── OVERLAY PICKER ── */
-  #toggle-dpe-layer,#toggle-cadastre,#toggle-rcu,#toggle-gaz{display:none!important}
+  #toggle-dpe-layer,#toggle-cadastre,#toggle-rcu,#toggle-gaz,#toggle-gsv,#toggle-panoramax,#btn-measure-poly{display:none!important}
+  /* ── VUES PICKER ── */
+  #vues-picker{position:relative;flex-shrink:0}
+  #vues-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #vues-picker-btn:hover,#vues-picker-btn.open{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #vues-picker-panel{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px;display:none;flex-direction:column;gap:8px;width:170px;z-index:200}
+  #vues-picker-panel.open{display:flex}
+  .vue-opt{display:flex;flex-direction:row;align-items:center;gap:10px;cursor:pointer;border-radius:8px;padding:8px 10px;border:1.5px solid var(--border);background:var(--surface2);transition:border-color .12s,background .12s;flex-shrink:0}
+  .vue-opt:hover{border-color:var(--accent);background:var(--accent-dim2)}
+  .vue-opt.active{border-color:var(--accent);background:var(--accent-dim2)}
+  .vue-opt span{font-size:11px;font-weight:600;color:var(--text-dim)}
+  /* ── SURFACE BUTTON ── */
+  #surface-btn{width:44px;height:44px;padding:0;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #surface-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #surface-btn.active{border-color:var(--accent);background:var(--accent-dim2)}
   #overlay-picker{position:relative;flex-shrink:0}
   #overlay-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0;background:#f0f4f1}
   #overlay-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
@@ -287,6 +301,34 @@
         </div>
       </div>
     </div>
+    <div id="vues-picker">
+      <button id="vues-picker-btn" title="Vues de rue">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#FBBC05" stroke-width="2" fill="rgba(251,188,5,0.1)"/>
+          <circle cx="12" cy="13" r="3.5" stroke="#FBBC05" stroke-width="2"/>
+        </svg>
+      </button>
+      <div id="vues-picker-panel">
+        <div class="vue-opt" data-vue="gsv">
+          <svg width="20" height="24" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>
+          <span>Street View</span>
+        </div>
+        <div class="vue-opt" data-vue="panoramax">
+          <svg width="20" height="20" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#FBBC05" stroke-width="1.5"/><circle cx="7" cy="7" r="2.5" fill="#FBBC05"/><line x1="7" y1="1" x2="7" y2="3" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="11" x2="7" y2="13" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="3" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="7" x2="13" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span>Panoramax</span>
+        </div>
+      </div>
+    </div>
+    <button id="surface-btn" title="Mesurer une surface">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+        <polygon points="12,3 21,9 18,20 6,20 3,9" stroke="#2bb573" stroke-width="2" fill="rgba(43,181,115,0.1)" stroke-linejoin="round"/>
+        <circle cx="12" cy="3" r="1.8" fill="#2bb573"/>
+        <circle cx="21" cy="9" r="1.8" fill="#2bb573"/>
+        <circle cx="18" cy="20" r="1.8" fill="#2bb573"/>
+        <circle cx="6"  cy="20" r="1.8" fill="#2bb573"/>
+        <circle cx="3"  cy="9"  r="1.8" fill="#2bb573"/>
+      </svg>
+    </button>
     <div id="info-wrap">
     <button id="info-btn" title="Sources de données">
       <span class="info-dot"></span>
@@ -558,6 +600,48 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
   map.setLayoutProperty('cadastre-layer', 'visibility', cadastreOn ? 'visible' : 'none');
   this.classList.toggle('on', cadastreOn);
 });
+
+// ── Vues picker ──
+(function() {
+  const btn = document.getElementById('vues-picker-btn');
+  const panel = document.getElementById('vues-picker-panel');
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    panel.classList.toggle('open');
+    btn.classList.toggle('open', panel.classList.contains('open'));
+  });
+  document.querySelectorAll('.vue-opt').forEach(card => {
+    card.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = 'toggle-' + card.dataset.vue;
+      document.getElementById(id).click();
+      panel.classList.remove('open');
+      btn.classList.remove('open');
+      requestAnimationFrame(() => {
+        const isOn = document.getElementById(id).classList.contains('on');
+        document.querySelectorAll('.vue-opt').forEach(c => c.classList.remove('active'));
+        card.classList.toggle('active', isOn);
+      });
+    });
+  });
+})();
+
+// ── Surface button ──
+(function() {
+  const surfBtn = document.getElementById('surface-btn');
+  const measureBtn = document.getElementById('btn-measure-poly');
+  surfBtn.addEventListener('click', () => {
+    measureBtn.click();
+    requestAnimationFrame(() => {
+      surfBtn.classList.toggle('active', measureBtn.classList.contains('active'));
+    });
+  });
+  // Mirror active state changes from the measure button
+  const observer = new MutationObserver(() => {
+    surfBtn.classList.toggle('active', measureBtn.classList.contains('active'));
+  });
+  observer.observe(measureBtn, { attributes: true, attributeFilter: ['class'] });
+})();
 
 // ── RÉSEAUX DE CHALEUR (Loire-Atlantique) ──
 let rcuOn = false, rcuLoaded = false;
