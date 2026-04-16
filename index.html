@@ -102,11 +102,8 @@
   .overlay-opt.active span{color:var(--text)}
   /* ── MAP PICKER ── */
   #map-picker{position:relative;flex-shrink:0}
-  #map-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#e8e4de;position:relative;display:block;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #map-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
   #map-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
-  #map-picker-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
-  #map-picker-overlay{position:absolute;bottom:0;left:0;right:0;height:48%;background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,0.88));backdrop-filter:blur(1px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px}
-  #map-picker-lbl{color:var(--accent);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;line-height:1}
   #map-picker-panel{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px;display:none;gap:8px;flex-wrap:wrap;width:282px;z-index:200}
   #map-picker-panel.open{display:flex}
   .map-opt{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;border-radius:8px;padding:5px;border:1.5px solid var(--border);background:var(--surface2);transition:border-color .12s,background .12s,box-shadow .12s;flex:0 0 auto;width:78px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
@@ -226,8 +223,10 @@
     </div>
     <div id="map-picker">
       <button id="map-picker-btn" title="Changer le fond de carte">
-        <img id="map-picker-thumb" src="https://a.basemaps.cartocdn.com/rastertiles/voyager/15/16239/11524.png" />
-        <div id="map-picker-overlay"><span id="map-picker-lbl">Cartes</span></div>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#2bb573"/>
+          <circle cx="12" cy="9" r="2.8" fill="white"/>
+        </svg>
       </button>
       <div id="map-picker-panel">
         <div class="map-opt active" data-layer="voyager">
@@ -505,8 +504,6 @@ const LAYER_LABELS = {'voyager':'Carto','ign-plan':'IGN Plan','google-plan':'Goo
 
 const mapPickerBtn = document.getElementById('map-picker-btn');
 const mapPickerPanel = document.getElementById('map-picker-panel');
-const mapPickerThumb = document.getElementById('map-picker-thumb');
-const mapPickerLbl = document.getElementById('map-picker-lbl');
 
 mapPickerBtn.addEventListener('click', e => { e.stopPropagation(); mapPickerPanel.classList.toggle('open'); });
 document.addEventListener('click', () => {
@@ -523,7 +520,6 @@ document.querySelectorAll('.map-opt').forEach(opt => {
     map.getSource('base').setTiles([TILE_URLS[lId]]);
     document.querySelectorAll('.map-opt').forEach(o => o.classList.remove('active'));
     opt.classList.add('active');
-    mapPickerThumb.src = THUMB_URLS[lId];
     mapPickerPanel.classList.remove('open');
   });
 });
