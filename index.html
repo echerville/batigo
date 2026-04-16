@@ -45,13 +45,11 @@
   .suggestion-item strong{color:var(--text);font-weight:600}
   /* ── INFO BUTTON ── */
   #info-wrap{margin-left:auto;position:relative;flex-shrink:0}
-  #info-btn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);font-weight:600;white-space:nowrap;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;transition:all .15s;font-family:inherit}
-  #info-btn:hover{border-color:var(--accent);color:var(--accent-dark);background:var(--accent-dim)}
-  #info-btn .info-dot{width:6px;height:6px;border-radius:50%;background:var(--border-med);flex-shrink:0;transition:background .2s}
+  #info-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0;position:relative}
+  #info-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #info-btn .info-dot{width:8px;height:8px;border-radius:50%;background:var(--border-med);position:absolute;top:6px;right:6px;flex-shrink:0;transition:background .2s;border:1.5px solid #fff}
   #info-btn.loading .info-dot{background:var(--accent);animation:pulse 1s ease-in-out infinite}
-  #info-btn.loading{color:var(--accent-dark)}
   #info-btn.error .info-dot{background:var(--danger)}
-  #info-btn.error{color:var(--danger)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   #info-panel{display:none;position:absolute;top:calc(100% + 8px);right:0;width:480px;max-width:calc(100vw - 40px);background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;overflow:hidden}
   #info-panel.open{display:block}
@@ -335,9 +333,18 @@
       </svg>
     </button>
     <div id="info-wrap">
-    <button id="info-btn" title="Sources de données">
+    <button id="info-btn" title="Connexion aux sources de données">
       <span class="info-dot"></span>
-      ⓘ Sources
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+        <!-- Broches -->
+        <path d="M9 2v5M15 2v5" stroke="#2bb573" stroke-width="2" stroke-linecap="round"/>
+        <!-- Corps de la prise -->
+        <rect x="6" y="7" width="12" height="8" rx="2.5" stroke="#2bb573" stroke-width="1.8" fill="rgba(43,181,115,0.1)"/>
+        <!-- Câble -->
+        <path d="M12 15v3" stroke="#2bb573" stroke-width="2" stroke-linecap="round"/>
+        <!-- Connecteur bas -->
+        <path d="M9 18h6" stroke="#2bb573" stroke-width="2" stroke-linecap="round"/>
+      </svg>
     </button>
     <div id="info-panel">
       <div id="info-panel-header">
