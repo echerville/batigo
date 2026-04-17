@@ -1855,24 +1855,21 @@ document.getElementById('info-btn').addEventListener('click',function(e){
   }
 
   async function fetchSurface() {
+    // 1 seule requête → bucketisation côté client
+    const r = await go(`${BASE}/lines?size=200&select=surface_habitable_logement${LA}&sort=-date_reception_dpe`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    const vals = (d.results||[]).map(row => parseFloat(row.surface_habitable_logement)).filter(v => !isNaN(v) && v > 0);
     const B = [
-      ['< 30 m²',      'surface_habitable_logement_lt=30'],
-      ['30 – 50 m²',   'surface_habitable_logement_gte=30&surface_habitable_logement_lt=50'],
-      ['50 – 80 m²',   'surface_habitable_logement_gte=50&surface_habitable_logement_lt=80'],
-      ['80 – 120 m²',  'surface_habitable_logement_gte=80&surface_habitable_logement_lt=120'],
-      ['120 – 200 m²', 'surface_habitable_logement_gte=120&surface_habitable_logement_lt=200'],
-      ['> 200 m²',     'surface_habitable_logement_gte=200'],
+      ['< 30 m²',      0,   30],
+      ['30 – 50 m²',   30,  50],
+      ['50 – 80 m²',   50,  80],
+      ['80 – 120 m²',  80,  120],
+      ['120 – 200 m²', 120, 200],
+      ['> 200 m²',     200, Infinity],
     ];
-    // Séquentiel pour ne pas saturer l'API
-    const res = [];
-    for (const [lbl, q] of B) {
-      try {
-        const r = await go(`${BASE}/lines?size=0&${q}${LA}`);
-        const d = await r.json();
-        res.push({ value: lbl, total: d.total || 0 });
-      } catch { res.push({ value: lbl, total: 0 }); }
-    }
-    return res.filter(a => a.total > 0);
+    return B.map(([lbl, min, max]) => ({ value: lbl, total: vals.filter(v => v >= min && v < max).length }))
+            .filter(a => a.total > 0);
   }
 
   async function fetchDeperditions() {
