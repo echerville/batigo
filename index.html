@@ -1849,6 +1849,7 @@ document.getElementById('info-btn').addEventListener('click',function(e){
 
   async function fetchAgg(field, size=12) {
     const r = await go(`${BASE}/values_agg?field=${field}&metric=count&size=${size}${LA}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status} on field ${field}`);
     const d = await r.json();
     return (d.aggs||[]).filter(a => a.value && a.total > 0);
   }
@@ -1960,9 +1961,9 @@ document.getElementById('info-btn').addEventListener('click',function(e){
       render: aggs => bars(pctRows([...aggs].sort((a,b)=>b.total-a.total)), '#8b5cf6'),
     },
     {
-      title: "Répartition par type d'appartement",
-      fetch: () => fetchAgg('tipologie_logement', 10),
-      render: aggs => bars(pctRows([...aggs].sort((a,b)=>(a.value||'').localeCompare(b.value||''))), '#f59e0b'),
+      title: "Répartition par type de logement",
+      fetch: () => fetchAgg('methode_application_dpe', 8),
+      render: aggs => bars(pctRows([...aggs].sort((a,b)=>b.total-a.total)), '#f59e0b'),
     },
     {
       title: 'Répartition par type de générateur de chauffage',
