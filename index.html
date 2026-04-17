@@ -217,11 +217,11 @@
   /* ── ONBOARDING ── */
   #onboarding-overlay{position:fixed;inset:0;z-index:9000;pointer-events:none}
   #onboarding-overlay.active{pointer-events:all}
-  .ob-backdrop{position:fixed;inset:0;background:rgba(15,28,46,0.55);backdrop-filter:blur(2px);opacity:0;transition:opacity .3s}
+  .ob-backdrop{position:fixed;inset:0;background:rgba(15,28,46,0.55);backdrop-filter:blur(0.8px);opacity:0;transition:opacity .3s}
   #onboarding-overlay.active .ob-backdrop{opacity:1}
   .ob-step{display:none;position:fixed;z-index:9001}
   .ob-step.visible{display:block}
-  .ob-card{background:var(--surface);border-radius:14px;box-shadow:0 8px 40px rgba(15,28,46,0.22);padding:18px 20px 16px;width:230px;pointer-events:all;border:1.5px solid var(--border)}
+  .ob-card{background:var(--surface);border-radius:14px;box-shadow:0 8px 40px rgba(15,28,46,0.22);padding:18px 20px 16px;width:270px;pointer-events:all;border:1.5px solid var(--border)}
   .ob-card h4{font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px;display:flex;align-items:center;gap:7px}
   .ob-card p{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-bottom:12px}
   .ob-arrow{position:absolute;width:12px;height:12px;background:var(--surface);border:1.5px solid var(--border);transform:rotate(45deg)}
@@ -1945,7 +1945,9 @@ document.getElementById('info-btn').addEventListener('click',function(e){
 
     // Last step
     const nextBtn = card.querySelector('#ob-next');
-    nextBtn.textContent = idx === steps.length - 1 ? 'Terminer ✓' : 'Suivant →';
+    const isLast = idx === steps.length - 1;
+    nextBtn.textContent = isLast ? 'Terminer ✓' : 'Suivant →';
+    nextBtn.onclick = isLast ? finish : next;
   }
 
   function next() {
