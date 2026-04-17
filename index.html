@@ -1444,30 +1444,39 @@ async function loadDPE(feature, clickLng, clickLat) {
     const SKIP_WORDS = /^(rue|avenue|boulevard|allée|allee|impasse|place|chemin|route|voie|passage|du|de|la|le|les|des|aux|au|d|l)$/i;
     const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP_WORDS.test(w)) || '';
 
+    // Fetch avec retry automatique sur 429 (backoff 1s puis 2s)
+    async function ademeGet(url) {
+      for (let i = 0; i < 3; i++) {
+        if (i > 0) await new Promise(ok => setTimeout(ok, 1000 * i));
+        const r = await fetch(url);
+        if (r.status === 429) continue;          // rate-limited → retry
+        if (!r.ok) return null;
+        return await r.json();
+      }
+      return null;
+    }
+
     async function fetchDPEDataset(dataset, size=100, useFallback=true) {
       const base = `https://data.ademe.fr/data-fair/api/v1/datasets/${dataset}/lines?size=${size}&select=${SEL}&sort=-date_reception_dpe`;
       // 1. Essayer tous les identifiants BAN du bâtiment (bâtiments d'angle = plusieurs adresses)
       const banIds = _allBanIds.length ? _allBanIds : (banId ? [banId] : []);
       for (const id of banIds) {
-        const r = await fetch(base + `&identifiant_ban_eq=${encodeURIComponent(id)}`);
-        const d = await r.json();
-        if (d.results?.length) return d.results;
+        const d = await ademeGet(base + `&identifiant_ban_eq=${encodeURIComponent(id)}`);
+        if (d?.results?.length) return d.results;
       }
       // 2. Fallback : commune + numéro de voie exacts (champs indexés), mot-clé rue dans adresse_ban
       if (useFallback && housenumber && citycode) {
         let url = base + `&code_insee_ban_eq=${citycode}&numero_voie_ban_eq=${encodeURIComponent(housenumber)}`;
         if (streetKey) url += `&q=${encodeURIComponent(streetKey)}&q_fields=adresse_ban`;
-        const r = await fetch(url);
-        const d = await r.json();
-        if (d.results?.length) return d.results;
+        const d = await ademeGet(url);
+        if (d?.results?.length) return d.results;
       }
       return [];
     }
 
-    const [results, resultsNeufs] = await Promise.all([
-      fetchDPEDataset('dpe03existant', 100, true).catch(()=>[]),
-      fetchDPEDataset('g3cgx7jb3cmys5voxz1mrm22', 50, false).catch(()=>[]),
-    ]);
+    // Séquentiel (pas de Promise.all) pour éviter le burst de requêtes → 429
+    const results = await fetchDPEDataset('dpe03existant', 100, true).catch(()=>[]);
+    const resultsNeufs = await fetchDPEDataset('g3cgx7jb3cmys5voxz1mrm22', 50, false).catch(()=>[]);
     renderDPE(results, resultsNeufs);
     const _applyLng = clickLng ?? currentCoords?.[0];
     const _applyLat = clickLat ?? currentCoords?.[1];
