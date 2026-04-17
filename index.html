@@ -32,11 +32,15 @@
   #logo-box{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;box-shadow:0 2px 8px rgba(43,181,115,.30);flex-shrink:0}
   #logo-text{font-size:24px;font-weight:700;color:var(--accent);letter-spacing:-.5px}
   #search-wrap{flex:1;position:relative;max-width:540px}
-  #search-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:28px;color:var(--text);font-family:inherit;font-size:13px;padding:10px 50px 10px 18px;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+  #search-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:28px;color:var(--text);font-family:inherit;font-size:13px;padding:10px 50px 10px 50px;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
   #search-input::placeholder{color:var(--text-muted)}
   #search-input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px var(--accent-dim)}
   #search-btn{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:var(--accent);border:none;border-radius:50%;cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(43,181,115,.35);transition:background .15s,transform .1s}
   #search-btn:hover{background:var(--accent-dark);transform:translateY(-50%) scale(1.05)}
+  #geolocate-btn{position:absolute;left:2px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:var(--accent);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(43,181,115,.35);transition:background .15s,transform .1s;z-index:2}
+  #geolocate-btn:hover{background:var(--accent-dark);transform:translateY(-50%) scale(1.05)}
+  #geolocate-btn.active{background:var(--accent-dark);box-shadow:0 2px 8px rgba(43,181,115,.5)}
+  #geolocate-btn.locating{animation:pulse 1s ease-in-out infinite}
   #suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:200;max-height:280px;overflow-y:auto}
   .suggestion-item{padding:10px 16px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);line-height:1.4;color:var(--text-dim);display:flex;align-items:flex-start;gap:8px;transition:background .1s}
   .suggestion-item::before{content:'📍';font-size:11px;margin-top:1px;flex-shrink:0;opacity:.5}
@@ -96,10 +100,6 @@
   #surface-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
   #surface-btn.active{border-color:var(--accent);background:var(--accent-dim2)}
   /* ── GEOLOCATION BUTTON ── */
-  #geolocate-btn{width:44px;height:44px;padding:0;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
-  #geolocate-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
-  #geolocate-btn.active{border-color:var(--accent);background:var(--accent-dim2)}
-  #geolocate-btn.locating{border-color:var(--accent);animation:pulse 1s ease-in-out infinite}
   #overlay-picker{position:relative;flex-shrink:0}
   #overlay-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0;background:#f0f4f1}
   #overlay-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
@@ -234,6 +234,12 @@
       <div id="logo-text">scope</div>
     </div>
     <div id="search-wrap">
+      <button id="geolocate-btn" title="Me localiser">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <circle cx="12" cy="12" r="4" stroke="#fff" stroke-width="2"/>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
       <input id="search-input" type="text" placeholder="Saisir une adresse…" autocomplete="off"/>
       <button id="search-btn">⌕</button>
       <div id="suggestions"></div>
@@ -335,12 +341,6 @@
         <circle cx="18" cy="20" r="1.8" fill="#2bb573"/>
         <circle cx="6"  cy="20" r="1.8" fill="#2bb573"/>
         <circle cx="3"  cy="9"  r="1.8" fill="#2bb573"/>
-      </svg>
-    </button>
-    <button id="geolocate-btn" title="Me localiser">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
-        <circle cx="12" cy="12" r="4" stroke="#2bb573" stroke-width="2"/>
-        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#2bb573" stroke-width="2" stroke-linecap="round"/>
       </svg>
     </button>
     <div id="info-wrap">
