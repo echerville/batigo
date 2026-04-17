@@ -217,6 +217,35 @@
   .maplibregl-popup-tip{display:none!important}
   .maplibregl-ctrl-group{border-radius:var(--radius-sm)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--border)!important}
   .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
+  /* ── LE SAVIEZ-VOUS ? ───────────────────────────────────────────────────── */
+  #empty-batiment{padding:2px 0}
+  .svq-card{animation:svqIn .4s ease}
+  @keyframes svqIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .svq-head{display:flex;align-items:center;gap:6px;margin-bottom:13px}
+  .svq-pill{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim2);border-radius:20px;padding:3px 9px}
+  .svq-src{margin-left:auto;font-size:9px;color:var(--text-muted)}
+  .svq-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:13px;line-height:1.35}
+  .svq-bars-row{display:flex;gap:2px;height:24px;border-radius:5px;overflow:hidden;margin-bottom:3px}
+  .svq-seg{display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.9);overflow:hidden;min-width:0}
+  .svq-row-lbl{font-size:9px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px}
+  .svq-insight{font-size:11.5px;color:var(--text-dim);line-height:1.6;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+  .svq-2col{display:flex;gap:10px}
+  .svq-col{flex:1;text-align:center;background:var(--surface2);border-radius:10px;padding:12px 8px}
+  .svq-col-val{font-size:24px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px}
+  .svq-col-sub{font-size:9px;color:var(--text-muted);margin-top:3px}
+  .svq-col-lbl{font-size:9.5px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .svq-col.hi{background:var(--accent-dim2)}.svq-col.hi .svq-col-val{color:var(--accent)}
+  .svq-hbar-row{display:flex;flex-direction:column;gap:7px}
+  .svq-hbar{display:flex;align-items:center;gap:8px}
+  .svq-hbar-lbl{font-size:10px;color:var(--text-muted);width:76px;font-weight:500;flex-shrink:0;line-height:1.2}
+  .svq-hbar-track{flex:1;height:16px;background:var(--surface2);border-radius:4px;overflow:hidden}
+  .svq-hbar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:700;color:#fff;white-space:nowrap}
+  .svq-badge-row{display:flex;align-items:center;justify-content:center;gap:20px;padding:6px 0 4px}
+  .svq-big-badge{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+  .svq-pct-block{text-align:center}
+  .svq-pct-val{font-size:22px;font-weight:800;color:var(--text)}
+  .svq-pct-lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-top:2px}
+  .svq-addr-hint{margin-top:14px;font-size:10px;color:var(--text-muted);text-align:center}
 </style>
 </head>
 <body>
@@ -405,7 +434,7 @@
   <div id="panel">
     <div id="panel-content">
       <div style="padding:12px">
-        <div class="empty-state" id="empty-batiment"><div class="icon">◈</div><p>Saisir une adresse<br>pour afficher les données bâtiment</p></div>
+        <div id="empty-batiment"></div>
         <div id="batiment-data" style="display:none"></div>
       </div>
     </div>
@@ -1818,6 +1847,78 @@ document.getElementById('info-btn').addEventListener('click',function(e){
   closeAllPickers();
   if (!wasOpen) document.getElementById('info-panel').classList.add('open');
 });
+
+// ── LE SAVIEZ-VOUS ? (empty state) ───────────────────────────────────────────
+(function() {
+  const C = {'A':'#00b050','B':'#85c341','C':'#cad401','D':'#ffd966','E':'#ffb531','F':'#f07b22','G':'#e3001b'};
+  const CARDS = [
+    {
+      title: 'Répartition des étiquettes DPE',
+      type: 'dpe-bars',
+      data: { labels:['A','B','C','D','E','F','G'], france:[1.4,4.9,36.8,31.2,16.0,6.2,3.5], la44:[1.7,5.1,45.2,29.9,11.3,4.4,2.2] },
+      insight: 'En Loire-Atlantique, <strong>52%</strong> des logements obtiennent une note C ou mieux — contre <strong>43%</strong> en France.'
+    },
+    {
+      title: 'Passoires thermiques (F &amp; G)',
+      type: 'big-2col',
+      data: { cols: [
+        { lbl:'France',    val:'9,7 %', sub:'~1,4M logements', hi:false },
+        { lbl:'Loire-Atl.',val:'6,6 %', sub:'~22 000 logements',hi:true }
+      ]},
+      insight: 'La Loire-Atlantique compte proportionnellement <strong>32% moins</strong> de passoires thermiques (F ou G) que la moyenne nationale.'
+    },
+    {
+      title: 'Mode de chauffage principal',
+      type: 'hbars',
+      data: { bars: [
+        { lbl:'France — Gaz',    pct:40.2, color:'#f97316' },
+        { lbl:'France — Élec.',  pct:39.6, color:'#64a5f6' },
+        { lbl:'LA — Électricité',pct:42.1, color:'#2563eb' },
+        { lbl:'LA — Gaz naturel',pct:40.2, color:'#ea7a00' }
+      ]},
+      insight: 'En Loire-Atlantique, le chauffage électrique (<strong>42%</strong>) devance le gaz (<strong>40%</strong>) — l\'inverse de la tendance nationale.'
+    },
+    {
+      title: 'La note C, reine du parc diagnostiqué',
+      type: 'badge-pct',
+      data: { badge:'C', france:36.8, la44:45.2 },
+      insight: 'La note DPE la plus fréquente est le <strong>C</strong>. En Loire-Atlantique elle représente <strong>45%</strong> des diagnostics, contre <strong>37%</strong> en France.'
+    },
+    {
+      title: '331 814 DPE en Loire-Atlantique',
+      type: 'progress',
+      data: { total:14559540, la44:331814, pct:2.3 },
+      insight: 'La Loire-Atlantique représente <strong>2,3%</strong> des <strong>14,5 millions</strong> de diagnostics énergétiques réalisés en France depuis 2021.'
+    }
+  ];
+
+  function render(card) {
+    let chart = '';
+    if (card.type === 'dpe-bars') {
+      const { labels, france, la44 } = card.data;
+      const row = (vals, lbl) => {
+        const segs = labels.map((l,i) => `<div class="svq-seg" style="flex:${vals[i]};background:${C[l]}" title="${l}: ${vals[i]}%">${vals[i]>=8?l:''}</div>`).join('');
+        return `<div class="svq-row-lbl">${lbl}</div><div class="svq-bars-row">${segs}</div>`;
+      };
+      const ltrs = labels.map(l=>`<span style="flex:1;text-align:center;font-size:8px;font-weight:700;color:${C[l]}">${l}</span>`).join('');
+      chart = `<div style="display:flex;gap:1px;margin-bottom:2px">${ltrs}</div>${row(france,'France')}${row(la44,'Loire-Atlantique')}`;
+    } else if (card.type === 'big-2col') {
+      chart = `<div class="svq-2col">${card.data.cols.map(c=>`<div class="svq-col${c.hi?' hi':''}"><div class="svq-col-val">${c.val}</div><div class="svq-col-lbl">${c.lbl}</div><div class="svq-col-sub">${c.sub}</div></div>`).join('')}</div>`;
+    } else if (card.type === 'hbars') {
+      chart = `<div class="svq-hbar-row">${card.data.bars.map(b=>`<div class="svq-hbar"><div class="svq-hbar-lbl">${b.lbl}</div><div class="svq-hbar-track"><div class="svq-hbar-fill" style="width:${b.pct}%;background:${b.color}">${b.pct}%</div></div></div>`).join('')}</div>`;
+    } else if (card.type === 'badge-pct') {
+      const { badge, france, la44 } = card.data;
+      chart = `<div class="svq-badge-row"><div class="svq-pct-block"><div class="svq-pct-val">${france}%</div><div class="svq-pct-lbl">France</div></div><div class="svq-big-badge" style="background:${C[badge]}">${badge}</div><div class="svq-pct-block"><div class="svq-pct-val" style="color:var(--accent)">${la44}%</div><div class="svq-pct-lbl">Loire-Atl.</div></div></div>`;
+    } else if (card.type === 'progress') {
+      const { total, la44, pct } = card.data;
+      chart = `<div style="margin:4px 0 6px"><div style="background:var(--surface2);border-radius:6px;height:22px;overflow:hidden;position:relative"><div style="width:${pct}%;background:var(--accent);height:100%;border-radius:6px"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text)">${pct}% du total national</div></div><div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9.5px;color:var(--text-muted)"><span><strong style="color:var(--accent)">${la44.toLocaleString('fr-FR')}</strong> en Loire-Atl.</span><span><strong>${(total/1e6).toFixed(1)}M</strong> en France</span></div></div>`;
+    }
+    return `<div class="svq-card"><div class="svq-head"><span class="svq-pill">💡 Le saviez-vous ?</span><span class="svq-src">ADEME · 2024</span></div><div class="svq-title">${card.title}</div><div>${chart}</div><div class="svq-insight">${card.insight}</div><div class="svq-addr-hint">↖ Saisir une adresse pour explorer votre bâtiment</div></div>`;
+  }
+
+  const el = document.getElementById('empty-batiment');
+  if (el) el.innerHTML = render(CARDS[Math.floor(Math.random() * CARDS.length)]);
+})();
 </script>
 
 </body>
