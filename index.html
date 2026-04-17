@@ -219,7 +219,7 @@
   #onboarding-overlay.active{pointer-events:all}
   .ob-backdrop{position:fixed;inset:0;background:rgba(15,28,46,0.55);backdrop-filter:blur(0.8px);opacity:0;transition:opacity .3s}
   #onboarding-overlay.active .ob-backdrop{opacity:1}
-  .ob-step{display:none;position:fixed;z-index:9001}
+  .ob-step{display:none;position:fixed;z-index:9100}
   .ob-step.visible{display:block}
   .ob-card{background:var(--surface);border-radius:14px;box-shadow:0 8px 40px rgba(15,28,46,0.22);padding:18px 20px 16px;width:270px;pointer-events:all;border:1.5px solid var(--border)}
   .ob-card h4{font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px;display:flex;align-items:center;gap:7px}
@@ -1883,7 +1883,7 @@ document.getElementById('info-btn').addEventListener('click',function(e){
   const overlay = document.getElementById('onboarding-overlay');
   const highlight = document.getElementById('ob-highlight');
 
-  // Créer la card
+  // Créer la card — appendée au body directement pour éviter tout stacking context
   const card = document.createElement('div');
   card.className = 'ob-step';
   card.innerHTML = `
@@ -1899,7 +1899,7 @@ document.getElementById('info-btn').addEventListener('click',function(e){
         </div>
       </div>
     </div>`;
-  overlay.appendChild(card);
+  document.body.appendChild(card);
 
   // Dots
   const dotsEl = card.querySelector('#ob-dots');
