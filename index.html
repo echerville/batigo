@@ -217,35 +217,16 @@
   .maplibregl-popup-tip{display:none!important}
   .maplibregl-ctrl-group{border-radius:var(--radius-sm)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--border)!important}
   .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
-  /* ── LE SAVIEZ-VOUS ? ───────────────────────────────────────────────────── */
-  #empty-batiment{padding:2px 0}
-  .svq-card{animation:svqIn .4s ease}
-  @keyframes svqIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-  .svq-head{display:flex;align-items:center;gap:6px;margin-bottom:13px}
-  .svq-pill{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim2);border-radius:20px;padding:3px 9px}
-  .svq-src{margin-left:auto;font-size:9px;color:var(--text-muted)}
-  .svq-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:13px;line-height:1.35}
-  .svq-bars-row{display:flex;gap:2px;height:24px;border-radius:5px;overflow:hidden;margin-bottom:3px}
-  .svq-seg{display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.9);overflow:hidden;min-width:0}
-  .svq-row-lbl{font-size:9px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px}
-  .svq-insight{font-size:11.5px;color:var(--text-dim);line-height:1.6;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
-  .svq-2col{display:flex;gap:10px}
-  .svq-col{flex:1;text-align:center;background:var(--surface2);border-radius:10px;padding:12px 8px}
-  .svq-col-val{font-size:24px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px}
-  .svq-col-sub{font-size:9px;color:var(--text-muted);margin-top:3px}
-  .svq-col-lbl{font-size:9.5px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-  .svq-col.hi{background:var(--accent-dim2)}.svq-col.hi .svq-col-val{color:var(--accent)}
-  .svq-hbar-row{display:flex;flex-direction:column;gap:7px}
-  .svq-hbar{display:flex;align-items:center;gap:8px}
-  .svq-hbar-lbl{font-size:10px;color:var(--text-muted);width:76px;font-weight:500;flex-shrink:0;line-height:1.2}
-  .svq-hbar-track{flex:1;height:16px;background:var(--surface2);border-radius:4px;overflow:hidden}
-  .svq-hbar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:700;color:#fff;white-space:nowrap}
-  .svq-badge-row{display:flex;align-items:center;justify-content:center;gap:20px;padding:6px 0 4px}
-  .svq-big-badge{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.18)}
-  .svq-pct-block{text-align:center}
-  .svq-pct-val{font-size:22px;font-weight:800;color:var(--text)}
-  .svq-pct-lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-top:2px}
-  .svq-addr-hint{margin-top:14px;font-size:10px;color:var(--text-muted);text-align:center}
+  /* ── STAT CARDS ── */
+  #empty-batiment{padding:4px 0}
+  @keyframes svqIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .stat-card{animation:svqIn .35s ease}
+  .stat-bar-wrap{margin-bottom:8px}
+  .stat-bar-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  .stat-bar-name{font-size:11px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%}
+  .stat-bar-val{font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;margin-left:8px}
+  .stat-bar-track{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+  .stat-bar-fill{height:100%;border-radius:3px}
 </style>
 </head>
 <body>
@@ -1848,76 +1829,158 @@ document.getElementById('info-btn').addEventListener('click',function(e){
   if (!wasOpen) document.getElementById('info-panel').classList.add('open');
 });
 
-// ── LE SAVIEZ-VOUS ? (empty state) ───────────────────────────────────────────
-(function() {
-  const C = {'A':'#00b050','B':'#85c341','C':'#cad401','D':'#ffd966','E':'#ffb531','F':'#f07b22','G':'#e3001b'};
-  const CARDS = [
-    {
-      title: 'Répartition des étiquettes DPE',
-      type: 'dpe-bars',
-      data: { labels:['A','B','C','D','E','F','G'], france:[1.4,4.9,36.8,31.2,16.0,6.2,3.5], la44:[1.7,5.1,45.2,29.9,11.3,4.4,2.2] },
-      insight: 'En Loire-Atlantique, <strong>52%</strong> des logements obtiennent une note C ou mieux — contre <strong>43%</strong> en France.'
-    },
-    {
-      title: 'Passoires thermiques (F &amp; G)',
-      type: 'big-2col',
-      data: { cols: [
-        { lbl:'France',    val:'9,7 %', sub:'~1,4M logements', hi:false },
-        { lbl:'Loire-Atl.',val:'6,6 %', sub:'~22 000 logements',hi:true }
-      ]},
-      insight: 'La Loire-Atlantique compte proportionnellement <strong>32% moins</strong> de passoires thermiques (F ou G) que la moyenne nationale.'
-    },
-    {
-      title: 'Mode de chauffage principal',
-      type: 'hbars',
-      data: { bars: [
-        { lbl:'France — Gaz',    pct:40.2, color:'#f97316' },
-        { lbl:'France — Élec.',  pct:39.6, color:'#64a5f6' },
-        { lbl:'LA — Électricité',pct:42.1, color:'#2563eb' },
-        { lbl:'LA — Gaz naturel',pct:40.2, color:'#ea7a00' }
-      ]},
-      insight: 'En Loire-Atlantique, le chauffage électrique (<strong>42%</strong>) devance le gaz (<strong>40%</strong>) — l\'inverse de la tendance nationale.'
-    },
-    {
-      title: 'La note C, reine du parc diagnostiqué',
-      type: 'badge-pct',
-      data: { badge:'C', france:36.8, la44:45.2 },
-      insight: 'La note DPE la plus fréquente est le <strong>C</strong>. En Loire-Atlantique elle représente <strong>45%</strong> des diagnostics, contre <strong>37%</strong> en France.'
-    },
-    {
-      title: '331 814 DPE en Loire-Atlantique',
-      type: 'progress',
-      data: { total:14559540, la44:331814, pct:2.3 },
-      insight: 'La Loire-Atlantique représente <strong>2,3%</strong> des <strong>14,5 millions</strong> de diagnostics énergétiques réalisés en France depuis 2021.'
-    }
-  ];
+// ── STATISTIQUES LOIRE-ATLANTIQUE (empty state) ──────────────────────────────
+(function () {
+  const BASE = 'https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant';
+  const LA   = '&code_postal_ban_starts=44';
+  const DPE_C = {A:'#00b050',B:'#85c341',C:'#cad401',D:'#ffd966',E:'#ffb531',F:'#f07b22',G:'#e3001b'};
+  const DEP_C = {
+    'Murs':'#3b82f6','Toiture':'#8b5cf6','Planchers bas':'#06b6d4',
+    'Baies vitrées':'#f59e0b',"Renouvellement d'air":'#10b981',
+    'Ponts thermiques':'#ef4444','Portes':'#f97316'
+  };
 
-  function render(card) {
-    let chart = '';
-    if (card.type === 'dpe-bars') {
-      const { labels, france, la44 } = card.data;
-      const row = (vals, lbl) => {
-        const segs = labels.map((l,i) => `<div class="svq-seg" style="flex:${vals[i]};background:${C[l]}" title="${l}: ${vals[i]}%">${vals[i]>=8?l:''}</div>`).join('');
-        return `<div class="svq-row-lbl">${lbl}</div><div class="svq-bars-row">${segs}</div>`;
-      };
-      const ltrs = labels.map(l=>`<span style="flex:1;text-align:center;font-size:8px;font-weight:700;color:${C[l]}">${l}</span>`).join('');
-      chart = `<div style="display:flex;gap:1px;margin-bottom:2px">${ltrs}</div>${row(france,'France')}${row(la44,'Loire-Atlantique')}`;
-    } else if (card.type === 'big-2col') {
-      chart = `<div class="svq-2col">${card.data.cols.map(c=>`<div class="svq-col${c.hi?' hi':''}"><div class="svq-col-val">${c.val}</div><div class="svq-col-lbl">${c.lbl}</div><div class="svq-col-sub">${c.sub}</div></div>`).join('')}</div>`;
-    } else if (card.type === 'hbars') {
-      chart = `<div class="svq-hbar-row">${card.data.bars.map(b=>`<div class="svq-hbar"><div class="svq-hbar-lbl">${b.lbl}</div><div class="svq-hbar-track"><div class="svq-hbar-fill" style="width:${b.pct}%;background:${b.color}">${b.pct}%</div></div></div>`).join('')}</div>`;
-    } else if (card.type === 'badge-pct') {
-      const { badge, france, la44 } = card.data;
-      chart = `<div class="svq-badge-row"><div class="svq-pct-block"><div class="svq-pct-val">${france}%</div><div class="svq-pct-lbl">France</div></div><div class="svq-big-badge" style="background:${C[badge]}">${badge}</div><div class="svq-pct-block"><div class="svq-pct-val" style="color:var(--accent)">${la44}%</div><div class="svq-pct-lbl">Loire-Atl.</div></div></div>`;
-    } else if (card.type === 'progress') {
-      const { total, la44, pct } = card.data;
-      chart = `<div style="margin:4px 0 6px"><div style="background:var(--surface2);border-radius:6px;height:22px;overflow:hidden;position:relative"><div style="width:${pct}%;background:var(--accent);height:100%;border-radius:6px"></div><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text)">${pct}% du total national</div></div><div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9.5px;color:var(--text-muted)"><span><strong style="color:var(--accent)">${la44.toLocaleString('fr-FR')}</strong> en Loire-Atl.</span><span><strong>${(total/1e6).toFixed(1)}M</strong> en France</span></div></div>`;
-    }
-    return `<div class="svq-card"><div class="svq-head"><span class="svq-pill">💡 Le saviez-vous ?</span><span class="svq-src">ADEME · 2024</span></div><div class="svq-title">${card.title}</div><div>${chart}</div><div class="svq-insight">${card.insight}</div><div class="svq-addr-hint">↖ Saisir une adresse pour explorer votre bâtiment</div></div>`;
+  /* ── fetch ── */
+  async function fetchAgg(field, size=12) {
+    const r = await fetch(`${BASE}/values_agg?field=${field}&metric=count&size=${size}${LA}`);
+    const d = await r.json();
+    return (d.aggs||[]).filter(a => a.value && a.total > 0);
   }
 
-  const el = document.getElementById('empty-batiment');
-  if (el) el.innerHTML = render(CARDS[Math.floor(Math.random() * CARDS.length)]);
+  async function fetchSurface() {
+    const B = [
+      ['< 30 m²',      'surface_habitable_logement_lt=30'],
+      ['30 – 50 m²',   'surface_habitable_logement_gte=30&surface_habitable_logement_lt=50'],
+      ['50 – 80 m²',   'surface_habitable_logement_gte=50&surface_habitable_logement_lt=80'],
+      ['80 – 120 m²',  'surface_habitable_logement_gte=80&surface_habitable_logement_lt=120'],
+      ['120 – 200 m²', 'surface_habitable_logement_gte=120&surface_habitable_logement_lt=200'],
+      ['> 200 m²',     'surface_habitable_logement_gte=200'],
+    ];
+    const res = await Promise.all(B.map(async ([lbl, q]) => {
+      const r = await fetch(`${BASE}/lines?size=0&${q}${LA}`);
+      const d = await r.json();
+      return { value: lbl, total: d.total || 0 };
+    }));
+    return res.filter(a => a.total > 0);
+  }
+
+  async function fetchDeperditions() {
+    const COMPS = [
+      ['deperditions_murs',               'Murs'],
+      ['deperditions_planchers_hauts',    'Toiture'],
+      ['deperditions_planchers_bas',      'Planchers bas'],
+      ['deperditions_baies_vitrees',      'Baies vitrées'],
+      ['deperditions_renouvellement_air', "Renouvellement d'air"],
+      ['deperditions_ponts_thermiques',   'Ponts thermiques'],
+      ['deperditions_portes',             'Portes'],
+    ];
+    const sel = COMPS.map(c => c[0]).join(',');
+    const r = await fetch(`${BASE}/lines?size=300&select=${sel}${LA}&sort=-date_reception_dpe`);
+    const d = await r.json();
+    const rows = d.results || [];
+    const avgs = COMPS.map(([fld, lbl]) => {
+      const vals = rows.map(row => parseFloat(row[fld])).filter(v => !isNaN(v) && v > 0);
+      return { value: lbl, raw: vals.length ? vals.reduce((s,v) => s+v, 0) / vals.length : 0 };
+    });
+    const tot = avgs.reduce((s,a) => s + a.raw, 0);
+    if (!tot) throw new Error('no data');
+    return avgs
+      .map(a => ({ value: a.value, pct: +(a.raw / tot * 100).toFixed(1) }))
+      .sort((a,b) => b.pct - a.pct);
+  }
+
+  /* ── render ── */
+  function pctRows(aggs) {
+    const tot = aggs.reduce((s,a) => s + a.total, 0);
+    return aggs.map(a => ({ value: a.value, pct: tot ? +(a.total/tot*100).toFixed(1) : 0 }));
+  }
+
+  function bars(rows, colorFn) {
+    return rows.map(r => {
+      const lbl = r.value && r.value.length > 34 ? r.value.slice(0,32)+'…' : (r.value||'—');
+      const col = typeof colorFn === 'function' ? colorFn(r.value) : colorFn;
+      return `<div class="stat-bar-wrap">
+        <div class="stat-bar-label">
+          <span class="stat-bar-name" title="${r.value}">${lbl}</span>
+          <span class="stat-bar-val">${r.pct}%</span>
+        </div>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${r.pct}%;background:${col}"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  function dpeBars(aggs) {
+    const order = ['A','B','C','D','E','F','G'];
+    const rows = pctRows(order.map(l => aggs.find(a => a.value===l)||{value:l,total:0}).filter(a=>a.total>0));
+    const segs = rows.map(r =>
+      `<div style="flex:${r.pct};background:${DPE_C[r.value]};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:rgba(255,255,255,.9);overflow:hidden;min-width:${r.pct>4?'18px':'4px'}">${r.pct>=6?r.value:''}</div>`
+    ).join('');
+    const lbls = rows.map(r =>
+      `<div style="flex:${r.pct};text-align:center;font-size:8px;font-weight:700;color:${DPE_C[r.value]};overflow:hidden;min-width:0">${r.pct>=5?r.pct+'%':''}</div>`
+    ).join('');
+    return `<div style="display:flex;height:32px;border-radius:6px;overflow:hidden;gap:2px;margin-bottom:5px">${segs}</div><div style="display:flex;gap:2px">${lbls}</div>`;
+  }
+
+  /* ── cards ── */
+  const CARDS = [
+    {
+      title: 'Répartition des déperditions thermiques',
+      fetch: fetchDeperditions,
+      render: rows => bars(rows, v => DEP_C[v]||'#6b7280'),
+    },
+    {
+      title: 'Répartition des étiquettes DPE',
+      fetch: () => fetchAgg('etiquette_dpe', 7),
+      render: aggs => dpeBars(aggs),
+    },
+    {
+      title: 'Répartition par période de construction',
+      fetch: () => fetchAgg('periode_construction', 12),
+      render: aggs => bars(pctRows([...aggs].sort((a,b)=>(a.value||'').localeCompare(b.value||''))), '#2bb573'),
+    },
+    {
+      title: 'Répartition par surface habitable',
+      fetch: fetchSurface,
+      render: aggs => bars(pctRows(aggs), '#0ea5e9'),
+    },
+    {
+      title: 'Répartition par type de bâtiment',
+      fetch: () => fetchAgg('type_batiment', 6),
+      render: aggs => bars(pctRows([...aggs].sort((a,b)=>b.total-a.total)), '#8b5cf6'),
+    },
+    {
+      title: "Répartition par type d'appartement",
+      fetch: () => fetchAgg('tipologie_logement', 10),
+      render: aggs => bars(pctRows([...aggs].sort((a,b)=>(a.value||'').localeCompare(b.value||''))), '#f59e0b'),
+    },
+    {
+      title: 'Répartition par type de générateur de chauffage',
+      fetch: () => fetchAgg('type_generateur_chauffage_principal', 10),
+      render: aggs => bars(pctRows([...aggs].sort((a,b)=>b.total-a.total)), '#ef4444'),
+    },
+  ];
+
+  /* ── show ── */
+  async function showCard() {
+    const el = document.getElementById('empty-batiment');
+    if (!el) return;
+    const card = CARDS[Math.floor(Math.random() * CARDS.length)];
+    const hdr = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim2);border-radius:20px;padding:3px 10px">Loire-Atlantique</span>
+      <span style="font-size:9px;color:var(--text-muted)">ADEME · 2024</span>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;line-height:1.35">${card.title}</div>`;
+    el.innerHTML = `<div class="stat-card">${hdr}<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);padding:4px 0"><span class="spinner"></span>Chargement…</div></div>`;
+    try {
+      const data = await card.fetch();
+      if (!data?.length) throw new Error('empty');
+      el.innerHTML = `<div class="stat-card">${hdr}${card.render(data)}<div style="margin-top:12px;font-size:10px;color:var(--text-muted);text-align:center;padding-top:10px;border-top:1px solid var(--border)">Saisir une adresse pour explorer votre bâtiment</div></div>`;
+    } catch(e) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">◈</div><p>Saisir une adresse<br>pour afficher les données bâtiment</p></div>`;
+    }
+  }
+
+  showCard();
 })();
 </script>
 
