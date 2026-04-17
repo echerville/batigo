@@ -452,9 +452,10 @@ maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
 let currentLayer = 'voyager', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
 let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
 let streetviewActive = null;
-// Identifiant BAN canonique fourni par BDNB (cle_interop_adr_principale_ban)
+// Identifiants BAN fournis par BDNB — principal + tous les adresses du bâtiment (coins de rue, etc.)
 // Partagé entre loadBatiment (producteur) et loadDPE (consommateur)
 let _canonicalBanId = null;
+let _allBanIds = [];
 let _lastDPEApplyArgs = null; // stocké par loadDPE, consommé par le idle de selectAddress
 let _pmtilesDpeGrade = null;  // note DPE issue des tuiles PMTiles (ancienne norme)
 let _dpeResultsReady = null;  // DPE arrivé avant le DOM batiment → appliqué par renderBatiment
@@ -1016,6 +1017,7 @@ async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
 
 async function loadBatiment(lat, lng, label, feature, bldGroupId) {
   _canonicalBanId = null;
+  _allBanIds = [];
   _dpeResultsReady = null; // reset pour la course ADEME vs BDNB
   const el = document.getElementById('batiment-data');
   document.getElementById('empty-batiment').style.display = 'none';
@@ -1063,6 +1065,7 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
 
     // Extraire les identifiants canoniques BDNB et les partager avec loadDPE
     _canonicalBanId = bdnbData?.cle_interop_adr_principale_ban || null;
+    _allBanIds = Array.isArray(bdnbData?.l_cle_interop_adr) ? bdnbData.l_cle_interop_adr : (_canonicalBanId ? [_canonicalBanId] : []);
     const bdnbUdu = Array.isArray(bdnbData?.l_parcelle_id) ? bdnbData.l_parcelle_id[0] : null;
 
 
@@ -1424,9 +1427,10 @@ async function loadDPE(feature, clickLng, clickLat) {
 
     async function fetchDPEDataset(dataset, size=100, useFallback=true) {
       const base = `https://data.ademe.fr/data-fair/api/v1/datasets/${dataset}/lines?size=${size}&select=${SEL}&sort=-date_reception_dpe`;
-      // 1. Identifiant BAN exact (le plus précis)
-      if (banId) {
-        const r = await fetch(base + `&identifiant_ban_eq=${encodeURIComponent(banId)}`);
+      // 1. Essayer tous les identifiants BAN du bâtiment (bâtiments d'angle = plusieurs adresses)
+      const banIds = _allBanIds.length ? _allBanIds : (banId ? [banId] : []);
+      for (const id of banIds) {
+        const r = await fetch(base + `&identifiant_ban_eq=${encodeURIComponent(id)}`);
         const d = await r.json();
         if (d.results?.length) return d.results;
       }

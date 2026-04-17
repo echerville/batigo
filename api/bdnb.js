@@ -37,7 +37,7 @@ module.exports = async function handler(req, res) {
   const ne = wgs84ToL93(lngMax, latMax);
 
   try {
-    const url = `https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox?xmin=${Math.round(sw.x)}&ymin=${Math.round(sw.y)}&xmax=${Math.round(ne.x)}&ymax=${Math.round(ne.y)}&limit=20&select=annee_construction,surface_emprise_sol,type_energie_chauffage,type_generateur_ecs,nb_log,usage_principal_bdnb_open,cle_interop_adr_principale_ban,libelle_adr_principale_ban,l_parcelle_id,code_iris,batiment_groupe_id`;
+    const url = `https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox?xmin=${Math.round(sw.x)}&ymin=${Math.round(sw.y)}&xmax=${Math.round(ne.x)}&ymax=${Math.round(ne.y)}&limit=20&select=annee_construction,surface_emprise_sol,type_energie_chauffage,type_generateur_ecs,nb_log,usage_principal_bdnb_open,cle_interop_adr_principale_ban,libelle_adr_principale_ban,l_parcelle_id,l_cle_interop_adr,code_iris,batiment_groupe_id`;
     const response = await fetch(url);
     if (!response.ok) {
       const text = await response.text();
