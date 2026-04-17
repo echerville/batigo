@@ -1840,9 +1840,15 @@ document.getElementById('info-btn').addEventListener('click',function(e){
     'Ponts thermiques':'#ef4444','Portes':'#f97316'
   };
 
-  /* ── fetch ── */
+  /* ── fetch helpers ── */
+  function go(url) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 9000);
+    return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(t));
+  }
+
   async function fetchAgg(field, size=12) {
-    const r = await fetch(`${BASE}/values_agg?field=${field}&metric=count&size=${size}${LA}`);
+    const r = await go(`${BASE}/values_agg?field=${field}&metric=count&size=${size}${LA}`);
     const d = await r.json();
     return (d.aggs||[]).filter(a => a.value && a.total > 0);
   }
@@ -1856,11 +1862,15 @@ document.getElementById('info-btn').addEventListener('click',function(e){
       ['120 – 200 m²', 'surface_habitable_logement_gte=120&surface_habitable_logement_lt=200'],
       ['> 200 m²',     'surface_habitable_logement_gte=200'],
     ];
-    const res = await Promise.all(B.map(async ([lbl, q]) => {
-      const r = await fetch(`${BASE}/lines?size=0&${q}${LA}`);
-      const d = await r.json();
-      return { value: lbl, total: d.total || 0 };
-    }));
+    // Séquentiel pour ne pas saturer l'API
+    const res = [];
+    for (const [lbl, q] of B) {
+      try {
+        const r = await go(`${BASE}/lines?size=0&${q}${LA}`);
+        const d = await r.json();
+        res.push({ value: lbl, total: d.total || 0 });
+      } catch { res.push({ value: lbl, total: 0 }); }
+    }
     return res.filter(a => a.total > 0);
   }
 
@@ -1875,7 +1885,8 @@ document.getElementById('info-btn').addEventListener('click',function(e){
       ['deperditions_portes',             'Portes'],
     ];
     const sel = COMPS.map(c => c[0]).join(',');
-    const r = await fetch(`${BASE}/lines?size=300&select=${sel}${LA}&sort=-date_reception_dpe`);
+    // 80 lignes suffisent pour une moyenne représentative
+    const r = await go(`${BASE}/lines?size=80&select=${sel}${LA}&sort=-date_reception_dpe`);
     const d = await r.json();
     const rows = d.results || [];
     const avgs = COMPS.map(([fld, lbl]) => {
