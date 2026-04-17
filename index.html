@@ -1963,14 +1963,13 @@ document.getElementById('info-btn').addEventListener('click',function(e){
     localStorage.setItem('scope-onboarding-done', '1');
   }
 
-  card.querySelector('#ob-next').addEventListener('click', next);
   card.querySelector('#ob-skip').addEventListener('click', finish);
 
   // Lancer après le chargement de la carte
   setTimeout(() => {
     overlay.classList.add('active');
     show(0);
-  }, 800);
+  }, 600);
 })();
 </script>
 </body>
