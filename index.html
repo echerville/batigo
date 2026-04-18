@@ -217,16 +217,6 @@
   .maplibregl-popup-tip{display:none!important}
   .maplibregl-ctrl-group{border-radius:var(--radius-sm)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--border)!important}
   .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
-  /* ── STAT CARDS ── */
-  #empty-batiment{padding:4px 0}
-  @keyframes svqIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .stat-card{animation:svqIn .35s ease}
-  .stat-bar-wrap{margin-bottom:8px}
-  .stat-bar-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
-  .stat-bar-name{font-size:11px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%}
-  .stat-bar-val{font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;margin-left:8px}
-  .stat-bar-track{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
-  .stat-bar-fill{height:100%;border-radius:3px}
 </style>
 </head>
 <body>
@@ -415,8 +405,7 @@
   <div id="panel">
     <div id="panel-content">
       <div style="padding:12px">
-        <div id="empty-batiment"></div>
-        <div id="batiment-data" style="display:none"></div>
+<div id="batiment-data" style="display:none"></div>
       </div>
     </div>
   </div>
@@ -1028,7 +1017,6 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
   _allBanIds = [];
   _dpeResultsReady = null; // reset pour la course ADEME vs BDNB
   const el = document.getElementById('batiment-data');
-  document.getElementById('empty-batiment').style.display = 'none';
   el.style.display = 'block';
   el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement BDNB…</div>';
   setStatus('Chargement bâtiment…','loading');
@@ -1837,134 +1825,6 @@ document.getElementById('info-btn').addEventListener('click',function(e){
   closeAllPickers();
   if (!wasOpen) document.getElementById('info-panel').classList.add('open');
 });
-
-// ── STATISTIQUES LOIRE-ATLANTIQUE (empty state — données statiques ADEME 2024) ─
-(function () {
-  const DPE_C = {A:'#00b050',B:'#85c341',C:'#cad401',D:'#ffd966',E:'#ffb531',F:'#f07b22',G:'#e3001b'};
-  const DEP_C = {"Renouvellement d'air":'#10b981','Murs':'#3b82f6','Toiture':'#8b5cf6',
-                 'Baies vitrées':'#f59e0b','Planchers bas':'#06b6d4','Ponts thermiques':'#ef4444','Portes':'#f97316'};
-
-  // Données pré-calculées ADEME 2024 — Loire-Atlantique (331 814 DPE)
-  const CARDS = [
-    {
-      title: 'Répartition des déperditions thermiques',
-      color: v => DEP_C[v] || '#6b7280',
-      rows: [
-        {v:"Renouvellement d'air", p:27.0},
-        {v:'Murs',                 p:25.0},
-        {v:'Toiture',              p:16.0},
-        {v:'Baies vitrées',        p:14.0},
-        {v:'Planchers bas',        p:11.0},
-        {v:'Ponts thermiques',     p:6.0},
-        {v:'Portes',               p:1.0},
-      ],
-    },
-    {
-      title: 'Répartition des étiquettes DPE',
-      type: 'dpe',
-      rows: [
-        {v:'A',p:1.7},{v:'B',p:5.1},{v:'C',p:45.2},
-        {v:'D',p:29.9},{v:'E',p:11.3},{v:'F',p:4.4},{v:'G',p:2.2},
-      ],
-    },
-    {
-      title: 'Répartition par période de construction',
-      color: '#2bb573',
-      rows: [
-        {v:'Avant 1948',   p:13},
-        {v:'1948 – 1974',  p:30},
-        {v:'1975 – 1982',  p:8},
-        {v:'1983 – 1988',  p:6},
-        {v:'1989 – 2000',  p:15},
-        {v:'2001 – 2012',  p:18},
-        {v:'2013 – 2021',  p:10},
-      ],
-    },
-    {
-      title: 'Répartition par surface habitable',
-      color: '#0ea5e9',
-      rows: [
-        {v:'< 30 m²',      p:7},
-        {v:'30 – 50 m²',   p:20},
-        {v:'50 – 80 m²',   p:34},
-        {v:'80 – 120 m²',  p:26},
-        {v:'120 – 200 m²', p:10},
-        {v:'> 200 m²',     p:3},
-      ],
-    },
-    {
-      title: 'Répartition par type de bâtiment',
-      color: '#8b5cf6',
-      rows: [
-        {v:'Appartement',         p:53},
-        {v:'Maison individuelle', p:40},
-        {v:'Immeuble collectif',  p:7},
-      ],
-    },
-    {
-      title: "Répartition par type d'appartement",
-      color: '#f59e0b',
-      rows: [
-        {v:'T3',          p:31},
-        {v:'T2',          p:24},
-        {v:'T4',          p:22},
-        {v:'T5 et plus',  p:13},
-        {v:'T1',          p:10},
-      ],
-    },
-    {
-      title: 'Répartition par énergie de chauffage principale',
-      color: '#ef4444',
-      rows: [
-        {v:'Électricité',          p:42.1},
-        {v:'Gaz naturel',          p:40.2},
-        {v:'Réseau de chaleur',    p:3.2},
-        {v:'Bois / biomasse',      p:2.8},
-        {v:'Fioul domestique',     p:2.1},
-        {v:'Autres',               p:9.6},
-      ],
-    },
-  ];
-
-  function bars(rows, colorFn) {
-    return rows.map(r => {
-      const col = typeof colorFn === 'function' ? colorFn(r.v) : colorFn;
-      return `<div class="stat-bar-wrap">
-        <div class="stat-bar-label">
-          <span class="stat-bar-name">${r.v}</span>
-          <span class="stat-bar-val">${r.p}%</span>
-        </div>
-        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${r.p}%;background:${col}"></div></div>
-      </div>`;
-    }).join('');
-  }
-
-  function dpeBars(rows) {
-    const segs = rows.map(r =>
-      `<div style="flex:${r.p};background:${DPE_C[r.v]};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:rgba(255,255,255,.9);overflow:hidden;min-width:${r.p>4?'18px':'4px'}">${r.p>=6?r.v:''}</div>`
-    ).join('');
-    const lbls = rows.map(r =>
-      `<div style="flex:${r.p};text-align:center;font-size:8px;font-weight:700;color:${DPE_C[r.v]};overflow:hidden;min-width:0">${r.p>=5?r.p+'%':''}</div>`
-    ).join('');
-    return `<div style="display:flex;height:32px;border-radius:6px;overflow:hidden;gap:2px;margin-bottom:5px">${segs}</div><div style="display:flex;gap:2px">${lbls}</div>`;
-  }
-
-  function render(card) {
-    const chart = card.type === 'dpe' ? dpeBars(card.rows) : bars(card.rows, card.color);
-    return `<div class="stat-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <span style="font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim2);border-radius:20px;padding:3px 10px">Loire-Atlantique</span>
-        <span style="font-size:9px;color:var(--text-muted)">ADEME · 2024</span>
-      </div>
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;line-height:1.35">${card.title}</div>
-      ${chart}
-      <div style="margin-top:12px;font-size:10px;color:var(--text-muted);text-align:center;padding-top:10px;border-top:1px solid var(--border)">Saisir une adresse pour explorer votre bâtiment</div>
-    </div>`;
-  }
-
-  const el = document.getElementById('empty-batiment');
-  if (el) el.innerHTML = render(CARDS[Math.floor(Math.random() * CARDS.length)]);
-})();
 </script>
 
 </body>
