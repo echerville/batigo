@@ -545,6 +545,31 @@ map.on('load', () => {
   map.addSource('rcu-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'rcu-layer', type:'line', source:'rcu-src', layout:{visibility:'none'},
     paint:{'line-color':'#e05c00','line-width':['interpolate',['linear'],['zoom'],12,2,16,4],'line-opacity':0.85}});
+
+  // Popup réseau de chaleur au clic
+  const rcuPopup = new maplibregl.Popup({closeButton:true, closeOnClick:true, maxWidth:'280px', offset:6});
+  map.on('mouseenter','rcu-layer', () => { map.getCanvas().style.cursor='pointer'; });
+  map.on('mouseleave','rcu-layer', () => { map.getCanvas().style.cursor=''; });
+  map.on('click','rcu-layer', e => {
+    const p = e.features[0].properties;
+    const nom = p.nom || 'Réseau de chaleur';
+    const gestionnaire = p.gestionnaire || '—';
+    const enr = p.enr || '—';
+    const co2 = p.co2 || '—';
+    rcuPopup.setLngLat(e.lngLat).setHTML(`
+      <div style="min-width:210px">
+        <div style="font-size:13px;font-weight:700;color:#e05c00;margin-bottom:10px;line-height:1.35">${nom}</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:11.5px;align-items:baseline">
+          <span style="color:var(--text-dim)">Gestionnaire</span>
+          <span style="font-weight:600">${gestionnaire}</span>
+          <span style="color:var(--text-dim)">Taux EnR&amp;R</span>
+          <span style="font-weight:700;color:#2bb573">${enr}</span>
+          <span style="color:var(--text-dim)">Facteur CO₂</span>
+          <span style="font-weight:600">${co2}</span>
+        </div>
+      </div>`).addTo(map);
+  });
+
   map.addSource('gaz-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'gaz-layer', type:'line', source:'gaz-src', layout:{visibility:'none'},
     paint:{'line-color':'#d4a000','line-width':['interpolate',['linear'],['zoom'],12,1.5,16,3.5],'line-opacity':0.9}});
