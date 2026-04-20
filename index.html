@@ -217,6 +217,8 @@
   .maplibregl-popup-tip{display:none!important}
   .maplibregl-ctrl-group{border-radius:var(--radius-sm)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--border)!important}
   .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
+  .rcu-marker{width:28px;height:28px;background:#e05c00;border:2.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(224,92,0,.45);transition:transform .15s,box-shadow .15s}
+  .rcu-marker:hover{transform:scale(1.15);box-shadow:0 3px 10px rgba(224,92,0,.6)}
 </style>
 </head>
 <body>
@@ -546,29 +548,11 @@ map.on('load', () => {
   map.addLayer({id:'rcu-layer', type:'line', source:'rcu-src', layout:{visibility:'none'},
     paint:{'line-color':'#e05c00','line-width':['interpolate',['linear'],['zoom'],12,2,16,4],'line-opacity':0.85}});
 
-  // Popup réseau de chaleur au clic
-  const rcuPopup = new maplibregl.Popup({closeButton:true, closeOnClick:true, maxWidth:'280px', offset:6});
+  // Popup réseau de chaleur — partagé entre clic sur ligne et clic sur marqueur
+  rcuPopup = new maplibregl.Popup({closeButton:true, closeOnClick:true, maxWidth:'280px', offset:6});
   map.on('mouseenter','rcu-layer', () => { map.getCanvas().style.cursor='pointer'; });
   map.on('mouseleave','rcu-layer', () => { map.getCanvas().style.cursor=''; });
-  map.on('click','rcu-layer', e => {
-    const p = e.features[0].properties;
-    const nom = p.nom || 'Réseau de chaleur';
-    const gestionnaire = p.gestionnaire || '—';
-    const enr = p.enr || '—';
-    const co2 = p.co2 || '—';
-    rcuPopup.setLngLat(e.lngLat).setHTML(`
-      <div style="min-width:210px">
-        <div style="font-size:13px;font-weight:700;color:#e05c00;margin-bottom:10px;line-height:1.35">${nom}</div>
-        <div style="display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:11.5px;align-items:baseline">
-          <span style="color:var(--text-dim)">Gestionnaire</span>
-          <span style="font-weight:600">${gestionnaire}</span>
-          <span style="color:var(--text-dim)">Taux EnR&amp;R</span>
-          <span style="font-weight:700;color:#2bb573">${enr}</span>
-          <span style="color:var(--text-dim)">Facteur CO₂</span>
-          <span style="font-weight:600">${co2}</span>
-        </div>
-      </div>`).addTo(map);
-  });
+  map.on('click','rcu-layer', e => { showRcuPopup(e.lngLat, e.features[0].properties); });
 
   map.addSource('gaz-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'gaz-layer', type:'line', source:'gaz-src', layout:{visibility:'none'},
@@ -763,7 +747,44 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
 })();
 
 // ── RÉSEAUX DE CHALEUR (Loire-Atlantique) ──
+let rcuPopup;   // initialisé dans map.on('load')
 let rcuOn = false, rcuLoaded = false;
+let rcuMarkers = [];
+
+function rcuPopupHTML(p) {
+  const nom  = (p.nom || 'Réseau de chaleur').trim();
+  const gest = p.gestionnaire || '—';
+  const enr  = p.enr  || '—';
+  const co2  = p.co2  || '—';
+  return `<div style="min-width:210px">
+    <div style="font-size:13px;font-weight:700;color:#e05c00;margin-bottom:10px;line-height:1.35">${nom}</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:11.5px;align-items:baseline">
+      <span style="color:var(--text-dim)">Gestionnaire</span><span style="font-weight:600">${gest}</span>
+      <span style="color:var(--text-dim)">Taux EnR&amp;R</span><span style="font-weight:700;color:#2bb573">${enr}</span>
+      <span style="color:var(--text-dim)">Facteur CO₂</span><span style="font-weight:600">${co2}</span>
+    </div></div>`;
+}
+function showRcuPopup(lngLat, props) {
+  if (rcuPopup) rcuPopup.setLngLat(lngLat).setHTML(rcuPopupHTML(props)).addTo(map);
+}
+
+// Centroïde d'un MultiLineString (moyenne de toutes les coordonnées)
+function multiLineCentroid(geom) {
+  let sx = 0, sy = 0, n = 0;
+  for (const line of (geom.coordinates || [])) {
+    for (const [x, y] of line) { sx += x; sy += y; n++; }
+  }
+  return n ? [sx / n, sy / n] : null;
+}
+
+const RCU_FACTORY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24">
+  <rect x="2" y="13" width="20" height="9" rx="1" fill="white"/>
+  <rect x="4"  y="5"  width="4" height="9" fill="white"/>
+  <rect x="14" y="8"  width="4" height="6" fill="white"/>
+  <rect x="3"  y="15" width="3" height="3" rx=".5" fill="#e05c00"/>
+  <rect x="10" y="15" width="3" height="3" rx=".5" fill="#e05c00"/>
+  <rect x="17" y="15" width="3" height="3" rx=".5" fill="#e05c00"/>
+</svg>`;
 const RCU_BOUNDS = {minLng:-2.55, maxLng:-0.85, minLat:46.85, maxLat:47.95};
 
 function inLoire(geom) {
@@ -781,6 +802,8 @@ document.getElementById('toggle-rcu').addEventListener('click', async function()
   rcuOn = !rcuOn;
   this.classList.toggle('on', rcuOn);
   map.setLayoutProperty('rcu-layer', 'visibility', rcuOn ? 'visible' : 'none');
+  // Afficher / masquer les marqueurs chaufferie déjà créés
+  rcuMarkers.forEach(m => { m.getElement().style.display = rcuOn ? '' : 'none'; });
   if (!rcuOn || rcuLoaded) return;
   setStatus('Chargement réseaux de chaleur…', 'loading');
   try {
@@ -799,6 +822,22 @@ document.getElementById('toggle-rcu').addEventListener('click', async function()
     }
     map.getSource('rcu-src').setData({type:'FeatureCollection', features});
     rcuLoaded = !!features.length;
+    // Créer un marqueur "usine" au centroïde de chaque réseau
+    rcuMarkers.forEach(m => m.remove());
+    rcuMarkers = [];
+    for (const feat of features) {
+      const center = multiLineCentroid(feat.geometry);
+      if (!center) continue;
+      const el = document.createElement('div');
+      el.className = 'rcu-marker';
+      el.title = (feat.properties.nom || 'Réseau de chaleur').trim();
+      el.innerHTML = RCU_FACTORY_SVG;
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        showRcuPopup(center, feat.properties);
+      });
+      rcuMarkers.push(new maplibregl.Marker({element: el, anchor:'center'}).setLngLat(center).addTo(map));
+    }
     setStatus(`${features.length} réseau${features.length>1?'x':''} de chaleur`, 'ok');
     setTimeout(() => setStatus('Prêt'), 3000);
   } catch(e) {
