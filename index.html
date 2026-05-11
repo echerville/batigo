@@ -1507,23 +1507,28 @@ async function loadDPE(feature, clickLng, clickLat) {
     const SKIP_WORDS = /^(rue|avenue|boulevard|allée|allee|impasse|place|chemin|route|voie|passage|du|de|la|le|les|des|aux|au|d|l)$/i;
     const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP_WORDS.test(w)) || '';
 
+    // Sentinelle : distingue "rate-limité" de "pas de résultats"
+    const ADEME_RL = Symbol('rate-limited');
+
     // Fetch avec retry sur 429 ET erreurs réseau (ERR_CONNECTION_CLOSED, timeout…)
     async function ademeGet(url) {
+      let was429 = false;
       for (let i = 0; i < 3; i++) {
-        if (i > 0) await new Promise(ok => setTimeout(ok, 1200 * i));
+        if (i > 0) await new Promise(ok => setTimeout(ok, i === 1 ? 3000 : 7000));
         try {
           const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), 12000); // 12 s max
+          const timer = setTimeout(() => ctrl.abort(), 12000);
           const r = await fetch(url, { signal: ctrl.signal });
           clearTimeout(timer);
-          if (r.status === 429) continue;        // rate-limited → retry
+          if (r.status === 429) { was429 = true; continue; }
           if (!r.ok) return null;
+          was429 = false;
           return await r.json();
         } catch {
-          // ERR_CONNECTION_CLOSED, AbortError, réseau coupé → retry
+          was429 = false; // ERR_CONNECTION_CLOSED / AbortError → retry, pas rate-limit
         }
       }
-      return null;
+      return was429 ? ADEME_RL : null; // ADEME_RL = serveur toujours limité après 3 essais
     }
 
     async function fetchDPEDataset(dataset, size=100, useFallback=true) {
@@ -1532,6 +1537,7 @@ async function loadDPE(feature, clickLng, clickLat) {
       const banIds = _allBanIds.length ? _allBanIds : (banId ? [banId] : []);
       for (const id of banIds) {
         const d = await ademeGet(base + `&identifiant_ban_eq=${encodeURIComponent(id)}`);
+        if (d === ADEME_RL) return [];          // rate-limité → pas la peine d'essayer le fallback
         if (d?.results?.length) return d.results;
       }
       // 2. Fallback : commune + numéro de voie exacts (champs indexés), mot-clé rue dans adresse_ban
@@ -1539,7 +1545,8 @@ async function loadDPE(feature, clickLng, clickLat) {
         let url = base + `&code_insee_ban_eq=${citycode}&numero_voie_ban_eq=${encodeURIComponent(housenumber)}`;
         if (streetKey) url += `&q=${encodeURIComponent(streetKey)}&q_fields=adresse_ban`;
         const d = await ademeGet(url);
-        if (d?.results?.length) return d.results;
+        if (d === ADEME_RL || !d?.results?.length) return [];
+        return d.results;
       }
       return [];
     }
