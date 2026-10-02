@@ -272,8 +272,8 @@
       </button>
       <div id="map-picker-panel">
         <div class="map-opt active" data-layer="voyager">
-          <img src="https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png" loading="lazy" />
-          <span>Carto</span>
+          <img src="https://tile.openstreetmap.org/13/4061/2882.png" loading="lazy" />
+          <span>OSM</span>
         </div>
         <div class="map-opt" data-layer="ign-plan">
           <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
@@ -414,7 +414,7 @@
           <tr><td class="src-name">France Chaleur Urbaine</td><td>Réseaux de chaleur (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-rcu"></td></tr>
           <tr><td class="src-name">GRDF Open Data</td><td>Réseau de gaz (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-gaz"></td></tr>
           <tr><td class="src-name">IGN GPU <span style="font-weight:400;color:var(--text-muted)">apicarto.ign.fr</span></td><td>PLU, Abords MH (AC1), SPR (AC4), Sites classés (AC2) — 44</td><td><span class="src-badge src-api">WMS + API</span></td><td>Temps réel</td><td class="src-status" id="src-st-gpu"></td></tr>
-          <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
+          <tr><td class="src-name">OpenStreetMap</td><td>Fond de carte OSM</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
           <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
         </tbody>
@@ -463,7 +463,7 @@ const TILE_URLS = {
   'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
   'google-sat':  'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
   'google-plan': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-  'voyager':     'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+  'voyager':     'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 };
 // Emprise France métropolitaine + Corse (évite les requêtes 400 hors couverture IGN)
 const FRANCE_BOUNDS = [-5.5, 41.2, 9.7, 51.2];
@@ -472,7 +472,7 @@ const LAYERS = {
   'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
   'google-sat':  { type:'raster', tiles:[TILE_URLS['google-sat']],  tileSize:256, maxzoom:21, attribution:'' },
   'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:21, attribution:'' },
-  'voyager':     { type:'raster', tiles:[TILE_URLS['voyager']],     tileSize:256, maxzoom:19, attribution:'© CartoDB © OpenStreetMap contributors' }
+  'voyager':     { type:'raster', tiles:[TILE_URLS['voyager']],     tileSize:256, maxzoom:19, attribution:'© OpenStreetMap contributors' }
 };
 const CADASTRE_SOURCE = {
   type:'raster',
@@ -638,13 +638,13 @@ map.on('load', () => {
 
 // ── Map picker ──
 const THUMB_URLS = {
-  'voyager':     'https://a.basemaps.cartocdn.com/rastertiles/voyager/13/4061/2882.png',
+  'voyager':     'https://tile.openstreetmap.org/13/4061/2882.png',
   'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061',
   'google-plan': 'https://mt1.google.com/vt/lyrs=m&x=4061&y=2882&z=13',
   'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061',
   'google-sat':  'https://mt1.google.com/vt/lyrs=s&x=4061&y=2882&z=13',
 };
-const LAYER_LABELS = {'voyager':'Carto','ign-plan':'IGN Plan','google-plan':'Google','ign-ortho':'IGN Sat','google-sat':'Google Sat'};
+const LAYER_LABELS = {'voyager':'OSM','ign-plan':'IGN Plan','google-plan':'Google','ign-ortho':'IGN Sat','google-sat':'Google Sat'};
 
 const mapPickerBtn = document.getElementById('map-picker-btn');
 const mapPickerPanel = document.getElementById('map-picker-panel');
@@ -2029,7 +2029,7 @@ async function testSources() {
     { id:'pmtiles',  fn: () => fetch('/public/dpe-44.pmtiles', {method:'HEAD', headers:{'Range':'bytes=0-1'}, signal:AbortSignal.timeout(6000)}).then(r=>r.ok||r.status===206) },
     { id:'rcu',      fn: () => fetch('/public/rcu-44.json', {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'gaz',      fn: () => fetch('/public/gaz-44.json', {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
-    { id:'carto',    fn: () => testTile('https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png') },
+    { id:'carto',    fn: () => testTile(TILE_URLS['voyager']) },
     { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
     { id:'google',   fn: () => testTile(TILE_URLS['google-plan']) },
   ];
