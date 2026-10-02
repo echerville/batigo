@@ -230,6 +230,11 @@
   .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
   .rcu-marker{width:28px;height:28px;background:#e05c00;border:2.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(224,92,0,.45);transition:transform .15s,box-shadow .15s}
   .rcu-marker:hover{transform:scale(1.15);box-shadow:0 3px 10px rgba(224,92,0,.6)}
+  .overlay-opt[data-overlay="plu"].active{border-color:#7c3aed!important;background:rgba(124,58,237,.07)!important}
+  .overlay-opt[data-overlay="ac1"].active{border-color:#c2410c!important;background:rgba(194,65,12,.07)!important}
+  .overlay-opt[data-overlay="ac4"].active{border-color:#0891b2!important;background:rgba(8,145,178,.07)!important}
+  .overlay-opt[data-overlay="ac2"].active{border-color:#166534!important;background:rgba(22,101,52,.07)!important}
+  .overlay-preview-swatch{width:100%;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.95)}
 </style>
 </head>
 <body>
@@ -322,6 +327,30 @@
           </div>
           <span>Réseau gaz</span>
         </div>
+        <div class="overlay-opt" data-overlay="plu">
+          <div class="overlay-preview">
+            <div class="overlay-preview-swatch" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">PLU</div>
+          </div>
+          <span>Zones PLU</span>
+        </div>
+        <div class="overlay-opt" data-overlay="ac1">
+          <div class="overlay-preview">
+            <div class="overlay-preview-swatch" style="background:linear-gradient(135deg,#c2410c,#fb923c)">AC1</div>
+          </div>
+          <span>Abords MH</span>
+        </div>
+        <div class="overlay-opt" data-overlay="ac4">
+          <div class="overlay-preview">
+            <div class="overlay-preview-swatch" style="background:linear-gradient(135deg,#0891b2,#38bdf8)">AC4</div>
+          </div>
+          <span>Patr. remarq.</span>
+        </div>
+        <div class="overlay-opt" data-overlay="ac2">
+          <div class="overlay-preview">
+            <div class="overlay-preview-swatch" style="background:linear-gradient(135deg,#166534,#4ade80)">SC</div>
+          </div>
+          <span>Sites classés</span>
+        </div>
       </div>
     </div>
     <div id="vues-picker">
@@ -384,6 +413,7 @@
           <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>04/04/2026 <button id="btn-update-pmtiles" onclick="triggerPMTilesUpdate()" title="Relancer la génération des tuiles DPE via GitHub Actions (~20 min)" style="margin-left:6px;font-size:9px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-dim);font-weight:600;font-family:inherit">↺ Màj</button></td><td class="src-status" id="src-st-pmtiles"></td></tr>
           <tr><td class="src-name">France Chaleur Urbaine</td><td>Réseaux de chaleur (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-rcu"></td></tr>
           <tr><td class="src-name">GRDF Open Data</td><td>Réseau de gaz (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-gaz"></td></tr>
+          <tr><td class="src-name">IGN GPU <span style="font-weight:400;color:var(--text-muted)">apicarto.ign.fr</span></td><td>PLU, Abords MH (AC1), SPR (AC4), Sites classés (AC2) — 44</td><td><span class="src-badge src-api">WMS + API</span></td><td>Temps réel</td><td class="src-status" id="src-st-gpu"></td></tr>
           <tr><td class="src-name">CartoDB / OSM</td><td>Fond de carte Voyager</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
           <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
@@ -398,6 +428,10 @@
     <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
     <button class="layer-toggle" id="toggle-rcu" title="Réseaux de chaleur urbain (Loire-Atlantique)">RCU</button>
     <button class="layer-toggle" id="toggle-gaz" title="Réseau de gaz GRDF (Loire-Atlantique)">Gaz</button>
+    <button class="layer-toggle" id="toggle-plu" title="Zones PLU (Loire-Atlantique)">PLU</button>
+    <button class="layer-toggle" id="toggle-ac1" title="Abords monuments historiques AC1">AC1</button>
+    <button class="layer-toggle" id="toggle-ac4" title="Sites patrimoniaux remarquables AC4">AC4</button>
+    <button class="layer-toggle" id="toggle-ac2" title="Sites classés ou inscrits AC2">AC2</button>
     <div class="lb-sep"></div>
     <button class="measure-btn" id="btn-measure-poly">⬡ m²</button>
     <button class="layer-toggle" id="toggle-gsv"><svg width="10" height="14" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>S.View</button>
@@ -472,6 +506,7 @@ let _dpeResultsReady = null;  // DPE arrivé avant le DOM batiment → appliqué
 let dvfEnabled = localStorage.getItem('dvf-enabled') === 'true';
 document.getElementById('dvf-enable').checked = dvfEnabled;
 let _rncQueryParams = null;   // params pour le lazy-load copro
+let _gpuQueryPoint = null;    // {lat,lng} pour le lazy-load GPU urbanisme
 
 const DPE_COLOR = ['match',['get','dpe'],
   'A','#00a651','B','#50b748','C','#c8d400',
@@ -571,6 +606,32 @@ map.on('load', () => {
   map.addSource('measure-src', {type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'measure-fill',type:'fill',source:'measure-src',paint:{'fill-color':'#e06090','fill-opacity':0.12},filter:['==','$type','Polygon']});
   map.addLayer({id:'measure-line',type:'line',source:'measure-src',paint:{'line-color':'#e06090','line-width':2,'line-dasharray':[4,2]}});
+
+  // Couches patrimoine — PLU (GeoJSON dynamique), AC1/AC4/AC2 (WMS IGN wms-v)
+  const IGN_WMS_V = 'https://data.geopf.fr/wms-v/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&STYLES=&FORMAT=image/png&TRANSPARENT=true&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}&LAYERS=';
+  // PLU — zones chargées dynamiquement via apicarto.ign.fr/api/gpu
+  const PLU_ZONE_COLOR = ['case',['==',['get','typezone'],'U'],'#7c3aed',['==',['get','typezone'],'AU'],'#a78bfa',['==',['get','typezone'],'A'],'#4ade80',['==',['get','typezone'],'N'],'#166534','#94a3b8'];
+  map.addSource('plu-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'plu-fill', type:'fill', source:'plu-src', layout:{visibility:'none'}, paint:{'fill-color':PLU_ZONE_COLOR,'fill-opacity':0.18}});
+  map.addLayer({id:'plu-line', type:'line', source:'plu-src', layout:{visibility:'none'}, paint:{'line-color':PLU_ZONE_COLOR,'line-width':1.5,'line-opacity':0.8}});
+  // AC1 — monuments historiques et périmètres de protection (abords)
+  map.addSource('ac1-src', {type:'raster', tiles:[IGN_WMS_V+'monument_historique'], tileSize:256});
+  map.addLayer({id:'ac1-layer', type:'raster', source:'ac1-src', layout:{visibility:'none'}, paint:{'raster-opacity':0.8}});
+  // AC4 — sites patrimoniaux remarquables (zonages SPR)
+  map.addSource('ac4-src', {type:'raster', tiles:[IGN_WMS_V+'zone_secteur'], tileSize:256});
+  map.addLayer({id:'ac4-layer', type:'raster', source:'ac4-src', layout:{visibility:'none'}, paint:{'raster-opacity':0.8}});
+  // AC2 — sites classés ou inscrits
+  map.addSource('ac2-src', {type:'raster', tiles:[IGN_WMS_V+'monument_naturel_site'], tileSize:256});
+  map.addLayer({id:'ac2-layer', type:'raster', source:'ac2-src', layout:{visibility:'none'}, paint:{'raster-opacity':0.8}});
+  // Popup survol zones PLU
+  const pluPopup = new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:4,maxWidth:'200px'});
+  map.on('mouseenter','plu-fill', e => {
+    map.getCanvas().style.cursor='pointer';
+    const p=e.features[0].properties;
+    pluPopup.setLngLat(e.lngLat).setHTML(`<b>${p.libelle||'?'}</b>${p.libelong?' – '+p.libelong:''}`).addTo(map);
+  });
+  map.on('mouseleave','plu-fill', () => { map.getCanvas().style.cursor=''; pluPopup.remove(); });
+
   setStatus('Prêt');
 });
 
@@ -894,6 +955,44 @@ document.getElementById('toggle-gaz').addEventListener('click', async function()
   }
 });
 
+let pluOn = false;
+async function loadPLUData() {
+  if (!pluOn || map.getZoom() < 12) return;
+  const b = map.getBounds();
+  const geom = encodeURIComponent(JSON.stringify({
+    type:'Polygon',
+    coordinates:[[[b.getWest(),b.getSouth()],[b.getEast(),b.getSouth()],[b.getEast(),b.getNorth()],[b.getWest(),b.getNorth()],[b.getWest(),b.getSouth()]]]
+  }));
+  try {
+    const r = await fetch(`https://apicarto.ign.fr/api/gpu/zone-urba?geom=${geom}&_limit=200`);
+    if (r.ok) map.getSource('plu-src').setData(await r.json());
+  } catch(e) { /* silent */ }
+}
+document.getElementById('toggle-plu').addEventListener('click', function() {
+  pluOn = !pluOn;
+  this.classList.toggle('on', pluOn);
+  const vis = pluOn ? 'visible' : 'none';
+  map.setLayoutProperty('plu-fill', 'visibility', vis);
+  map.setLayoutProperty('plu-line', 'visibility', vis);
+  if (pluOn) {
+    if (map.getZoom() < 12) map.flyTo({zoom: 13});
+    else loadPLUData();
+  }
+});
+map.on('moveend', () => { if (pluOn) loadPLUData(); });
+document.getElementById('toggle-ac1').addEventListener('click', function() {
+  this.classList.toggle('on');
+  map.setLayoutProperty('ac1-layer', 'visibility', this.classList.contains('on') ? 'visible' : 'none');
+});
+document.getElementById('toggle-ac4').addEventListener('click', function() {
+  this.classList.toggle('on');
+  map.setLayoutProperty('ac4-layer', 'visibility', this.classList.contains('on') ? 'visible' : 'none');
+});
+document.getElementById('toggle-ac2').addEventListener('click', function() {
+  this.classList.toggle('on');
+  map.setLayoutProperty('ac2-layer', 'visibility', this.classList.contains('on') ? 'visible' : 'none');
+});
+
 
 document.getElementById('toggle-dpe-layer').addEventListener('click', function() {
   dpeLayerOn = !dpeLayerOn;
@@ -1153,6 +1252,7 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
     const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
     const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP.test(w)) || '';
     _rncQueryParams = (cc || bdnbUdu) ? { idu: bdnbUdu || cadastreData?.idu, cc, hn, streetKey, lat, lng } : null;
+    _gpuQueryPoint = (lat != null && lng != null) ? { lat, lng } : null;
 
     const dvfIdu = bdnbUdu || cadastreData?.idu;
     renderBatiment(bdnbData, label, cadastreData, dvfIdu, bldGroupId);
@@ -1267,6 +1367,16 @@ function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
         <span style="font-size:9px;color:var(--text-muted)">▶</span>
       </summary>
       <div class="dvf-content" style="padding:0 14px 12px">${dvfIdu ? '' : '<div style="font-size:11px;color:var(--text-muted)">Parcelle non identifiée</div>'}</div>
+    </details>
+
+    <!-- GPU Urbanisme & Patrimoine lazy -->
+    <details class="card gpu-accordion" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none;padding:12px 14px">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7c3aed;flex-shrink:0"></span>
+        <span style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);flex:1">Urbanisme · GPU</span>
+        <span style="font-size:9px;color:var(--text-muted)">▶</span>
+      </summary>
+      <div class="gpu-content"></div>
     </details>`;
 
   // Lazy-load DVF
@@ -1304,6 +1414,25 @@ function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
     });
   } else if (rncDetails) {
     rncDetails.querySelector('.rnc-content').innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Adresse non identifiée</p>';
+  }
+
+  // Lazy-load Urbanisme GPU
+  const gpuDetails = el.querySelector('.gpu-accordion');
+  if (gpuDetails && _gpuQueryPoint) {
+    gpuDetails.addEventListener('toggle', async function() {
+      if (!this.open || this.dataset.loaded) return;
+      this.dataset.loaded = '1';
+      const content = this.querySelector('.gpu-content');
+      content.innerHTML = '<div style="text-align:center;padding:10px;color:var(--text-muted);font-size:11px"><span class="spinner"></span> Chargement GPU…</div>';
+      try {
+        const data = await fetchPatrimoine(_gpuQueryPoint.lat, _gpuQueryPoint.lng);
+        content.innerHTML = buildPatrimoineContent(data);
+      } catch(e) {
+        content.innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Erreur de chargement</p>';
+      }
+    });
+  } else if (gpuDetails) {
+    gpuDetails.querySelector('.gpu-content').innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Adresse non identifiée</p>';
   }
 
   // Si DPE déjà arrivé avant le DOM (race condition inverse), l'appliquer maintenant
@@ -1380,6 +1509,59 @@ function buildRNCContent(rnc) {
       <div class="info-cell"><div class="field-label">Période constr.</div>${na(rnc.periode_construction)}</div>
     </div>
   </div>`;
+}
+
+async function fetchPatrimoine(lat, lng) {
+  const geom = encodeURIComponent(JSON.stringify({type:'Point',coordinates:[lng, lat]}));
+  const base = 'https://apicarto.ign.fr/api/gpu';
+  const [pluR, ac1R, ac2R, ac4R] = await Promise.all([
+    fetch(`${base}/zone-urba?geom=${geom}`).then(r => r.json()).catch(() => null),
+    fetch(`${base}/acte-sup?typeRef=AC1&geom=${geom}`).then(r => r.json()).catch(() => null),
+    fetch(`${base}/acte-sup?typeRef=AC2&geom=${geom}`).then(r => r.json()).catch(() => null),
+    fetch(`${base}/acte-sup?typeRef=AC4&geom=${geom}`).then(r => r.json()).catch(() => null),
+  ]);
+  return { plu: pluR, ac1: ac1R, ac2: ac2R, ac4: ac4R };
+}
+
+function buildPatrimoineContent(data) {
+  const { plu, ac1, ac2, ac4 } = data;
+  const pluZone = plu?.features?.[0]?.properties;
+  const hasAC1 = (ac1?.features?.length || 0) > 0;
+  const hasAC2 = (ac2?.features?.length || 0) > 0;
+  const hasAC4 = (ac4?.features?.length || 0) > 0;
+
+  let html = '<div style="padding:0 14px 12px">';
+
+  html += '<div style="margin-bottom:10px">';
+  html += '<div class="field-label">Zone PLU</div>';
+  if (pluZone) {
+    html += `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">`;
+    html += `<span style="background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.03em">${pluZone.libelle || '?'}</span>`;
+    if (pluZone.libelong) html += `<span class="field-value" style="font-size:11.5px">${pluZone.libelong}</span>`;
+    html += '</div>';
+    if (pluZone.partition) html += `<div style="margin-top:3px;font-size:10px;color:var(--text-muted)">Doc. ${pluZone.partition}${pluZone.nom_commune ? ' · ' + pluZone.nom_commune : ''}</div>`;
+  } else {
+    html += '<span class="field-value na">Zone non identifiée</span>';
+  }
+  html += '</div>';
+
+  const rows = [
+    { ref:'AC1', label:'Abords monument historique',  has:hasAC1, color:'#c2410c' },
+    { ref:'AC4', label:'Site patrimonial remarquable', has:hasAC4, color:'#0891b2' },
+    { ref:'AC2', label:'Site classé ou inscrit',       has:hasAC2, color:'#166534' },
+  ];
+  html += '<div style="display:flex;flex-direction:column;gap:5px">';
+  for (const row of rows) {
+    const bg = row.has ? row.color : 'var(--surface2)';
+    const fc = row.has ? '#fff' : 'var(--text-muted)';
+    html += `<div style="display:flex;align-items:center;gap:6px">`;
+    html += `<span style="background:${bg};color:${fc};font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:2px;letter-spacing:.04em;flex-shrink:0">${row.ref}</span>`;
+    html += `<span style="font-size:11.5px;color:${row.has ? 'var(--text)' : 'var(--text-muted)'}">${row.label}</span>`;
+    html += `<span style="margin-left:auto;font-size:10px;font-weight:600;color:${row.has ? row.color : 'var(--text-muted)'}">${row.has ? 'Oui' : 'Non'}</span>`;
+    html += '</div>';
+  }
+  html += '</div></div>';
+  return html;
 }
 
 const DPE_GRADE_NUM = {A:1,B:2,C:3,D:4,E:5,F:6,G:7};
