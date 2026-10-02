@@ -1513,29 +1513,16 @@ function buildRNCContent(rnc) {
 
 async function fetchPatrimoine(lat, lng) {
   const geom = encodeURIComponent(JSON.stringify({type:'Point',coordinates:[lng, lat]}));
-  const base = 'https://apicarto.ign.fr/api/gpu';
-  const [pluR, ac1R, ac2R, ac4R] = await Promise.all([
-    fetch(`${base}/zone-urba?geom=${geom}`).then(r => r.json()).catch(() => null),
-    fetch(`${base}/acte-sup?typeRef=AC1&geom=${geom}`).then(r => r.json()).catch(() => null),
-    fetch(`${base}/acte-sup?typeRef=AC2&geom=${geom}`).then(r => r.json()).catch(() => null),
-    fetch(`${base}/acte-sup?typeRef=AC4&geom=${geom}`).then(r => r.json()).catch(() => null),
-  ]);
-  return { plu: pluR, ac1: ac1R, ac2: ac2R, ac4: ac4R };
+  const pluR = await fetch(`https://apicarto.ign.fr/api/gpu/zone-urba?geom=${geom}`).then(r => r.json()).catch(() => null);
+  return { plu: pluR };
 }
 
 function buildPatrimoineContent(data) {
-  const { plu, ac1, ac2, ac4 } = data;
-  const pluZone = plu?.features?.[0]?.properties;
-  const hasAC1 = (ac1?.features?.length || 0) > 0;
-  const hasAC2 = (ac2?.features?.length || 0) > 0;
-  const hasAC4 = (ac4?.features?.length || 0) > 0;
-
+  const pluZone = data.plu?.features?.[0]?.properties;
   let html = '<div style="padding:0 14px 12px">';
-
-  html += '<div style="margin-bottom:10px">';
   html += '<div class="field-label">Zone PLU</div>';
   if (pluZone) {
-    html += `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">`;
+    html += `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">`;
     html += `<span style="background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.03em">${pluZone.libelle || '?'}</span>`;
     if (pluZone.libelong) html += `<span class="field-value" style="font-size:11.5px">${pluZone.libelong}</span>`;
     html += '</div>';
@@ -1544,23 +1531,6 @@ function buildPatrimoineContent(data) {
     html += '<span class="field-value na">Zone non identifiée</span>';
   }
   html += '</div>';
-
-  const rows = [
-    { ref:'AC1', label:'Abords monument historique',  has:hasAC1, color:'#c2410c' },
-    { ref:'AC4', label:'Site patrimonial remarquable', has:hasAC4, color:'#0891b2' },
-    { ref:'AC2', label:'Site classé ou inscrit',       has:hasAC2, color:'#166534' },
-  ];
-  html += '<div style="display:flex;flex-direction:column;gap:5px">';
-  for (const row of rows) {
-    const bg = row.has ? row.color : 'var(--surface2)';
-    const fc = row.has ? '#fff' : 'var(--text-muted)';
-    html += `<div style="display:flex;align-items:center;gap:6px">`;
-    html += `<span style="background:${bg};color:${fc};font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:2px;letter-spacing:.04em;flex-shrink:0">${row.ref}</span>`;
-    html += `<span style="font-size:11.5px;color:${row.has ? 'var(--text)' : 'var(--text-muted)'}">${row.label}</span>`;
-    html += `<span style="margin-left:auto;font-size:10px;font-weight:600;color:${row.has ? row.color : 'var(--text-muted)'}">${row.has ? 'Oui' : 'Non'}</span>`;
-    html += '</div>';
-  }
-  html += '</div></div>';
   return html;
 }
 
