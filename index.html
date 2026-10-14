@@ -220,13 +220,14 @@
   .maplibregl-ctrl-attrib:hover{opacity:1}
   .maplibregl-ctrl-attrib-button{width:16px!important;height:16px!important;font-size:10px!important}
   /* ── BOUTON LABELS ── */
-  #map-picker-btn,#overlay-picker-btn,#vues-picker-btn,#surface-btn,#info-btn{flex-direction:column!important;height:auto!important;padding:5px 2px 4px!important;gap:1px!important}
+  #map-picker-btn,#overlay-picker-btn,#vues-picker-btn,#timeline-btn,#surface-btn,#info-btn{flex-direction:column!important;height:auto!important;padding:5px 2px 4px!important;gap:1px!important}
   #map-picker-btn::after    {content:'Cartes'}
   #overlay-picker-btn::after{content:'Couches'}
   #vues-picker-btn::after   {content:'Vues'}
+  #timeline-btn::after      {content:'Retour'}
   #surface-btn::after       {content:'Surface'}
   #info-btn::after          {content:'Sources'}
-  #map-picker-btn::after,#overlay-picker-btn::after,#vues-picker-btn::after,#surface-btn::after,#info-btn::after{font-size:7.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);line-height:1;pointer-events:none}
+  #map-picker-btn::after,#overlay-picker-btn::after,#vues-picker-btn::after,#timeline-btn::after,#surface-btn::after,#info-btn::after{font-size:7.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);line-height:1;pointer-events:none}
   .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
   .rcu-marker{width:28px;height:28px;background:#e05c00;border:2.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(224,92,0,.45);transition:transform .15s,box-shadow .15s}
   .rcu-marker:hover{transform:scale(1.15);box-shadow:0 3px 10px rgba(224,92,0,.6)}
@@ -235,6 +236,27 @@
   .overlay-opt[data-overlay="ac4"].active{border-color:#0891b2!important;background:rgba(8,145,178,.07)!important}
   .overlay-opt[data-overlay="ac2"].active{border-color:#166534!important;background:rgba(22,101,52,.07)!important}
   .overlay-preview-swatch{width:100%;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.95)}
+  /* ── TIMELINE BUTTON ── */
+  #timeline-btn{width:44px;height:44px;padding:0;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #timeline-btn:hover{border-color:#0ea5e9;box-shadow:0 2px 8px rgba(14,165,233,.2)}
+  #timeline-btn.active{border-color:#0ea5e9;background:rgba(14,165,233,.08)}
+  /* ── TIMELINE PANEL ── */
+  #timeline-panel{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);padding:14px 20px 12px;min-width:360px;max-width:min(640px,calc(100vw - 80px));z-index:150;display:none;user-select:none}
+  #timeline-panel.open{display:block}
+  #tl-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+  #tl-year{font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.5px;line-height:1}
+  #tl-sub{font-size:11px;color:var(--text-muted);font-weight:500;margin-left:6px}
+  #tl-close{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:4px 8px;border-radius:6px;transition:background .15s;flex-shrink:0}
+  #tl-close:hover{background:var(--surface2)}
+  #tl-slider-wrap{display:flex;align-items:center;gap:10px}
+  #tl-slider{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:var(--border);outline:none;cursor:pointer}
+  #tl-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#0ea5e9;border:3px solid #fff;box-shadow:0 1px 5px rgba(14,165,233,.45);cursor:pointer;transition:transform .1s}
+  #tl-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
+  #tl-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#0ea5e9;border:3px solid #fff;box-shadow:0 1px 5px rgba(14,165,233,.45);cursor:pointer}
+  .tl-edge{font-size:9.5px;font-weight:600;color:var(--text-muted);white-space:nowrap;flex-shrink:0}
+  #tl-ticks{display:flex;justify-content:space-between;padding:5px 0 0}
+  .tl-tick{font-size:8.5px;color:var(--text-muted);font-weight:500;opacity:.7}
+
 </style>
 </head>
 <body>
@@ -371,6 +393,13 @@
         </div>
       </div>
     </div>
+    <button id="timeline-btn" title="Remonter le temps — photos aériennes IGN">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+        <path d="M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12" stroke="#0ea5e9" stroke-width="2"/>
+        <polyline points="12,7 12,12 9,15" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3.5 5.5v4h4" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <button id="surface-btn" title="Mesurer une surface">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
         <polygon points="12,3 21,9 18,20 6,20 3,9" stroke="#d4a000" stroke-width="2" fill="rgba(212,160,0,0.1)" stroke-linejoin="round"/>
@@ -443,6 +472,29 @@
     <div id="map"></div>
 
     <div id="measure-result"></div>
+    <!-- Timeline panel -->
+    <div id="timeline-panel">
+      <div id="tl-header">
+        <div><span id="tl-year">~1958</span><span id="tl-sub"> · 1950-1965</span></div>
+        <button id="tl-close" title="Fermer">✕</button>
+      </div>
+      <div id="tl-slider-wrap">
+        <span class="tl-edge">~1958</span>
+        <input type="range" id="tl-slider" min="0" max="27" value="0" step="1">
+        <span class="tl-edge">2024</span>
+      </div>
+      <div id="tl-ticks">
+        <span class="tl-tick">~1958</span>
+        <span class="tl-tick">~1973</span>
+        <span class="tl-tick">~1988</span>
+        <span class="tl-tick">2000</span>
+        <span class="tl-tick">2005</span>
+        <span class="tl-tick">2010</span>
+        <span class="tl-tick">2015</span>
+        <span class="tl-tick">2020</span>
+        <span class="tl-tick">2024</span>
+      </div>
+    </div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
       <button id="panoramax-fs" title="Plein écran"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4V1h3M8 1h3v3M11 8v3H8M4 11H1V8"/></svg></button>
@@ -655,6 +707,7 @@ function closeAllPickers() {
   document.getElementById('vues-picker-panel').classList.remove('open');
   document.getElementById('vues-picker-btn').classList.remove('open');
   document.getElementById('info-panel').classList.remove('open');
+  if (typeof _tlActive !== 'undefined' && _tlActive) closeTL();
 }
 
 mapPickerBtn.addEventListener('click', e => {
@@ -2052,6 +2105,48 @@ document.getElementById('info-btn').addEventListener('click',function(e){
   closeAllPickers();
   if (!wasOpen) document.getElementById('info-panel').classList.add('open');
 });
+
+// ── Timeline "Remonter le temps" ──
+const TIMELINE_STEPS = [
+  { label:'~1958', sub:'1950-1965', layer:'ORTHOIMAGERY.ORTHOPHOTOS.1950-1965' },
+  { label:'~1973', sub:'1965-1980', layer:'ORTHOIMAGERY.ORTHOPHOTOS.1965-1980' },
+  { label:'~1988', sub:'1980-1995', layer:'ORTHOIMAGERY.ORTHOPHOTOS.1980-1995' },
+  ...[...Array(25)].map((_,i) => ({ label:String(2000+i), sub:'', layer:`ORTHOIMAGERY.ORTHOPHOTOS${2000+i}` }))
+];
+const IGN_ORTHO_TILE = l => `https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=${l}&STYLE=normal&FORMAT=image%2Fjpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
+let _tlActive = false, _tlPrevLayer = null;
+const tlBtn = document.getElementById('timeline-btn');
+const tlPanel = document.getElementById('timeline-panel');
+const tlSlider = document.getElementById('tl-slider');
+const tlYear = document.getElementById('tl-year');
+const tlSub = document.getElementById('tl-sub');
+function applyTLStep(i) {
+  const s = TIMELINE_STEPS[i];
+  tlYear.textContent = s.label;
+  tlSub.textContent = s.sub ? ' · '+s.sub : '';
+  map.getSource('base').setTiles([IGN_ORTHO_TILE(s.layer)]);
+}
+function closeTL() {
+  _tlActive = false;
+  tlBtn.classList.remove('active');
+  tlPanel.classList.remove('open');
+  if (_tlPrevLayer) { map.getSource('base').setTiles([TILE_URLS[_tlPrevLayer]]); _tlPrevLayer = null; }
+}
+function openTL() {
+  const prev = currentLayer;
+  closeAllPickers(); // _tlActive still false here → no recursion
+  _tlActive = true;
+  _tlPrevLayer = prev;
+  tlBtn.classList.add('active');
+  tlPanel.classList.add('open');
+  applyTLStep(parseInt(tlSlider.value));
+}
+tlBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  if (_tlActive) { closeTL(); } else { openTL(); }
+});
+tlSlider.addEventListener('input', () => applyTLStep(parseInt(tlSlider.value)));
+document.getElementById('tl-close').addEventListener('click', closeTL);
 </script>
 
 </body>
