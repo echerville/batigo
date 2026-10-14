@@ -517,19 +517,19 @@ const TILE_URLS = {
   'google-plan': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
   'voyager':     'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 };
-// Emprise France métropolitaine + Corse (évite les requêtes 400 hors couverture IGN)
-const FRANCE_BOUNDS = [-5.5, 41.2, 9.7, 51.2];
+// Emprise Loire-Atlantique (44) — bloque le chargement de tuiles hors département
+const DEPT44_BOUNDS = [-2.56, 46.84, -0.85, 47.84];
 const LAYERS = {
-  'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
-  'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
-  'google-sat':  { type:'raster', tiles:[TILE_URLS['google-sat']],  tileSize:256, maxzoom:21, attribution:'' },
-  'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:21, attribution:'' },
-  'voyager':     { type:'raster', tiles:[TILE_URLS['voyager']],     tileSize:256, maxzoom:19, attribution:'© OpenStreetMap contributors' }
+  'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, bounds:DEPT44_BOUNDS, attribution:'© IGN Géoplateforme' },
+  'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, bounds:DEPT44_BOUNDS, attribution:'© IGN Géoplateforme' },
+  'google-sat':  { type:'raster', tiles:[TILE_URLS['google-sat']],  tileSize:256, maxzoom:21, bounds:DEPT44_BOUNDS, attribution:'' },
+  'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:21, bounds:DEPT44_BOUNDS, attribution:'' },
+  'voyager':     { type:'raster', tiles:[TILE_URLS['voyager']],     tileSize:256, maxzoom:19, bounds:DEPT44_BOUNDS, attribution:'© OpenStreetMap contributors' }
 };
 const CADASTRE_SOURCE = {
   type:'raster',
   tiles:['https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'],
-  tileSize:256, minzoom:0, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Cadastre'
+  tileSize:256, minzoom:0, maxzoom:19, bounds:DEPT44_BOUNDS, attribution:'© IGN Cadastre'
 };
 
 // Enregistre le protocole PMTiles pour MapLibre
@@ -569,7 +569,8 @@ const DPE_COLOR = ['match',['get','dpe'],
 const map = new maplibregl.Map({
   container: 'map',
   style: { version:8, sources:{'base':LAYERS['google-plan']}, layers:[{id:'base-layer',type:'raster',source:'base'}], glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf' },
-  center: [-2.28, 47.27], zoom: 10, attributionControl: false, preserveDrawingBuffer: true
+  center: [-2.28, 47.27], zoom: 10, minZoom: 9, maxBounds: [-3.2, 46.5, -0.1, 48.15],
+  attributionControl: false, preserveDrawingBuffer: true
 });
 window._map = map;
 map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
