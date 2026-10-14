@@ -241,21 +241,14 @@
   #timeline-btn:hover{border-color:#0ea5e9;box-shadow:0 2px 8px rgba(14,165,233,.2)}
   #timeline-btn.active{border-color:#0ea5e9;background:rgba(14,165,233,.08)}
   /* ── TIMELINE PANEL ── */
-  #timeline-panel{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);padding:14px 20px 12px;min-width:360px;max-width:min(640px,calc(100vw - 80px));z-index:150;display:none;user-select:none}
-  #timeline-panel.open{display:block}
-  #tl-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
-  #tl-year{font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.5px;line-height:1}
-  #tl-sub{font-size:11px;color:var(--text-muted);font-weight:500;margin-left:6px}
-  #tl-close{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:4px 8px;border-radius:6px;transition:background .15s;flex-shrink:0}
+  #timeline-panel{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);padding:10px 14px;z-index:150;display:none;align-items:center;gap:10px;white-space:nowrap}
+  #timeline-panel.open{display:flex}
+  #tl-label{font-size:10.5px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase}
+  #tl-close{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:15px;line-height:1;padding:3px 6px;border-radius:6px;transition:background .15s;flex-shrink:0;margin-left:2px}
   #tl-close:hover{background:var(--surface2)}
-  #tl-slider-wrap{display:flex;align-items:center;gap:10px}
-  #tl-slider{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:var(--border);outline:none;cursor:pointer}
-  #tl-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#0ea5e9;border:3px solid #fff;box-shadow:0 1px 5px rgba(14,165,233,.45);cursor:pointer;transition:transform .1s}
-  #tl-slider::-webkit-slider-thumb:hover{transform:scale(1.15)}
-  #tl-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#0ea5e9;border:3px solid #fff;box-shadow:0 1px 5px rgba(14,165,233,.45);cursor:pointer}
-  .tl-edge{font-size:9.5px;font-weight:600;color:var(--text-muted);white-space:nowrap;flex-shrink:0}
-  #tl-ticks{display:flex;justify-content:space-between;padding:5px 0 0}
-  .tl-tick{font-size:8.5px;color:var(--text-muted);font-weight:500;opacity:.7}
+  .tl-chip{padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);font-size:12px;font-weight:700;color:var(--text);cursor:pointer;transition:border-color .15s,background .15s,color .15s;flex-shrink:0}
+  .tl-chip:hover{border-color:#0ea5e9;background:rgba(14,165,233,.07)}
+  .tl-chip.active{border-color:#0ea5e9;background:rgba(14,165,233,.12);color:#0ea5e9}
 
 </style>
 </head>
@@ -474,26 +467,10 @@
     <div id="measure-result"></div>
     <!-- Timeline panel -->
     <div id="timeline-panel">
-      <div id="tl-header">
-        <div><span id="tl-year">~1958</span><span id="tl-sub"> · 1950-1965</span></div>
-        <button id="tl-close" title="Fermer">✕</button>
-      </div>
-      <div id="tl-slider-wrap">
-        <span class="tl-edge">~1958</span>
-        <input type="range" id="tl-slider" min="0" max="27" value="0" step="1">
-        <span class="tl-edge">2024</span>
-      </div>
-      <div id="tl-ticks">
-        <span class="tl-tick">~1958</span>
-        <span class="tl-tick">~1973</span>
-        <span class="tl-tick">~1988</span>
-        <span class="tl-tick">2000</span>
-        <span class="tl-tick">2005</span>
-        <span class="tl-tick">2010</span>
-        <span class="tl-tick">2015</span>
-        <span class="tl-tick">2020</span>
-        <span class="tl-tick">2024</span>
-      </div>
+      <span id="tl-label">Photos IGN</span>
+      <button class="tl-chip" data-layer="ORTHOIMAGERY.ORTHOPHOTOS.1980-1995">~1990</button>
+      <button class="tl-chip" data-layer="ORTHOIMAGERY.ORTHOPHOTOS.1965-1980">avant 1974</button>
+      <button id="tl-close" title="Fermer">✕</button>
     </div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
@@ -2108,52 +2085,38 @@ document.getElementById('info-btn').addEventListener('click',function(e){
 });
 
 // ── Timeline "Remonter le temps" ──
-const TIMELINE_STEPS = [
-  { label:'~1958', sub:'1950-1965', layer:'ORTHOIMAGERY.ORTHOPHOTOS.1950-1965' },
-  { label:'~1973', sub:'1965-1980', layer:'ORTHOIMAGERY.ORTHOPHOTOS.1965-1980' },
-  { label:'~1988', sub:'1980-1995', layer:'ORTHOIMAGERY.ORTHOPHOTOS.1980-1995' },
-  ...[...Array(25)].map((_,i) => ({ label:String(2000+i), sub:'', layer:`ORTHOIMAGERY.ORTHOPHOTOS${2000+i}` }))
-];
 const IGN_ORTHO_TILE = l => `https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=${l}&STYLE=normal&FORMAT=image%2Fjpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
-let _tlActive = false, _tlPrevLayer = null;
+let _tlActive = false, _tlPrevLayer = null, _tlChip = null;
 const tlBtn = document.getElementById('timeline-btn');
 const tlPanel = document.getElementById('timeline-panel');
-const tlSlider = document.getElementById('tl-slider');
-const tlYear = document.getElementById('tl-year');
-const tlSub = document.getElementById('tl-sub');
-function applyTLStep(i) {
-  const s = TIMELINE_STEPS[i];
-  tlYear.textContent = s.label;
-  tlSub.textContent = s.sub ? ' · '+s.sub : '';
-  map.getSource('base').setTiles([IGN_ORTHO_TILE(s.layer)]);
-}
 function closeTL() {
   _tlActive = false;
   tlBtn.classList.remove('active');
   tlPanel.classList.remove('open');
+  if (_tlChip) { _tlChip.classList.remove('active'); _tlChip = null; }
   if (_tlPrevLayer) { map.getSource('base').setTiles([TILE_URLS[_tlPrevLayer]]); _tlPrevLayer = null; }
 }
 function openTL() {
   const prev = currentLayer;
-  closeAllPickers(); // _tlActive still false here → no recursion
+  closeAllPickers();
   _tlActive = true;
   _tlPrevLayer = prev;
   tlBtn.classList.add('active');
   tlPanel.classList.add('open');
-  applyTLStep(parseInt(tlSlider.value));
 }
 tlBtn.addEventListener('click', e => {
   e.stopPropagation();
   if (_tlActive) { closeTL(); } else { openTL(); }
 });
-let _tlDebounce = null;
-tlSlider.addEventListener('input', () => {
-  const i = parseInt(tlSlider.value);
-  const s = TIMELINE_STEPS[i];
-  tlYear.textContent = s.label;
-  tlSub.textContent = s.sub ? ' · '+s.sub : '';
-  clearTimeout(_tlDebounce);
-  _tlDebounce = setTimeout(() => applyTLStep(i), 350);
+tlPanel.querySelectorAll('.tl-chip').forEach(chip => {
+  chip.addEventListener('click', e => {
+    e.stopPropagation();
+    if (_tlChip) _tlChip.classList.remove('active');
+    if (_tlChip === chip) { _tlChip = null; closeTL(); return; }
+    _tlChip = chip;
+    chip.classList.add('active');
+    map.getSource('base').setTiles([IGN_ORTHO_TILE(chip.dataset.layer)]);
+  });
 });
 document.getElementById('tl-close').addEventListener('click', closeTL);
 </script>
