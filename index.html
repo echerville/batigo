@@ -2145,7 +2145,15 @@ tlBtn.addEventListener('click', e => {
   e.stopPropagation();
   if (_tlActive) { closeTL(); } else { openTL(); }
 });
-tlSlider.addEventListener('input', () => applyTLStep(parseInt(tlSlider.value)));
+let _tlDebounce = null;
+tlSlider.addEventListener('input', () => {
+  const i = parseInt(tlSlider.value);
+  const s = TIMELINE_STEPS[i];
+  tlYear.textContent = s.label;
+  tlSub.textContent = s.sub ? ' · '+s.sub : '';
+  clearTimeout(_tlDebounce);
+  _tlDebounce = setTimeout(() => applyTLStep(i), 350);
+});
 document.getElementById('tl-close').addEventListener('click', closeTL);
 </script>
 
