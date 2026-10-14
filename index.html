@@ -2085,7 +2085,7 @@ document.getElementById('info-btn').addEventListener('click',function(e){
 });
 
 // ── Timeline "Remonter le temps" ──
-const IGN_ORTHO_TILE = l => `https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=${l}&STYLE=normal&FORMAT=image%2Fjpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
+const IGN_ORTHO_TILE = l => `https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=${l}&STYLE=BDORTHOHISTORIQUE&FORMAT=image%2Fpng&TILEMATRIXSET=PM_3_18&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
 let _tlActive = false, _tlPrevLayer = null, _tlChip = null;
 const tlBtn = document.getElementById('timeline-btn');
 const tlPanel = document.getElementById('timeline-panel');
