@@ -252,6 +252,18 @@
   .tl-chip:hover{border-color:#0ea5e9;background:rgba(14,165,233,.07)}
   .tl-chip.active{border-color:#0ea5e9;background:rgba(14,165,233,.12);color:#0ea5e9}
 
+  /* ── MOBILE ── */
+  #panel-handle{display:none}
+  @media (max-width:768px){
+    #info-wrap{display:none!important}
+    #panel{position:fixed;bottom:0;left:0;right:0;width:100%;max-height:76vh;border-left:none;border-top:1.5px solid var(--border);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:100;box-shadow:0 -4px 24px rgba(15,28,46,.12)}
+    #panel.mobile-open{transform:translateY(0)}
+    #panel-handle{display:flex;justify-content:center;padding:12px 0 6px;cursor:pointer;flex-shrink:0}
+    #panel-handle::before{content:'';width:40px;height:4px;background:var(--border-med);border-radius:2px;display:block}
+    #timeline-panel{bottom:auto;top:calc(var(--header-h) + 8px)}
+    .maplibregl-ctrl-bottom-right,.maplibregl-ctrl-bottom-left{bottom:0!important}
+  }
+
 </style>
 </head>
 <body>
@@ -482,6 +494,7 @@
     </div>
   </div>
   <div id="panel">
+    <div id="panel-handle"></div>
     <div id="panel-content">
       <div style="padding:12px">
 <div id="batiment-data" style="display:none"></div>
@@ -535,7 +548,7 @@ let _bdnbPromise = Promise.resolve();
 let _lastDPEApplyArgs = null; // stocké par loadDPE, consommé par le idle de selectAddress
 let _pmtilesDpeGrade = null;  // note DPE issue des tuiles PMTiles (ancienne norme)
 let _dpeResultsReady = null;  // DPE arrivé avant le DOM batiment → appliqué par renderBatiment
-let dvfEnabled = localStorage.getItem('dvf-enabled') === 'true';
+let dvfEnabled = localStorage.getItem('dvf-enabled') !== 'false';
 document.getElementById('dvf-enable').checked = dvfEnabled;
 let _rncQueryParams = null;   // params pour le lazy-load copro
 let _gpuQueryPoint = null;    // {lat,lng} pour le lazy-load GPU urbanisme
@@ -1226,6 +1239,7 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
   _dpeResultsReady = null; // reset pour la course ADEME vs BDNB
   const el = document.getElementById('batiment-data');
   el.style.display = 'block';
+  if (window.innerWidth <= 768) document.getElementById('panel').classList.add('mobile-open');
   el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement BDNB…</div>';
   setStatus('Chargement bâtiment…','loading');
 
@@ -2122,6 +2136,11 @@ tlPanel.querySelectorAll('.tl-chip').forEach(chip => {
   });
 });
 document.getElementById('tl-close').addEventListener('click', closeTL);
+
+// ── Mobile panel handle (ferme le bottom sheet) ──
+document.getElementById('panel-handle').addEventListener('click', () => {
+  document.getElementById('panel').classList.remove('mobile-open');
+});
 </script>
 
 </body>
