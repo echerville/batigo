@@ -235,6 +235,8 @@
   .overlay-opt[data-overlay="ac1"].active{border-color:#c2410c!important;background:rgba(194,65,12,.07)!important}
   .overlay-opt[data-overlay="ac4"].active{border-color:#0891b2!important;background:rgba(8,145,178,.07)!important}
   .overlay-opt[data-overlay="ac2"].active{border-color:#166534!important;background:rgba(22,101,52,.07)!important}
+  .overlay-preview-logo{width:100%;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;background:#fff}
+  .overlay-preview .overlay-preview-logo img{width:auto;height:84%;object-fit:contain}
   .overlay-preview-swatch{width:100%;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.95)}
   /* ── TIMELINE BUTTON ── */
   #timeline-btn{width:44px;height:44px;padding:0;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
@@ -338,31 +340,31 @@
         </div>
         <div class="overlay-opt" data-overlay="gaz">
           <div class="overlay-preview">
-            <img src="/public/thumb-gaz.jpg" loading="lazy"/>
+            <div class="overlay-preview-logo"><img src="/public/logo-grdf.png" alt="GRDF"/></div>
           </div>
           <span>Réseau gaz</span>
         </div>
         <div class="overlay-opt" data-overlay="plu">
           <div class="overlay-preview">
-            <div class="overlay-preview-swatch" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">PLU</div>
+            <div class="overlay-preview-logo"><img src="/public/logo-gpu.png" alt="Géoportail de l'Urbanisme" style="width:88%;height:auto"/></div>
           </div>
           <span>Zones PLU</span>
         </div>
         <div class="overlay-opt" data-overlay="ac1">
           <div class="overlay-preview">
-            <div class="overlay-preview-swatch" style="background:linear-gradient(135deg,#c2410c,#fb923c)">AC1</div>
+            <div class="overlay-preview-logo"><img src="/public/logo-mh.svg" alt="Monument historique"/></div>
           </div>
           <span>Abords MH</span>
         </div>
         <div class="overlay-opt" data-overlay="ac4">
           <div class="overlay-preview">
-            <div class="overlay-preview-swatch" style="background:linear-gradient(135deg,#0891b2,#38bdf8)">AC4</div>
+            <div class="overlay-preview-logo"><img src="/public/logo-spr.png" alt="Site patrimonial remarquable"/></div>
           </div>
           <span>Patr. remarq.</span>
         </div>
         <div class="overlay-opt" data-overlay="ac2">
           <div class="overlay-preview">
-            <div class="overlay-preview-swatch" style="background:linear-gradient(135deg,#166534,#4ade80)">SC</div>
+            <div class="overlay-preview-logo"><img src="/public/logo-mte.svg" alt="Ministère de la Transition écologique"/></div>
           </div>
           <span>Sites classés</span>
         </div>
