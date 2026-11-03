@@ -254,6 +254,12 @@
 
   /* ── MOBILE ── */
   #panel-handle{display:none}
+  body.mobile #info-wrap{display:none!important}
+  body.mobile #panel{position:fixed;bottom:0;left:0;right:0;width:100%;max-height:76vh;border-left:none;border-top:1.5px solid var(--border);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:100;box-shadow:0 -4px 24px rgba(15,28,46,.12)}
+  body.mobile #panel.mobile-open{transform:translateY(0)}
+  body.mobile #panel-handle{display:flex;justify-content:center;padding:12px 0 6px;cursor:pointer;flex-shrink:0}
+  body.mobile #panel-handle::before{content:'';width:40px;height:4px;background:var(--border-med);border-radius:2px;display:block}
+  body.mobile #timeline-panel{bottom:auto;top:calc(var(--header-h) + 8px)}
   @media (max-width:768px){
     #info-wrap{display:none!important}
     #panel{position:fixed;bottom:0;left:0;right:0;width:100%;max-height:76vh;border-left:none;border-top:1.5px solid var(--border);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:100;box-shadow:0 -4px 24px rgba(15,28,46,.12)}
@@ -261,7 +267,6 @@
     #panel-handle{display:flex;justify-content:center;padding:12px 0 6px;cursor:pointer;flex-shrink:0}
     #panel-handle::before{content:'';width:40px;height:4px;background:var(--border-med);border-radius:2px;display:block}
     #timeline-panel{bottom:auto;top:calc(var(--header-h) + 8px)}
-    .maplibregl-ctrl-bottom-right,.maplibregl-ctrl-bottom-left{bottom:0!important}
   }
 
 </style>
@@ -503,6 +508,10 @@
   </div>
 </div>
 <script>
+// Détection mobile : touch OU viewport étroit
+const isMobile = window.matchMedia('(pointer:coarse)').matches || window.innerWidth <= 768;
+if (isMobile) document.body.classList.add('mobile');
+
 const TILE_URLS = {
   'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
   'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
