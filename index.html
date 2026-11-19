@@ -546,7 +546,13 @@ let _dpeResultsReady = null;  // DPE arrivé avant le DOM batiment → appliqué
 let dvfEnabled = localStorage.getItem('dvf-enabled') !== 'false';
 document.getElementById('dvf-enable').checked = dvfEnabled;
 let _rncQueryParams = null;
-let _selectedBatId = null;     // identifiant BDNB du bâtiment affiché (couleur de sélection sur la carte)   // params pour le lazy-load copro
+let _selectedBatId = null;     // identifiant BDNB du bâtiment affiché (couleur de sélection sur la carte)
+// Couleurs ADEME vérifiées pendant la session (id BDNB → polygones colorés) : elles restent affichées
+// quand on sélectionne un autre bâtiment, par-dessus les tuiles qui peuvent être plus anciennes.
+const _dpeCorrections = new Map();
+function renderDpeCorrections(selSrc) {
+  selSrc.setData({type:'FeatureCollection', features: [..._dpeCorrections.values()].flat()});
+}
 let _gpuQueryPoint = null;    // {lat,lng} pour le lazy-load GPU urbanisme
 
 const DPE_COLOR = ['match',['get','dpe'],
@@ -1650,7 +1656,8 @@ function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
 
   const hasAny = results?.length || resultsNeufs?.length;
   if (!hasAny || lng == null || lat == null) {
-    selSrc.setData({type:'FeatureCollection',features:[]});
+    if (_selectedBatId && !hasAny) _dpeCorrections.delete(_selectedBatId); // plus de DPE ADEME : couleur des tuiles
+    renderDpeCorrections(selSrc);
     hatchSrc.setData({type:'FeatureCollection',features:[]});
     return;
   }
@@ -1663,7 +1670,7 @@ function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
     ? map.queryRenderedFeatures({layers:['dpe-query']}).filter(f => f.properties.id === _selectedBatId)
     : [];
   if (!selFeatures.length) {
-    selSrc.setData({type:'FeatureCollection',features:[]});
+    renderDpeCorrections(selSrc);
     hatchSrc.setData({type:'FeatureCollection',features:[]});
     // Tuiles pas encore rendues (flyTo en cours) → nouvel essai quand la carte est stable
     if (_selectedBatId && (retry||0) < 4) map.once('idle', () => applySelectedDPE(results, resultsNeufs, lng, lat, (retry||0)+1));
@@ -1686,7 +1693,8 @@ function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
   // Copie explicite de la géométrie : les objets renvoyés par queryRenderedFeatures la calculent
   // à la demande, et une copie {...f} la perd (la surcouche ne dessinait alors rien).
   const plain = selFeatures.map(f => ({type:'Feature', geometry:f.geometry, properties:{...f.properties, color}}));
-  selSrc.setData({type:'FeatureCollection', features: plain});
+  _dpeCorrections.set(_selectedBatId, plain);
+  renderDpeCorrections(selSrc);
 
   // Hachures uniquement si DPE neuf sans existant
   hatchSrc.setData({type:'FeatureCollection', features: isNeuf ? plain : []});
