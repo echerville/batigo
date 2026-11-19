@@ -510,7 +510,7 @@ const TILE_URLS = {
 // Emprise Loire-Atlantique (44) — bloque le chargement de tuiles hors département
 const FRANCE_BOUNDS = [-5.6, 41.2, 9.8, 51.2]; // France métropolitaine
 // Tuiles DPE nationales (Cloudflare R2). Vide = repli sur le fichier Loire-Atlantique du site.
-const DPE_TILES_BASE = '';
+const DPE_TILES_BASE = 'https://pub-ba3b84e9a7d644e1854486f04e1f0116.r2.dev';
 const LAYERS = {
   'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
   'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },

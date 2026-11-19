@@ -13,7 +13,7 @@ on:
         default: ''
 
 env:
-  R2_BUCKET: scope-tuiles
+  R2_BUCKET: scope-tuiles-eu
 
 jobs:
   prepare:
