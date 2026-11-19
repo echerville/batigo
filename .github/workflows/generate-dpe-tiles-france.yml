@@ -62,8 +62,10 @@ jobs:
         run: |
           MIL=${{ needs.prepare.outputs.millesime }}
           D=${{ matrix.dep }}
-          URL="https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_${MIL}/millesime_${MIL}_dep${D}/open_data_millesime_${MIL}_dep${D}_csv.zip"
-          wget -q "$URL" -O bdnb.zip
+          url_for() { echo "https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_${MIL}/millesime_${MIL}_dep$1/open_data_millesime_${MIL}_dep$1_csv.zip"; }
+          # La Corse peut être nommée 2A ou 2a selon les éditions
+          DL=$(echo "$D" | tr 'AB' 'ab')
+          wget -q "$(url_for "$D")" -O bdnb.zip || wget -q "$(url_for "$DL")" -O bdnb.zip
           python3 scripts/extract_dpe_44.py bdnb.zip dpe.geojson 2> extract.log; tail -3 extract.log
           rm bdnb.zip
           mkdir -p out
@@ -78,6 +80,8 @@ jobs:
 
   fusion:
     needs: [prepare, departement]
+    # Fusionner même si un département a échoué (il manquera, signalé dans le résumé)
+    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -93,13 +97,15 @@ jobs:
           merge-multiple: true
       - name: Fusion nationale
         run: |
-          ls in | wc -l
+          N=$(ls in/*.mbtiles | wc -l); echo "$N départements"
+          ATTENDU=$(echo '${{ needs.prepare.outputs.matrix }}' | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+          [ "$N" -lt "$ATTENDU" ] && echo "::warning::$((ATTENDU-N)) département(s) manquant(s) sur $ATTENDU"
           NOM="dpe-france-${{ needs.prepare.outputs.millesime }}-$(date +%Y%m%d-%H%M).pmtiles"
           echo "NOM=$NOM" >> "$GITHUB_ENV"
           tile-join -o "$NOM" --no-tile-size-limit --force in/*.mbtiles
           du -h "$NOM"
           printf '{"millesime":"%s","genere_le":"%s","fichier":"%s","departements":%s}\n' \
-            "${{ needs.prepare.outputs.millesime }}" "$(date +%Y-%m-%d)" "$NOM" "$(ls in | wc -l)" > dpe-france-meta.json
+            "${{ needs.prepare.outputs.millesime }}" "$(date +%Y-%m-%d)" "$NOM" "$N" > dpe-france-meta.json
           cat dpe-france-meta.json
       - name: Dépôt sur Cloudflare R2
         env:
