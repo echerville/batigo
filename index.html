@@ -1233,19 +1233,24 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
   _bdnbPromise = new Promise(res => { _resolveBdnb = res; });
 
   try {
-    // Sélectionne le meilleur bâtiment parmi une liste de candidats BDNB
-    function pickBest(candidates, clickLat, clickLng) {
+    // Identifiant BAN de l'adresse recherchée (ou trouvée au clic) : sert à retrouver le bon bâtiment
+    const searchedBanId = feature?.properties?.type === 'housenumber' ? (feature.properties.id || null) : null;
+    // Choix du bâtiment parmi une liste de candidats BDNB
+    function pickBest(candidates) {
       if (!candidates?.length) return null;
-      // Priorité absolue : match exact batiment_groupe_id depuis PMTiles
+      // 1. Clic sur la carte : identifiant exact du bâtiment (tuiles PMTiles)
       if (bldGroupId) {
         const exact = candidates.find(b => b.batiment_groupe_id === bldGroupId);
         if (exact) return exact;
       }
-      // Fallback : préférer les logements, puis le plus grand
-      const logements = candidates.filter(b => isLogement(b.usage_principal_bdnb_open));
-      const pool = logements.length ? logements : candidates;
-      if (pool.length === 1) return pool[0];
-      return pool.reduce((best, b) => ((b.surface_emprise_sol||0) > (best.surface_emprise_sol||0) ? b : best));
+      // 2. Adresse : le bâtiment auquel la BDNB rattache cet identifiant BAN (même méthode que Go-Rénove)
+      if (searchedBanId) {
+        const exact = candidates.find(b => b.cle_interop_adr_principale_ban === searchedBanId
+          || (Array.isArray(b.l_cle_interop_adr) && b.l_cle_interop_adr.includes(searchedBanId)));
+        if (exact) return exact;
+      }
+      // 3. Aucun rattachement certain : on n'affiche pas un bâtiment voisin (ni ses DPE)
+      return null;
     }
 
     async function fetchBDNB(d) {
@@ -1261,9 +1266,12 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
     try {
       const [bdnbRes, cadRes] = await Promise.all([
         (async () => {
-          let c = await fetchBDNB(0.0001).catch(() => []);
-          if (!c.length) c = await fetchBDNB(0.0003).catch(() => []);
-          return pickBest(c, lat, lng);
+          // Élargit la zone tant que le bâtiment rattaché à l'adresse n'est pas trouvé
+          for (const d of [0.0001, 0.0003, 0.0008]) {
+            const found = pickBest(await fetchBDNB(d).catch(() => []));
+            if (found) return found;
+          }
+          return null;
         })(),
         fetchCadastre(lat, lng).catch(() => null)
       ]);
@@ -1704,22 +1712,22 @@ async function loadDPE(feature, clickLng, clickLat) {
       return null;
     }
 
-    async function fetchDPEDataset(dataset, size=100, useFallback=true) {
+    async function fetchDPEDataset(dataset, size=100) {
       const base = `https://data.ademe.fr/data-fair/api/v1/datasets/${dataset}/lines?size=${size}&select=${SEL}&sort=-date_reception_dpe`;
-      // 1. Essayer tous les identifiants BAN du bâtiment (bâtiments d'angle = plusieurs adresses)
-      const banIds = _allBanIds.length ? _allBanIds : (banId ? [banId] : []);
-      for (const id of banIds) {
-        const d = await ademeGet(base + `&identifiant_ban_eq=${encodeURIComponent(id)}`);
-        if (d?.results?.length) return d.results;
+      // Uniquement les adresses BAN que la BDNB rattache au bâtiment (bâtiments d'angle = plusieurs adresses),
+      // ou à défaut l'adresse recherchée elle-même. Aucune recherche approchée :
+      // mieux vaut aucun DPE qu'un DPE du voisin.
+      const banIds = [...new Set(_allBanIds.length ? _allBanIds : (banId ? [banId] : []))];
+      const all = [], seen = new Set();
+      for (let i = 0; i < banIds.length; i += 30) {
+        const ids = banIds.slice(i, i + 30).map(encodeURIComponent).join(',');
+        const d = await ademeGet(base + `&identifiant_ban_in=${ids}`);
+        for (const r of (d?.results || [])) {
+          if (!seen.has(r.numero_dpe)) { seen.add(r.numero_dpe); all.push(r); }
+        }
       }
-      // 2. Fallback : commune + numéro de voie exacts (champs indexés), mot-clé rue dans adresse_ban
-      if (useFallback && housenumber && citycode) {
-        let url = base + `&code_insee_ban_eq=${citycode}&numero_voie_ban_eq=${encodeURIComponent(housenumber)}`;
-        if (streetKey) url += `&q=${encodeURIComponent(streetKey)}&q_fields=adresse_ban`;
-        const d = await ademeGet(url);
-        if (d?.results?.length) return d.results;
-      }
-      return [];
+      all.sort((a, b) => String(b.date_reception_dpe || '').localeCompare(String(a.date_reception_dpe || '')));
+      return all;
     }
 
     // Séquentiel (pas de Promise.all) pour éviter le burst de requêtes → 429
