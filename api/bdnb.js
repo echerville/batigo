@@ -24,8 +24,51 @@ function wgs84ToL93(lng, lat) {
   return { x: X, y: Y };
 }
 
+// Point dans un polygone (algorithme du rayon), coordonnées Lambert-93
+function inRing(ring, x, y) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function geomContains(geom, x, y) {
+  if (!geom || !Array.isArray(geom.coordinates)) return false;
+  const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+  // Dans le contour extérieur et hors des trous éventuels
+  return polys.some(([outer, ...holes]) => outer && inRing(outer, x, y) && !holes.some(h => inRing(h, x, y)));
+}
+
+const SELECT = 'annee_construction,surface_emprise_sol,type_energie_chauffage,type_generateur_ecs,nb_log,usage_principal_bdnb_open,cle_interop_adr_principale_ban,libelle_adr_principale_ban,l_parcelle_id,l_cle_interop_adr,code_iris,batiment_groupe_id';
+
+// Mode « point » (clic sur la carte) : renvoie uniquement le ou les bâtiments
+// dont le contour contient le point cliqué.
+async function byPoint(point, res) {
+  const [lng, lat] = String(point).split(',').map(Number);
+  const ok = Number.isFinite(lng) && Number.isFinite(lat) && lng >= -5.5 && lng <= 10 && lat >= 41 && lat <= 51.5;
+  if (!ok) return res.status(400).json({ error: 'point invalide' });
+  const p = wgs84ToL93(lng, lat);
+  const r = 5; // mètres autour du point
+  const url = `https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox?xmin=${Math.floor(p.x - r)}&ymin=${Math.floor(p.y - r)}&xmax=${Math.ceil(p.x + r)}&ymax=${Math.ceil(p.y + r)}&limit=20&select=${SELECT},geom_groupe`;
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) return res.status(502).json({ error: 'Source BDNB indisponible' });
+    const data = await response.json();
+    const inside = (Array.isArray(data) ? data : [])
+      .filter(b => geomContains(b.geom_groupe, p.x, p.y))
+      .map(({ geom_groupe, ...rest }) => rest);
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=86400');
+    return res.json(inside);
+  } catch (e) {
+    return res.status(502).json({ error: 'Source BDNB indisponible' });
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (guard(req, res)) return;
+
+  if (req.query.point) return byPoint(req.query.point, res);
 
   const { bbox } = req.query;
   if (!bbox) return res.status(400).json({ error: 'bbox required' });
@@ -44,7 +87,7 @@ module.exports = async function handler(req, res) {
   const ne = wgs84ToL93(lngMax, latMax);
 
   try {
-    const url = `https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox?xmin=${Math.round(sw.x)}&ymin=${Math.round(sw.y)}&xmax=${Math.round(ne.x)}&ymax=${Math.round(ne.y)}&limit=20&select=annee_construction,surface_emprise_sol,type_energie_chauffage,type_generateur_ecs,nb_log,usage_principal_bdnb_open,cle_interop_adr_principale_ban,libelle_adr_principale_ban,l_parcelle_id,l_cle_interop_adr,code_iris,batiment_groupe_id`;
+    const url = `https://api.bdnb.io/v1/bdnb/donnees/batiment_groupe_complet/bbox?xmin=${Math.round(sw.x)}&ymin=${Math.round(sw.y)}&xmax=${Math.round(ne.x)}&ymax=${Math.round(ne.y)}&limit=20&select=${SELECT}`;
     const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!response.ok) {
       const text = await response.text();

@@ -1140,12 +1140,20 @@ function selectAddress(feature, clickLng, clickLat, bldGroupId) {
   const el = document.createElement('div'); el.className='addr-marker';
   el.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="22" height="30" viewBox="0 0 22 30"><path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 19 11 19s11-11.3 11-19C22 4.9 17.1 0 11 0z" fill="#2bb573"/><circle cx="11" cy="11" r="4.5" fill="white" opacity=".9"/></svg>';
   addrMarker = new maplibregl.Marker({element:el, anchor:'bottom'}).setLngLat([mLng, mLat]).addTo(map);
-  loadBatiment(mLat, mLng, label, feature, bldGroupId);
-  loadDPE(feature, mLng, mLat);
+  const isClick = clickLng !== undefined; // clic sur la carte (et non adresse saisie)
+  loadBatiment(mLat, mLng, label, feature, bldGroupId, isClick);
+  loadDPE(feature, mLng, mLat, isClick);
 }
 
 // WFS IGN CADASTRALPARCELS — point-in-polygon exact via turf.js
 // Fetch jusqu'à 10 parcelles dans un BBOX ±20m, puis filtre par containment géographique
+// Parcelle à partir de son identifiant (14 caractères : commune 5, préfixe 3, section 2, numéro 4)
+function parcelFromIdu(idu) {
+  if (!idu || idu.length !== 14) return null;
+  return { idu, code_insee: idu.slice(0, 5), section: idu.slice(8, 10).replace(/^0+(?=[A-Z])/, ''),
+           numero: idu.slice(10).replace(/^0+/, ''), confident: true };
+}
+
 async function fetchCadastre(lat, lng) {
   const d = 0.0002; // ~20m
   const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
@@ -1218,7 +1226,7 @@ async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
   return null;
 }
 
-async function loadBatiment(lat, lng, label, feature, bldGroupId) {
+async function loadBatiment(lat, lng, label, feature, bldGroupId, isClick = false) {
   _canonicalBanId = null;
   _allBanIds = [];
   _dpeResultsReady = null; // reset pour la course ADEME vs BDNB
@@ -1234,7 +1242,7 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
 
   try {
     // Identifiant BAN de l'adresse recherchée (ou trouvée au clic) : sert à retrouver le bon bâtiment
-    const searchedBanId = feature?.properties?.type === 'housenumber' ? (feature.properties.id || null) : null;
+    const searchedBanId = !isClick && feature?.properties?.type === 'housenumber' ? (feature.properties.id || null) : null;
     // Choix du bâtiment parmi une liste de candidats BDNB
     function pickBest(candidates) {
       if (!candidates?.length) return null;
@@ -1261,22 +1269,43 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
       return Array.isArray(data) ? data : [];
     }
 
-    // BDNB + cadastre en parallèle
     let bdnbData = null, cadastreData = null;
     try {
-      const [bdnbRes, cadRes] = await Promise.all([
-        (async () => {
-          // Élargit la zone tant que le bâtiment rattaché à l'adresse n'est pas trouvé
-          for (const d of [0.0001, 0.0003, 0.0008]) {
-            const found = pickBest(await fetchBDNB(d).catch(() => []));
-            if (found) return found;
-          }
-          return null;
-        })(),
-        fetchCadastre(lat, lng).catch(() => null)
-      ]);
-      bdnbData = bdnbRes;
-      cadastreData = cadRes;
+      if (isClick) {
+        // Clic sur la carte : parcelle et bâtiment sont ceux qui CONTIENNENT le point cliqué.
+        // On n'utilise pas l'adresse la plus proche, qui peut être celle du voisin (point BAN côté route).
+        cadastreData = await fetchCadastre(lat, lng).catch(() => null);
+        if (bldGroupId) bdnbData = pickBest(await fetchBDNB(0.0003).catch(() => []));
+        if (!bdnbData) {
+          const r = await fetch(`/api/bdnb?point=${lng},${lat}`).catch(() => null);
+          const inside = r?.ok ? await r.json() : [];
+          if (Array.isArray(inside) && inside.length) bdnbData = inside[0];
+        }
+        if (!bdnbData && cadastreData?.idu && cadastreData.confident) {
+          // Clic hors bâtiment (jardin, cour) : seulement s'il n'y a qu'un bâtiment sur la parcelle
+          const onParcel = (await fetchBDNB(0.0005).catch(() => []))
+            .filter(b => Array.isArray(b.l_parcelle_id) && b.l_parcelle_id.includes(cadastreData.idu));
+          if (onParcel.length === 1) bdnbData = onParcel[0];
+        }
+      } else {
+        const [bdnbRes, cadRes] = await Promise.all([
+          (async () => {
+            // Élargit la zone tant que le bâtiment rattaché à l'adresse n'est pas trouvé
+            for (const d of [0.0001, 0.0003, 0.0008]) {
+              const found = pickBest(await fetchBDNB(d).catch(() => []));
+              if (found) return found;
+            }
+            return null;
+          })(),
+          fetchCadastre(lat, lng).catch(() => null)
+        ]);
+        bdnbData = bdnbRes;
+        cadastreData = cadRes;
+        // Le point d'adresse est souvent en bord de parcelle, côté route : si la parcelle sous ce point
+        // n'est pas une parcelle du bâtiment, on prend celle que la BDNB associe au bâtiment.
+        const parcels = Array.isArray(bdnbData?.l_parcelle_id) ? bdnbData.l_parcelle_id : [];
+        if (parcels.length && !parcels.includes(cadastreData?.idu)) cadastreData = parcelFromIdu(parcels[0]) || cadastreData;
+      }
     } catch(e) {}
 
     // Extraire les identifiants canoniques BDNB et les partager avec loadDPE
@@ -1292,11 +1321,11 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId) {
     const street = (feature?.properties?.street || feature?.properties?.name || '').trim();
     const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
     const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP.test(w)) || '';
-    _rncQueryParams = (cc || bdnbUdu) ? { idu: bdnbUdu || cadastreData?.idu, cc, hn, streetKey, lat, lng } : null;
+    _rncQueryParams = (cc || bdnbUdu) ? { idu: isClick ? (cadastreData?.idu || bdnbUdu) : (bdnbUdu || cadastreData?.idu), cc, hn, streetKey, lat, lng } : null;
     _gpuQueryPoint = (lat != null && lng != null) ? { lat, lng } : null;
 
-    const dvfIdu = bdnbUdu || cadastreData?.idu;
-    renderBatiment(bdnbData, label, cadastreData, dvfIdu, bldGroupId);
+    const dvfIdu = isClick ? (cadastreData?.idu || bdnbUdu) : (bdnbUdu || cadastreData?.idu);
+    renderBatiment(bdnbData, label, cadastreData, dvfIdu, bldGroupId || isClick);
     setStatus('Prêt');
   } catch(e) {
     _resolveBdnb?.(); // toujours débloquer loadDPE même en cas d'erreur
@@ -1682,7 +1711,7 @@ function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
   hatchSrc.setData({type:'FeatureCollection', features: isNeuf ? selFeatures : []});
 }
 
-async function loadDPE(feature, clickLng, clickLat) {
+async function loadDPE(feature, clickLng, clickLat, isClick = false) {
   // Attendre que loadBatiment ait récupéré les identifiants BAN depuis BDNB
   // (les deux fonctions démarrent en parallèle depuis selectAddress)
   await _bdnbPromise;
@@ -1691,7 +1720,7 @@ async function loadDPE(feature, clickLng, clickLat) {
   // renderDPE le trouvera ou stockera dans _dpeResultsReady
   const p = feature.properties;
   // Priorité : clé d'interopérabilité BDNB (lien bâtiment→BAN fiable) > BAN reverse geocode
-  const banId = _canonicalBanId || p.id||'', citycode = p.citycode||'';
+  const banId = _canonicalBanId || (isClick ? '' : (p.id || '')), citycode = p.citycode||'';
   const housenumber = p.housenumber||'', street = p.street||p.name||'';
   try {
     const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,surface_habitable_immeuble,nombre_appartement,methode_application_dpe,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction,conso_5_usages_par_m2_ep';
@@ -1924,7 +1953,7 @@ map.on('click',e=>{
   const pt = map.project([lng, lat]);
   const bldFeats = map.queryRenderedFeatures(
     [{x:pt.x-8,y:pt.y-8},{x:pt.x+8,y:pt.y+8}], {layers:['dpe-query']}
-  );
+  ).filter(f => { try { return turf.booleanPointInPolygon(turf.point([lng, lat]), f); } catch(_) { return false; } }); // seulement le bâtiment qui contient le point cliqué
   let markerLng = lng, markerLat = lat;
   let bldGroupId = null;
   if (bldFeats.length) {
@@ -1939,7 +1968,7 @@ map.on('click',e=>{
   // Sinon au point de clic (fallback)
   const geocodeLng = bldFeats.length ? markerLng : lng;
   const geocodeLat = bldFeats.length ? markerLat : lat;
-  reverseGeocode(geocodeLng, geocodeLat, markerLng, markerLat, bldGroupId);
+  reverseGeocode(geocodeLng, geocodeLat, lng, lat, bldGroupId);
 });
 
 async function reverseGeocode(lng, lat, markerLng, markerLat, bldGroupId) {
