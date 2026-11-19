@@ -2105,7 +2105,15 @@ let _dpeTilesUrl = '/public/dpe-44.pmtiles';
 .then(nat => {
   if (nat?.fichier) {
     _dpeTilesUrl = DPE_TILES_BASE + '/' + nat.fichier;
-    const apply = () => map.getSource('dpe-src')?.setUrl(`pmtiles://${_dpeTilesUrl}`);
+    // Attendre la fin du chargement de la source initiale : sinon sa réponse
+    // arrive après et remet l'emprise Loire-Atlantique (bâtiments absents ailleurs)
+    const apply = () => {
+      const src = map.getSource('dpe-src'); if (!src) return;
+      const go = () => src.setUrl(`pmtiles://${_dpeTilesUrl}`);
+      if (src.loaded()) return go();
+      const h = e => { if (e.sourceId === 'dpe-src' && e.sourceDataType === 'metadata') { map.off('sourcedata', h); go(); } };
+      map.on('sourcedata', h);
+    };
     if (map.getSource('dpe-src')) apply(); else map.once('load', () => setTimeout(apply, 0));
     return nat;
   }
