@@ -2,6 +2,11 @@
 // Source : https://files.data.gouv.fr/geo-dvf/latest/csv/{year}/communes/{dep}/{commune}.csv
 // Aucune authentification requise.
 
+const { guard } = require('./_guard');
+
+// Identifiant de parcelle : commune (5, Corse 2A/2B) + préfixe (3) + section (2) + numéro (4)
+const IDPAR_RE = /^(\d{5}|2[AB]\d{3})\d{3}[0-9A-Z]{2}\d{4}$/;
+
 function parseCsvLine(line) {
   const cols = [];
   let cur = '', inQ = false;
@@ -16,11 +21,10 @@ function parseCsvLine(line) {
 }
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  if (guard(req, res)) return;
 
-  const { idpar } = req.query;
-  if (!idpar || idpar.length < 5) return res.status(400).json({ error: 'idpar required (14 chars)' });
+  const idpar = String(req.query.idpar || '').toUpperCase();
+  if (!IDPAR_RE.test(idpar)) return res.status(400).json({ error: 'idpar invalide (14 caractères)' });
 
   const codeCommune = idpar.slice(0, 5);
   const dep = codeCommune.startsWith('97') ? codeCommune.slice(0, 3) : codeCommune.slice(0, 2);
@@ -85,5 +89,6 @@ module.exports = async function handler(req, res) {
 
   // Trier par date décroissante
   allResults.sort((a, b) => b.date_mutation.localeCompare(a.date_mutation));
+  res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=86400');
   res.json(allResults);
 };

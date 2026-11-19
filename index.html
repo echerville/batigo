@@ -309,21 +309,13 @@
           <img src="https://tile.openstreetmap.org/13/4061/2882.png" loading="lazy" />
           <span>OSM</span>
         </div>
-        <div class="map-opt" data-layer="ign-plan">
+        <div class="map-opt active" data-layer="ign-plan">
           <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
           <span>IGN Plan</span>
-        </div>
-        <div class="map-opt active" data-layer="google-plan">
-          <img src="https://mt1.google.com/vt/lyrs=m&x=4061&y=2882&z=13" loading="lazy" />
-          <span>Google</span>
         </div>
         <div class="map-opt" data-layer="ign-ortho">
           <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
           <span>IGN Sat</span>
-        </div>
-        <div class="map-opt" data-layer="google-sat">
-          <img src="https://mt1.google.com/vt/lyrs=s&x=4061&y=2882&z=13" loading="lazy" />
-          <span>Google Sat</span>
         </div>
       </div>
     </div>
@@ -395,10 +387,6 @@
         </svg>
       </button>
       <div id="vues-picker-panel">
-        <div class="vue-opt" data-vue="gsv">
-          <svg width="20" height="24" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>
-          <span>Street View</span>
-        </div>
         <div class="vue-opt" data-vue="panoramax">
           <svg width="20" height="20" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#FBBC05" stroke-width="1.5"/><circle cx="7" cy="7" r="2.5" fill="#FBBC05"/><line x1="7" y1="1" x2="7" y2="3" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="11" x2="7" y2="13" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="3" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="7" x2="13" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/></svg>
           <span>Panoramax</span>
@@ -457,7 +445,6 @@
           <tr><td class="src-name">IGN GPU <span style="font-weight:400;color:var(--text-muted)">apicarto.ign.fr</span></td><td>PLU, Abords MH (AC1), SPR (AC4), Sites classés (AC2) — 44</td><td><span class="src-badge src-api">WMS + API</span></td><td>Temps réel</td><td class="src-status" id="src-st-gpu"></td></tr>
           <tr><td class="src-name">OpenStreetMap</td><td>Fond de carte OSM</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
-          <tr><td class="src-name">Google Maps</td><td>Fond de carte · Satellite</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-google"></td></tr>
         </tbody>
       </table>
     </div>
@@ -475,7 +462,6 @@
     <button class="layer-toggle" id="toggle-ac2" title="Sites classés ou inscrits AC2">AC2</button>
     <div class="lb-sep"></div>
     <button class="measure-btn" id="btn-measure-poly">⬡ m²</button>
-    <button class="layer-toggle" id="toggle-gsv"><svg width="10" height="14" viewBox="0 0 12 18"><circle cx="6" cy="3.5" r="3.5" fill="#FBBC05"/><path d="M2 8h8c.5 0 .8.4.7.9L9.5 14H2.5L1.3 8.9C1.2 8.4 1.5 8 2 8z" fill="#FBBC05"/><rect x="3" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/><rect x="6.5" y="14" width="2.5" height="4" rx=".8" fill="#FBBC05"/></svg>S.View</button>
     <button class="layer-toggle" id="toggle-panoramax"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#FBBC05" stroke-width="1.5"/><circle cx="7" cy="7" r="2.5" fill="#FBBC05"/><line x1="7" y1="1" x2="7" y2="3" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="11" x2="7" y2="13" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="3" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="7" x2="13" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/></svg>Panor.</button>
   </div>
 </div>
@@ -508,15 +494,17 @@
   </div>
 </div>
 <script>
-// Détection mobile : touch OU viewport étroit
-const isMobile = window.matchMedia('(pointer:coarse)').matches || window.innerWidth <= 768;
-if (isMobile) document.body.classList.add('mobile');
+// Redirection automatique vers la version mobile
+if (window.matchMedia('(pointer:coarse)').matches || window.innerWidth <= 768) {
+  window.location.replace('mobile.html');
+}
+// Détection mobile (desktop uniquement ici)
+const isMobile = false;
+
 
 const TILE_URLS = {
   'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
   'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
-  'google-sat':  'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-  'google-plan': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
   'voyager':     'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 };
 // Emprise Loire-Atlantique (44) — bloque le chargement de tuiles hors département
@@ -524,8 +512,6 @@ const DEPT44_BOUNDS = [-2.56, 46.84, -0.85, 47.84];
 const LAYERS = {
   'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, bounds:DEPT44_BOUNDS, attribution:'© IGN Géoplateforme' },
   'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, bounds:DEPT44_BOUNDS, attribution:'© IGN Géoplateforme' },
-  'google-sat':  { type:'raster', tiles:[TILE_URLS['google-sat']],  tileSize:256, maxzoom:21, bounds:DEPT44_BOUNDS, attribution:'' },
-  'google-plan': { type:'raster', tiles:[TILE_URLS['google-plan']], tileSize:256, maxzoom:21, bounds:DEPT44_BOUNDS, attribution:'' },
   'voyager':     { type:'raster', tiles:[TILE_URLS['voyager']],     tileSize:256, maxzoom:19, bounds:DEPT44_BOUNDS, attribution:'© OpenStreetMap contributors' }
 };
 const CADASTRE_SOURCE = {
@@ -545,7 +531,7 @@ function isLogement(usage) {
 const _pmtilesProtocol = new pmtiles.Protocol();
 maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
 
-let currentLayer = 'google-plan', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
+let currentLayer = 'ign-plan', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
 let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
 let streetviewActive = null;
 // Identifiants BAN fournis par BDNB — principal + tous les adresses du bâtiment (coins de rue, etc.)
@@ -570,7 +556,7 @@ const DPE_COLOR = ['match',['get','dpe'],
 
 const map = new maplibregl.Map({
   container: 'map',
-  style: { version:8, sources:{'base':LAYERS['google-plan']}, layers:[{id:'base-layer',type:'raster',source:'base'}], glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf' },
+  style: { version:8, sources:{'base':LAYERS['ign-plan']}, layers:[{id:'base-layer',type:'raster',source:'base'}], glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf' },
   center: [-2.28, 47.27], zoom: 10, minZoom: 9, maxBounds: [-3.2, 46.5, -0.1, 48.15],
   attributionControl: false, preserveDrawingBuffer: true
 });
@@ -695,11 +681,9 @@ map.on('load', () => {
 const THUMB_URLS = {
   'voyager':     'https://tile.openstreetmap.org/13/4061/2882.png',
   'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061',
-  'google-plan': 'https://mt1.google.com/vt/lyrs=m&x=4061&y=2882&z=13',
   'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061',
-  'google-sat':  'https://mt1.google.com/vt/lyrs=s&x=4061&y=2882&z=13',
 };
-const LAYER_LABELS = {'voyager':'OSM','ign-plan':'IGN Plan','google-plan':'Google','ign-ortho':'IGN Sat','google-sat':'Google Sat'};
+const LAYER_LABELS = {'voyager':'OSM','ign-plan':'IGN Plan','ign-ortho':'IGN Sat'};
 
 const mapPickerBtn = document.getElementById('map-picker-btn');
 const mapPickerPanel = document.getElementById('map-picker-panel');
@@ -1063,23 +1047,15 @@ function openImmersive(url, source) {
   streetviewActive = source;
   document.getElementById('panoramax-iframe').src = url;
   document.getElementById('panoramax-panel').classList.add('visible');
-  document.getElementById('toggle-gsv').classList.toggle('on', source === 'gsv');
   document.getElementById('toggle-panoramax').classList.toggle('on', source === 'panoramax');
 }
 function closeStreetview() {
   streetviewActive = null;
   document.getElementById('panoramax-panel').classList.remove('visible');
   document.getElementById('panoramax-iframe').src = '';
-  document.getElementById('toggle-gsv').classList.remove('on');
   document.getElementById('toggle-panoramax').classList.remove('on');
 }
 
-document.getElementById('toggle-gsv').addEventListener('click', function() {
-  if (streetviewActive === 'gsv') { closeStreetview(); return; }
-  if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
-  const [lng, lat] = currentCoords;
-  openImmersive(`https://www.google.com/maps?layer=c&cbll=${lat},${lng}&cbp=12,0,0,0,0&output=svembed`, 'gsv');
-});
 
 document.getElementById('toggle-panoramax').addEventListener('click', async function() {
   if (streetviewActive === 'panoramax') { closeStreetview(); return; }
@@ -2058,7 +2034,6 @@ async function testSources() {
     { id:'gaz',      fn: () => fetch('/public/gaz-44.json', {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'carto',    fn: () => testTile(TILE_URLS['voyager']) },
     { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
-    { id:'google',   fn: () => testTile(TILE_URLS['google-plan']) },
   ];
 
   tests.forEach(t => pending(t.id));
@@ -2084,7 +2059,15 @@ async function triggerPMTilesUpdate() {
   btn.disabled = true;
   btn.textContent = '…';
   try {
-    const r = await fetch('/api/trigger-update', { method: 'POST' });
+    // Jeton admin (ADMIN_TOKEN sur Vercel), demandé une fois puis gardé dans ce navigateur
+    let adminToken = localStorage.getItem('scope-admin-token');
+    if (!adminToken) {
+      adminToken = (window.prompt('Jeton administrateur :') || '').trim();
+      if (!adminToken) { btn.textContent = '↺ Màj'; btn.disabled = false; return; }
+    }
+    const r = await fetch('/api/trigger-update', { method: 'POST', headers: { 'x-admin-token': adminToken } });
+    if (r.status === 401) localStorage.removeItem('scope-admin-token');
+    else if (r.ok) localStorage.setItem('scope-admin-token', adminToken);
     const d = await r.json();
     if (d.ok) {
       btn.textContent = '✓ Lancé';
