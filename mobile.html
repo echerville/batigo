@@ -460,7 +460,7 @@
           <tr><td class="src-name">IGN GÃ©oplateforme</td><td>Cadastre parcellaire</td><td><span class="src-badge src-api">API WFS</span></td><td>Temps rÃ©el</td><td class="src-status" id="src-st-ign-wfs"></td></tr>
           <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobiliÃ¨res</td><td><span class="src-badge src-api">API REST</span></td><td><label class="src-toggle"><input type="checkbox" id="dvf-enable" onchange="toggleDVF(this.checked)"> Activer</label></td><td class="src-status" id="src-st-dvf"></td></tr>
           <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriÃ©tÃ©s</td><td><span class="src-badge src-api">API REST</span></td><td>Temps rÃ©el</td><td class="src-status" id="src-st-rnic"></td></tr>
-          <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bÃ¢timents (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>04/04/2026 <button id="btn-update-pmtiles" onclick="triggerPMTilesUpdate()" title="Relancer la gÃ©nÃ©ration des tuiles DPE via GitHub Actions (~20 min)" style="margin-left:6px;font-size:9px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-dim);font-weight:600;font-family:inherit">â†º MÃ j</button></td><td class="src-status" id="src-st-pmtiles"></td></tr>
+          <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bÃ¢timents (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td><span id="pmtiles-edition">BDNB 2025-07-a</span> <button id="btn-update-pmtiles" onclick="triggerPMTilesUpdate()" title="Relancer la gÃ©nÃ©ration des tuiles DPE via GitHub Actions (~20 min)" style="margin-left:6px;font-size:9px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-dim);font-weight:600;font-family:inherit">â†º MÃ j</button></td><td class="src-status" id="src-st-pmtiles"></td></tr>
           <tr><td class="src-name">France Chaleur Urbaine</td><td>RÃ©seaux de chaleur (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-rcu"></td></tr>
           <tr><td class="src-name">GRDF Open Data</td><td>RÃ©seau de gaz (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-gaz"></td></tr>
           <tr><td class="src-name">IGN GPU <span style="font-weight:400;color:var(--text-muted)">apicarto.ign.fr</span></td><td>PLU, Abords MH (AC1), SPR (AC4), Sites classÃ©s (AC2) â€” 44</td><td><span class="src-badge src-api">WMS + API</span></td><td>Temps rÃ©el</td><td class="src-status" id="src-st-gpu"></td></tr>
@@ -562,7 +562,8 @@ let _pmtilesDpeGrade = null;  // note DPE issue des tuiles PMTiles (ancienne nor
 let _dpeResultsReady = null;  // DPE arrivÃ© avant le DOM batiment â†’ appliquÃ© par renderBatiment
 let dvfEnabled = localStorage.getItem('dvf-enabled') !== 'false';
 document.getElementById('dvf-enable').checked = dvfEnabled;
-let _rncQueryParams = null;   // params pour le lazy-load copro
+let _rncQueryParams = null;
+let _selectedBatId = null;     // identifiant BDNB du bâtiment affiché (couleur de sélection sur la carte)   // params pour le lazy-load copro
 let _gpuQueryPoint = null;    // {lat,lng} pour le lazy-load GPU urbanisme
 
 const DPE_COLOR = ['match',['get','dpe'],
@@ -1246,6 +1247,7 @@ async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
 async function loadBatiment(lat, lng, label, feature, bldGroupId, isClick = false) {
   _canonicalBanId = null;
   _allBanIds = [];
+  _selectedBatId = null;
   _dpeResultsReady = null; // reset pour la course ADEME vs BDNB
   const el = document.getElementById('batiment-data');
   el.style.display = 'block';
@@ -1326,6 +1328,7 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId, isClick = fals
     } catch(e) {}
 
     // Extraire les identifiants canoniques BDNB et les partager avec loadDPE
+    _selectedBatId = bdnbData?.batiment_groupe_id || null;
     _canonicalBanId = bdnbData?.cle_interop_adr_principale_ban || null;
     _allBanIds = Array.isArray(bdnbData?.l_cle_interop_adr) ? bdnbData.l_cle_interop_adr : (_canonicalBanId ? [_canonicalBanId] : []);
     _resolveBdnb(); // dÃ©bloquer loadDPE qui attend les identifiants BAN
@@ -1643,6 +1646,13 @@ function getBestDpeGrade(results, resultsNeufs) {
   // PrioritÃ© 1 : DPE immeuble collectif (note directe, pas de moyenne)
   const immeuble = (results||[]).find(r => r.methode_application_dpe === 'dpe immeuble collectif');
   if (immeuble?.etiquette_dpe && DPE_GRADE_NUM[immeuble.etiquette_dpe]) return immeuble.etiquette_dpe;
+  // Maison individuelle : le DPE le plus récent remplace les précédents (même logement)
+  const allDpe = [...(results||[]), ...(resultsNeufs||[])];
+  if (allDpe.length && allDpe.every(r => r.methode_application_dpe === 'dpe maison individuelle' || !r.methode_application_dpe)) {
+    const latest = allDpe.filter(r => DPE_GRADE_NUM[r.etiquette_dpe])
+      .sort((a, b) => String(b.date_reception_dpe || '').localeCompare(String(a.date_reception_dpe || '')))[0];
+    if (latest) return latest.etiquette_dpe;
+  }
   // PrioritÃ© 2 : moyenne des DPE individuels
   const all = [...(results||[]), ...(resultsNeufs||[])];
   const nums = all.map(r => DPE_GRADE_NUM[r.etiquette_dpe]).filter(Boolean);
@@ -1665,48 +1675,18 @@ function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
   // RÃ©cupÃ©rer le polygone du bÃ¢timent via dpe-query (toujours actif, opacitÃ© 0)
   // â†’ fonctionne que le toggle DPE soit ON ou OFF
   const pt = map.project([lng, lat]);
-  let feats = map.queryRenderedFeatures(pt, {layers:['dpe-query']});
-  if (!feats.length) feats = map.queryRenderedFeatures(
-    [{x:pt.x-20,y:pt.y-20},{x:pt.x+20,y:pt.y+20}], {layers:['dpe-query']});
-  // Fallback large : coords BAN souvent sur la rue hors du polygone bÃ¢timent
-  if (!feats.length) feats = map.queryRenderedFeatures(
-    [{x:pt.x-120,y:pt.y-120},{x:pt.x+120,y:pt.y+120}], {layers:['dpe-query']});
-  // Dernier recours : tout le viewport, prendre le plus proche
-  if (!feats.length && map.getZoom() >= 13) {
-    const all = map.queryRenderedFeatures({layers:['dpe-query']});
-    if (all.length) feats = [all.reduce((best, f) => {
-      try {
-        const cc = turf.centroid(f).geometry.coordinates;
-        const cb = turf.centroid(best).geometry.coordinates;
-        return ((cc[0]-lng)**2+(cc[1]-lat)**2) < ((cb[0]-lng)**2+(cb[1]-lat)**2) ? f : best;
-      } catch(_) { return best; }
-    })];
-  }
-  if (!feats.length) {
-    // Tuiles pas encore rendues (zoom<13 ou flyTo en cours) â†’ retry sur idle
-    if ((retry||0) < 4) map.once('idle', () => applySelectedDPE(results, resultsNeufs, lng, lat, (retry||0)+1));
+  // Polygones du bâtiment sélectionné, retrouvés par son identifiant BDNB exact (jamais « le plus proche »)
+  const selFeatures = _selectedBatId
+    ? map.queryRenderedFeatures({layers:['dpe-query']}).filter(f => f.properties.id === _selectedBatId)
+    : [];
+  if (!selFeatures.length) {
+    selSrc.setData({type:'FeatureCollection',features:[]});
+    hatchSrc.setData({type:'FeatureCollection',features:[]});
+    // Tuiles pas encore rendues (flyTo en cours) → nouvel essai quand la carte est stable
+    if (_selectedBatId && (retry||0) < 4) map.once('idle', () => applySelectedDPE(results, resultsNeufs, lng, lat, (retry||0)+1));
     return;
   }
-
-  // Si plusieurs features dans le fallback large â†’ prendre le plus proche
-  let closestFeat = feats[0];
-  if (feats.length > 1) {
-    let minDist = Infinity;
-    for (const f of feats) {
-      try {
-        const c = turf.centroid(f).geometry.coordinates;
-        const d = (c[0]-lng)**2 + (c[1]-lat)**2;
-        if (d < minDist) { minDist = d; closestFeat = f; }
-      } catch(_) {}
-    }
-  }
-
-  // SÃ©lectionner TOUS les polygones du mÃªme bÃ¢timent (batiment_groupe_id)
-  const batId = closestFeat.properties.id;
-  const allBatFeats = batId
-    ? map.queryRenderedFeatures({layers:['dpe-query']}).filter(f => f.properties.id === batId)
-    : [closestFeat];
-  const selFeatures = allBatFeats.length ? allBatFeats : [closestFeat];
+  const closestFeat = selFeatures[0];
 
   // Lire la note PMTiles (ancienne norme) depuis le feature
   const pmGrade = closestFeat?.properties?.dpe || null;
@@ -2107,6 +2087,12 @@ function toggleDVF(checked) {
   const el = document.querySelector('.dvf-accordion');
   if (el) el.style.display = checked ? '' : 'none';
 }
+
+// Édition BDNB des tuiles DPE (fichier écrit par la GitHub Action)
+fetch('/public/dpe-44-meta.json').then(r => r.ok ? r.json() : null).then(m => {
+  const el = document.getElementById('pmtiles-edition');
+  if (el && m?.millesime) el.textContent = `BDNB ${m.millesime} (${m.genere_le || ''})`;
+}).catch(() => {});
 
 async function triggerPMTilesUpdate() {
   const btn = document.getElementById('btn-update-pmtiles');

@@ -30,12 +30,24 @@ jobs:
           cd /tmp/tippecanoe && make -j$(nproc) && sudo make install
           tippecanoe --version
 
+      - name: Find latest BDNB edition (millésime)
+        run: |
+          # Dernière édition publiée sur data.gouv.fr (ex. 2026-02-b), au lieu d'une édition figée
+          MIL=$(curl -sf https://www.data.gouv.fr/api/1/datasets/base-de-donnees-nationale-des-batiments/ \
+            | python3 -c "import sys,json,re; d=json.load(sys.stdin); ms=sorted({m for r in d.get('resources',[]) for m in re.findall(r'millesime_(\d{4}-\d{2}-[a-z])', r.get('url',''))}); print(ms[-1] if ms else '')")
+          url_for() { echo "https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_$1/millesime_$1_dep44/open_data_millesime_$1_dep44_csv.zip"; }
+          if [ -z "$MIL" ] || ! curl -sfI "$(url_for "$MIL")" > /dev/null; then
+            echo "::warning::Édition la plus récente introuvable ($MIL), repli sur 2025-07-a"
+            MIL=2025-07-a
+          fi
+          echo "BDNB_MILLESIME=$MIL" >> "$GITHUB_ENV"
+          echo "BDNB_URL=$(url_for "$MIL")" >> "$GITHUB_ENV"
+          echo "Édition BDNB utilisée : $MIL"
+
       - name: Download BDNB Loire-Atlantique (CSV)
         run: |
-          echo "Downloading BDNB dep44 CSV (~700MB)..."
-          wget --progress=dot:giga \
-            "https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_2025-07-a/millesime_2025-07-a_dep44/open_data_millesime_2025-07-a_dep44_csv.zip" \
-            -O bdnb_dep44.zip
+          echo "Downloading $BDNB_URL ..."
+          wget --progress=dot:giga "$BDNB_URL" -O bdnb_dep44.zip
           echo "Download complete. Size: $(du -h bdnb_dep44.zip | cut -f1)"
           unzip -l bdnb_dep44.zip | grep '\.csv' | head -20
 
@@ -76,16 +88,19 @@ jobs:
           git config user.name "github-actions[bot]"
           # Sauvegarder le fichier généré hors du repo
           cp public/dpe-44.pmtiles /tmp/dpe-44.pmtiles
+          # Métadonnées affichées dans l'onglet Sources (édition BDNB et date de génération)
+          printf '{"millesime":"%s","genere_le":"%s"}\n' "$BDNB_MILLESIME" "$(date +%Y-%m-%d)" > /tmp/dpe-44-meta.json
           # Se caler sur l'état exact du remote (commits poussés pendant le build)
           git fetch origin main
           git reset --hard FETCH_HEAD
           # Remettre le fichier généré et committer
           mkdir -p public
           cp /tmp/dpe-44.pmtiles public/dpe-44.pmtiles
-          git add public/dpe-44.pmtiles
+          cp /tmp/dpe-44-meta.json public/dpe-44-meta.json
+          git add public/dpe-44.pmtiles public/dpe-44-meta.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: generate DPE PMTiles Loire-Atlantique ($(date +%Y-%m-%d))"
+            git commit -m "chore: generate DPE PMTiles Loire-Atlantique (BDNB $BDNB_MILLESIME, $(date +%Y-%m-%d))"
             git push
           fi
