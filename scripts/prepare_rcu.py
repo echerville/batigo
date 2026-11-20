@@ -8,9 +8,11 @@ def num(v):
     try: return float(v)
     except (TypeError, ValueError): return None
 
+ENR_ECHELLE = 1   # fixé plus bas : 100 si la source donne des fractions (0-1) et non des pourcentages
+
 def props(p, trace):
     enr, co2 = num(p.get('Taux EnR&R')), num(p.get('contenu CO2'))
-    if enr is not None and enr <= 1: enr *= 100   # au cas où le taux serait une fraction
+    if enr is not None: enr *= ENR_ECHELLE
     return {
         'id': p.get('Identifiant reseau') or p.get('Identifian') or '',
         'nom': (p.get('nom_reseau') or 'Réseau de chaleur').strip(),
@@ -27,11 +29,19 @@ def centroid(g):
         if c and isinstance(c[0], (int, float)): pts.append(c)
         else:
             for x in c: walk(x)
-    walk(g['coordinates'])
+    def geom(g):
+        if g.get('type') == 'GeometryCollection':
+            for x in g.get('geometries') or []: geom(x)
+        elif g.get('coordinates'): walk(g['coordinates'])
+    geom(g)
     return [round(sum(p[0] for p in pts) / len(pts), 6), round(sum(p[1] for p in pts) / len(pts), 6)] if pts else None
 
 traces = json.load(open(sys.argv[1]))['features']
 sans = json.load(open(sys.argv[2]))['features']
+# Échelle décidée sur l'ensemble des réseaux, jamais réseau par réseau (un vrai 1 % ne doit pas devenir 100 %)
+_vals = [v for v in (num(f['properties'].get('Taux EnR&R')) for f in traces + sans) if v is not None]
+if _vals and max(_vals) <= 1: ENR_ECHELLE = 100
+print(f'Taux EnR&R : {len(_vals)} valeurs, max {max(_vals) if _vals else "-"}, échelle x{ENR_ECHELLE}')
 points = []
 with open('rcu-lignes.geojsonl', 'w') as out:
     for f in traces:

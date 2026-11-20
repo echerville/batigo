@@ -439,10 +439,10 @@
           <tr><td class="src-name">IGN Géoplateforme</td><td>Cadastre parcellaire</td><td><span class="src-badge src-api">API WFS</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-wfs"></td></tr>
           <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobilières</td><td><span class="src-badge src-api">API REST</span></td><td><label class="src-toggle"><input type="checkbox" id="dvf-enable" onchange="toggleDVF(this.checked)"> Activer</label></td><td class="src-status" id="src-st-dvf"></td></tr>
           <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriétés</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-rnic"></td></tr>
-          <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td><span id="pmtiles-edition">BDNB 2025-07-a</span> <button id="btn-update-pmtiles" onclick="triggerPMTilesUpdate()" title="Relancer la génération des tuiles DPE via GitHub Actions (~20 min)" style="margin-left:6px;font-size:9px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text-dim);font-weight:600;font-family:inherit">↺ Màj</button></td><td class="src-status" id="src-st-pmtiles"></td></tr>
-          <tr><td class="src-name">France Chaleur Urbaine</td><td>Réseaux de chaleur (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-rcu"></td></tr>
-          <tr><td class="src-name">GRDF Open Data</td><td>Réseau de gaz (Loire-Atlantique)</td><td><span class="src-badge src-dl">GeoJSON</span></td><td>Statique</td><td class="src-status" id="src-st-gaz"></td></tr>
-          <tr><td class="src-name">IGN GPU <span style="font-weight:400;color:var(--text-muted)">apicarto.ign.fr</span></td><td>PLU, Abords MH (AC1), SPR (AC4), Sites classés (AC2) — 44</td><td><span class="src-badge src-api">WMS + API</span></td><td>Temps réel</td><td class="src-status" id="src-st-gpu"></td></tr>
+          <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td><span id="pmtiles-edition">BDNB 2025-07-a</span></td><td class="src-status" id="src-st-pmtiles"></td></tr>
+          <tr><td class="src-name">France Chaleur Urbaine</td><td>Réseaux de chaleur (France)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>Mensuel</td><td class="src-status" id="src-st-rcu"></td></tr>
+          <tr><td class="src-name">GRDF Open Data</td><td>Réseau de gaz (France)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>Mensuel</td><td class="src-status" id="src-st-gaz"></td></tr>
+          <tr><td class="src-name">IGN GPU <span style="font-weight:400;color:var(--text-muted)">apicarto.ign.fr</span></td><td>PLU, Abords MH (AC1), SPR (AC4), Sites classés (AC2)</td><td><span class="src-badge src-api">WMS + API</span></td><td>Temps réel</td><td class="src-status" id="src-st-gpu"></td></tr>
           <tr><td class="src-name">OpenStreetMap</td><td>Fond de carte OSM</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
           <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
         </tbody>
@@ -454,9 +454,9 @@
     <div class="lb-sep"></div>
     <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE">DPE</button>
     <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
-    <button class="layer-toggle" id="toggle-rcu" title="Réseaux de chaleur urbain (Loire-Atlantique)">RCU</button>
-    <button class="layer-toggle" id="toggle-gaz" title="Réseau de gaz GRDF (Loire-Atlantique)">Gaz</button>
-    <button class="layer-toggle" id="toggle-plu" title="Zones PLU (Loire-Atlantique)">PLU</button>
+    <button class="layer-toggle" id="toggle-rcu" title="Réseaux de chaleur (France Chaleur Urbaine)">RCU</button>
+    <button class="layer-toggle" id="toggle-gaz" title="Réseau de gaz GRDF">Gaz</button>
+    <button class="layer-toggle" id="toggle-plu" title="Zones PLU">PLU</button>
     <button class="layer-toggle" id="toggle-ac1" title="Abords monuments historiques AC1">AC1</button>
     <button class="layer-toggle" id="toggle-ac4" title="Sites patrimoniaux remarquables AC4">AC4</button>
     <button class="layer-toggle" id="toggle-ac2" title="Sites classés ou inscrits AC2">AC2</button>
@@ -507,7 +507,7 @@ const TILE_URLS = {
   'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
   'voyager':     'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 };
-// Emprise Loire-Atlantique (44) — bloque le chargement de tuiles hors département
+// Emprise des fonds de carte
 const FRANCE_BOUNDS = [-5.6, 41.2, 9.8, 51.2]; // France métropolitaine
 // Tuiles DPE nationales (Cloudflare R2). Vide = repli sur le fichier Loire-Atlantique du site.
 const DPE_TILES_BASE = 'https://pub-ba3b84e9a7d644e1854486f04e1f0116.r2.dev';
@@ -577,7 +577,7 @@ map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
 map.on('load', () => {
   map.addSource('cadastre', CADASTRE_SOURCE);
   map.addLayer({id:'cadastre-layer',type:'raster',source:'cadastre',layout:{visibility:'none'},paint:{'raster-opacity':0.7}});
-  // Couche DPE bâtiments (PMTiles statique Loire-Atlantique)
+  // Couche DPE bâtiments (PMTiles national sur R2, voir plus bas)
   map.addSource('dpe-src', {
     type: 'vector',
     url: `pmtiles://${location.origin}/public/dpe-44.pmtiles`
@@ -639,20 +639,13 @@ map.on('load', () => {
   });
   map.on('mouseleave','dpe-fill', () => { map.getCanvas().style.cursor=''; dpePopup.remove(); });
 
-  // Réseaux de chaleur urbain
-  map.addSource('rcu-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
-  map.addLayer({id:'rcu-layer', type:'line', source:'rcu-src', layout:{visibility:'none'},
-    paint:{'line-color':'#e05c00','line-width':['interpolate',['linear'],['zoom'],12,2,16,4],'line-opacity':0.85}});
-
-  // Popup réseau de chaleur — partagé entre clic sur ligne et clic sur marqueur
+  // Réseaux de chaleur (France Chaleur Urbaine) et gaz (GRDF) : sources ajoutées au premier affichage
   rcuPopup = new maplibregl.Popup({closeButton:true, closeOnClick:true, maxWidth:'280px', offset:6});
-  map.on('mouseenter','rcu-layer', () => { map.getCanvas().style.cursor='pointer'; });
-  map.on('mouseleave','rcu-layer', () => { map.getCanvas().style.cursor=''; });
-  map.on('click','rcu-layer', e => { showRcuPopup(e.lngLat, e.features[0].properties); });
-
-  map.addSource('gaz-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
-  map.addLayer({id:'gaz-layer', type:'line', source:'gaz-src', layout:{visibility:'none'},
-    paint:{'line-color':'#d4a000','line-width':['interpolate',['linear'],['zoom'],12,1.5,16,3.5],'line-opacity':0.9}});
+  for (const id of ['rcu-layer','rcu-points']) {
+    map.on('mouseenter', id, () => { map.getCanvas().style.cursor='pointer'; });
+    map.on('mouseleave', id, () => { map.getCanvas().style.cursor=''; });
+    map.on('click', id, e => { showRcuPopup(e.lngLat, e.features[0].properties); });
+  }
   map.addSource('measure-src', {type:'geojson',data:{type:'FeatureCollection',features:[]}});
   map.addLayer({id:'measure-fill',type:'fill',source:'measure-src',paint:{'fill-color':'#e06090','fill-opacity':0.12},filter:['==','$type','Polygon']});
   map.addLayer({id:'measure-line',type:'line',source:'measure-src',paint:{'line-color':'#e06090','line-width':2,'line-dasharray':[4,2]}});
@@ -867,10 +860,9 @@ document.getElementById('toggle-cadastre').addEventListener('click', function() 
   });
 })();
 
-// ── RÉSEAUX DE CHALEUR (Loire-Atlantique) ──
+// ── RÉSEAUX DE CHALEUR (France Chaleur Urbaine, national) ──
 let rcuPopup;   // initialisé dans map.on('load')
 let rcuOn = false, rcuLoaded = false;
-let rcuMarkers = [];
 
 function rcuPopupHTML(p) {
   const nom  = (p.nom || 'Réseau de chaleur').trim();
@@ -883,89 +875,53 @@ function rcuPopupHTML(p) {
       <span style="color:var(--text-dim)">Gestionnaire</span><span style="font-weight:600">${gest}</span>
       <span style="color:var(--text-dim)">Taux EnR&amp;R</span><span style="font-weight:700;color:#2bb573">${enr}</span>
       <span style="color:var(--text-dim)">Facteur CO₂</span><span style="font-weight:600">${co2}</span>
-    </div></div>`;
+    </div>${p.trace === 0 || p.trace === '0' ? '<div style="margin-top:8px;font-size:10.5px;color:var(--text-dim)">Tracé non publié : position approximative</div>' : ''}</div>`;
 }
 function showRcuPopup(lngLat, props) {
   if (rcuPopup) rcuPopup.setLngLat(lngLat).setHTML(rcuPopupHTML(props)).addTo(map);
 }
 
-// Centroïde d'un MultiLineString (moyenne de toutes les coordonnées)
-function multiLineCentroid(geom) {
-  let sx = 0, sy = 0, n = 0;
-  for (const line of (geom.coordinates || [])) {
-    for (const [x, y] of line) { sx += x; sy += y; n++; }
-  }
-  return n ? [sx / n, sy / n] : null;
-}
 
-const RCU_FACTORY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24">
-  <rect x="2" y="13" width="20" height="9" rx="1" fill="white"/>
-  <rect x="4"  y="5"  width="4" height="9" fill="white"/>
-  <rect x="14" y="8"  width="4" height="6" fill="white"/>
-  <rect x="3"  y="15" width="3" height="3" rx=".5" fill="#e05c00"/>
-  <rect x="10" y="15" width="3" height="3" rx=".5" fill="#e05c00"/>
-  <rect x="17" y="15" width="3" height="3" rx=".5" fill="#e05c00"/>
-</svg>`;
-const RCU_BOUNDS = {minLng:-2.55, maxLng:-0.85, minLat:46.85, maxLat:47.95};
-
-function inLoire(geom) {
-  const {minLng,maxLng,minLat,maxLat} = RCU_BOUNDS;
-  for (const ls of (geom?.coordinates || [])) {
-    for (const pt of ls) {
-      const [x,y] = Array.isArray(pt[0]) ? pt[0] : pt;
-      if (x>minLng && x<maxLng && y>minLat && y<maxLat) return true;
-    }
-  }
-  return false;
+// Fichiers réseaux sur R2 (générés par le workflow generate-reseaux-tiles)
+async function reseauMeta(couche) {
+  const r = await fetch(`${DPE_TILES_BASE}/${couche}-meta.json`, {cache:'no-store'});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
 }
+function reseauBefore() { return map.getLayer('measure-fill') ? 'measure-fill' : undefined; }
 
 document.getElementById('toggle-rcu').addEventListener('click', async function() {
   rcuOn = !rcuOn;
   this.classList.toggle('on', rcuOn);
-  map.setLayoutProperty('rcu-layer', 'visibility', rcuOn ? 'visible' : 'none');
-  // Afficher / masquer les marqueurs chaufferie déjà créés
-  rcuMarkers.forEach(m => { m.getElement().style.display = rcuOn ? '' : 'none'; });
-  if (!rcuOn || rcuLoaded) return;
+  if (rcuLoaded) {
+    ['rcu-layer','rcu-points'].forEach(id => map.setLayoutProperty(id, 'visibility', rcuOn ? 'visible' : 'none'));
+    return;
+  }
+  if (!rcuOn) return;
   setStatus('Chargement réseaux de chaleur…', 'loading');
   try {
-    const cached = sessionStorage.getItem('rcu-44');
-    let features;
-    if (cached) {
-      features = JSON.parse(cached);
-      if (!features.length) { sessionStorage.removeItem('rcu-44'); features = null; } // purge cache vide
+    const m = await reseauMeta('rcu');
+    const pts = await fetch(`${DPE_TILES_BASE}/${m.points}`).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    if (!map.getSource('rcu-src')) {
+      map.addSource('rcu-src', {type:'vector', url:`pmtiles://${DPE_TILES_BASE}/${m.fichier}`});
+      map.addLayer({id:'rcu-layer', type:'line', source:'rcu-src', 'source-layer':'rcu',
+        paint:{'line-color':'#e05c00','line-width':['interpolate',['linear'],['zoom'],8,1,12,2,16,4],'line-opacity':0.85}}, reseauBefore());
+      map.addSource('rcu-pts', {type:'geojson', data:pts});
+      // Un point par réseau ; cercle creux = réseau connu sans tracé publié
+      map.addLayer({id:'rcu-points', type:'circle', source:'rcu-pts',
+        paint:{'circle-radius':['interpolate',['linear'],['zoom'],5,3,10,6,14,8],
+               'circle-color':['case',['==',['get','trace'],1],'#e05c00','#ffffff'],
+               'circle-stroke-color':['case',['==',['get','trace'],1],'#ffffff','#e05c00'],
+               'circle-stroke-width':2}}, reseauBefore());
     }
-    if (!features) {
-      const r = await fetch('/public/rcu-44.json');
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const geojson = await r.json();
-      features = geojson.features || [];
-      if (features.length) sessionStorage.setItem('rcu-44', JSON.stringify(features));
-    }
-    map.getSource('rcu-src').setData({type:'FeatureCollection', features});
-    rcuLoaded = !!features.length;
-    // Créer un marqueur "usine" au centroïde de chaque réseau
-    rcuMarkers.forEach(m => m.remove());
-    rcuMarkers = [];
-    for (const feat of features) {
-      const center = multiLineCentroid(feat.geometry);
-      if (!center) continue;
-      const el = document.createElement('div');
-      el.className = 'rcu-marker';
-      el.title = (feat.properties.nom || 'Réseau de chaleur').trim();
-      el.innerHTML = RCU_FACTORY_SVG;
-      el.addEventListener('click', e => {
-        e.stopPropagation();
-        showRcuPopup(center, feat.properties);
-      });
-      rcuMarkers.push(new maplibregl.Marker({element: el, anchor:'center'}).setLngLat(center).addTo(map));
-    }
-    setStatus(`${features.length} réseau${features.length>1?'x':''} de chaleur`, 'ok');
+    rcuLoaded = true;
+    if (!rcuOn) ['rcu-layer','rcu-points'].forEach(id => map.setLayoutProperty(id, 'visibility', 'none'));
+    setStatus(`${pts.features.length.toLocaleString()} réseaux de chaleur en France`, 'ok');
     setTimeout(() => setStatus('Prêt'), 3000);
   } catch(e) {
-    setStatus('Erreur chargement RCU', 'error');
+    setStatus('Erreur chargement réseaux de chaleur', 'error');
     setTimeout(() => setStatus('Prêt'), 3000);
     rcuOn = false; this.classList.remove('on');
-    map.setLayoutProperty('rcu-layer', 'visibility', 'none');
   }
 });
 
@@ -973,34 +929,30 @@ let gazOn = false, gazLoaded = false;
 document.getElementById('toggle-gaz').addEventListener('click', async function() {
   gazOn = !gazOn;
   this.classList.toggle('on', gazOn);
-  map.setLayoutProperty('gaz-layer', 'visibility', gazOn ? 'visible' : 'none');
-  if (!gazOn || gazLoaded) return;
-  setStatus('Chargement réseau de gaz…', 'loading');
-  try {
-    const cached = sessionStorage.getItem('gaz-44');
-    let features;
-    if (cached) {
-      features = JSON.parse(cached);
-      if (!features.length) { sessionStorage.removeItem('gaz-44'); features = null; }
-    }
-    if (!features) {
-      const r = await fetch('/public/gaz-44.json');
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const geojson = await r.json();
-      features = geojson.features || [];
-      if (features.length) {
-        try { sessionStorage.setItem('gaz-44', JSON.stringify(features)); } catch(e) { /* quota */ }
+  if (gazLoaded) { map.setLayoutProperty('gaz-layer', 'visibility', gazOn ? 'visible' : 'none'); }
+  else if (gazOn) {
+    setStatus('Chargement réseau de gaz…', 'loading');
+    try {
+      const m = await reseauMeta('gaz');
+      if (!map.getSource('gaz-src')) {
+        map.addSource('gaz-src', {type:'vector', url:`pmtiles://${DPE_TILES_BASE}/${m.fichier}`});
+        // Tronçons propane en violet, gaz naturel en jaune
+        map.addLayer({id:'gaz-layer', type:'line', source:'gaz-src', 'source-layer':'gaz', minzoom:12,
+          paint:{'line-color':['match',['downcase',['to-string',['get','propane']]],['oui','true','1','o'],'#8b5cf6','#d4a000'],
+                 'line-width':['interpolate',['linear'],['zoom'],12,1.5,16,3.5],'line-opacity':0.9}}, reseauBefore());
       }
+      gazLoaded = true;
+      if (!gazOn) map.setLayoutProperty('gaz-layer', 'visibility', 'none');
+    } catch(e) {
+      setStatus('Erreur chargement réseau gaz', 'error');
+      setTimeout(() => setStatus('Prêt'), 3000);
+      gazOn = false; this.classList.remove('on');
+      return;
     }
-    map.getSource('gaz-src').setData({type:'FeatureCollection', features});
-    gazLoaded = !!features.length;
-    setStatus(`${features.length.toLocaleString()} tronçons gaz`, 'ok');
+  }
+  if (gazOn) {
+    setStatus(map.getZoom() < 12 ? 'Réseau gaz GRDF : zoomez pour l’afficher' : 'Réseau gaz GRDF', 'ok');
     setTimeout(() => setStatus('Prêt'), 3000);
-  } catch(e) {
-    setStatus('Erreur chargement réseau gaz', 'error');
-    setTimeout(() => setStatus('Prêt'), 3000);
-    gazOn = false; this.classList.remove('on');
-    map.setLayoutProperty('gaz-layer', 'visibility', 'none');
   }
 });
 
@@ -1107,7 +1059,7 @@ document.addEventListener('click', e => { if (!e.target.closest('#search-wrap'))
 
 async function fetchSuggestions(q, autoSelect=false) {
   try {
-    // Biais géographique vers le centre de Loire-Atlantique + limite large pour filtrer côté client
+    // Résultats orientés vers la zone affichée
     const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&lat=${map.getCenter().lat.toFixed(4)}&lon=${map.getCenter().lng.toFixed(4)}&limit=15`);
     const all = (await r.json()).features || [];
     const feats44 = all;
@@ -2058,8 +2010,8 @@ async function testSources() {
     { id:'dvf',      fn: () => fetch('/api/dvf?idpar=440109000B0100', {signal:AbortSignal.timeout(8000)}).then(r=>r.status<500) },
     { id:'rnic',     fn: () => fetch('https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'pmtiles',  fn: () => fetch(_dpeTilesUrl, {method:'HEAD', headers:{'Range':'bytes=0-1'}, signal:AbortSignal.timeout(6000)}).then(r=>r.ok||r.status===206) },
-    { id:'rcu',      fn: () => fetch('/public/rcu-44.json', {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
-    { id:'gaz',      fn: () => fetch('/public/gaz-44.json', {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'rcu',      fn: () => fetch(`${DPE_TILES_BASE}/rcu-meta.json`, {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'gaz',      fn: () => fetch(`${DPE_TILES_BASE}/gaz-meta.json`, {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
     { id:'carto',    fn: () => testTile(TILE_URLS['voyager']) },
     { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
   ];
@@ -2105,37 +2057,6 @@ let _dpeTilesUrl = '/public/dpe-44.pmtiles';
   const el = document.getElementById('pmtiles-edition');
   if (el && m?.millesime) el.textContent = `BDNB ${m.millesime} (${m.genere_le || ''})`;
 }).catch(() => {});
-
-async function triggerPMTilesUpdate() {
-  const btn = document.getElementById('btn-update-pmtiles');
-  btn.disabled = true;
-  btn.textContent = '…';
-  try {
-    // Jeton admin (ADMIN_TOKEN sur Vercel), demandé une fois puis gardé dans ce navigateur
-    let adminToken = localStorage.getItem('scope-admin-token');
-    if (!adminToken) {
-      adminToken = (window.prompt('Jeton administrateur :') || '').trim();
-      if (!adminToken) { btn.textContent = '↺ Màj'; btn.disabled = false; return; }
-    }
-    const r = await fetch('/api/trigger-update', { method: 'POST', headers: { 'x-admin-token': adminToken } });
-    if (r.status === 401) localStorage.removeItem('scope-admin-token');
-    else if (r.ok) localStorage.setItem('scope-admin-token', adminToken);
-    const d = await r.json();
-    if (d.ok) {
-      btn.textContent = '✓ Lancé';
-      btn.style.color = 'var(--accent)';
-      btn.style.borderColor = 'var(--accent)';
-      setTimeout(() => { btn.textContent = '↺ Màj'; btn.style.color=''; btn.style.borderColor=''; btn.disabled=false; }, 5000);
-    } else {
-      btn.textContent = '✗ Erreur';
-      btn.style.color = '#e53e3e';
-      setTimeout(() => { btn.textContent = '↺ Màj'; btn.style.color=''; btn.disabled=false; }, 4000);
-    }
-  } catch(e) {
-    btn.textContent = '✗ Erreur';
-    setTimeout(() => { btn.textContent = '↺ Màj'; btn.style.color=''; btn.disabled=false; }, 4000);
-  }
-}
 
 // Toggle info panel
 document.getElementById('info-btn').addEventListener('click',function(e){
