@@ -21,17 +21,26 @@ const PLU_COLOR = ['case', ['==', ['get', 'typezone'], 'U'], '#7C3AED', ['==', [
 const EMPTY = { type: 'FeatureCollection', features: [] };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// Vue de départ : la France métropolitaine entière, un peu resserrée
+function franceView(el, mobile) {
+  const [w0, s0, e0, n0] = mobile ? [-4.9, 42.3, 8.3, 51.1] : [-5.0, 42.0, 8.5, 51.1];
+  const W = el.clientWidth || window.innerWidth, H = (el.clientHeight || window.innerHeight) - (mobile ? 170 : 40);
+  const my = lat => (1 - Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) / Math.PI) / 2;
+  const zx = Math.log2((W * 360) / (512 * (e0 - w0)));
+  const zy = Math.log2(H / (512 * (my(s0) - my(n0))));
+  return { center: [(w0 + e0) / 2 + (mobile ? 0 : 0.6), mobile ? 46.2 : 46.6], zoom: Math.min(zx, zy) };
+}
+
 export function createMap(container, { onPick, onStatus, mobile }) {
   const map = new maplibregl.Map({
     container,
     style: {
       version: 8,
-      sources: { base: { type: 'raster', tiles: [BASEMAPS.plan.tiles], tileSize: 256, maxzoom: 19, bounds: FRANCE_BOUNDS, attribution: BASEMAPS.plan.attribution } },
+      sources: { base: { type: 'raster', tiles: [BASEMAPS.plan.tiles], tileSize: 256, maxzoom: 19, attribution: BASEMAPS.plan.attribution } },
       layers: [{ id: 'base-layer', type: 'raster', source: 'base' }],
     },
-    // Démarrage sur la France métropolitaine entière
-    bounds: FRANCE_BOUNDS, fitBoundsOptions: { padding: mobile ? { top: 150, bottom: 90, left: 10, right: 10 } : { top: 40, bottom: 40, left: 40, right: 40 } },
-    minZoom: 3.5, maxBounds: MAX_BOUNDS,
+    // Démarrage sur la France entière (le fond IGN couvre aussi les pays voisins aux petits zooms : pas de bord blanc)
+    ...franceView(container, mobile), minZoom: 4, maxBounds: MAX_BOUNDS,
     attributionControl: false,
   });
   // Mobile : en haut, pour ne pas passer sous la fiche glissante

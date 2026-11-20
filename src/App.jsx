@@ -169,11 +169,11 @@ export default function App() {
   );
 
   return (
-    <div className={`app${mobile ? ' mobile' : ''}`} style={mobile ? { '--top-h': place ? '120px' : '146px' } : undefined}>
+    <div className={`app${mobile ? ' mobile' : ''}`} style={mobile ? { '--top-h': '120px' } : undefined}>
       <div ref={mapEl} className="map" aria-label="Carte" role="region" />
 
       <div className="topbar">
-        <Search value={query} onValue={setQuery} onSelect={f => selectPlace(f)} getCenter={() => api.current?.map.getCenter()} mobile={mobile} tagline={!mobile || !place} />
+        <Search value={query} onValue={setQuery} onSelect={f => selectPlace(f)} getCenter={() => api.current?.map.getCenter()} mobile={mobile} />
         {!mobile && (
           <>
             <div className="spacer" />
