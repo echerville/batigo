@@ -216,19 +216,12 @@ export default function App() {
             <h2 style={{ margin: 0 }}>Couches</h2>
             <button className="icon-btn" aria-label="Fermer les couches" onClick={() => setPanel(null)}><Icon name="x" size={18} /></button>
           </div>
-          {nbOverlays > 0 && (
-            <div className="layer-active" aria-label="Couches affichées">
-              {OVERLAYS.filter(o => overlays[o.id]).map(o => (
-                <button key={o.id} onClick={() => toggleOverlay(o.id, false)} aria-label={`Masquer ${o.label}`}>{o.label}<Icon name="x" size={14} stroke={2.4} /></button>
-              ))}
-            </div>
-          )}
           {[...new Set(OVERLAYS.map(o => o.group))].map(g => (
             <div key={g}>
               <h3>{g}</h3>
               <div className="layer-grid">
                 {OVERLAYS.filter(o => o.group === g).map(o => (
-                  <button key={o.id} className="layer-tile" aria-pressed={!!overlays[o.id]} onClick={() => toggleOverlay(o.id)}>
+                  <button key={o.id} className="layer-tile" aria-pressed={!!overlays[o.id]} onClick={() => { toggleOverlay(o.id); setPanel(null); }}>
                     <span className="layer-sw" style={{ background: o.sw }} aria-hidden="true" />
                     <span>{o.label}<small>{o.sub}</small></span>
                     {overlays[o.id] && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
