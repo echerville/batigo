@@ -27,8 +27,8 @@ const BDNB_ZIP_URL     = 'https://open-data.s3.fr-par.scw.cloud/bdnb_millesime_2
 const DPE_REP_COMP_SIZE = 23907257;
 const DPE_REP_LH_OFFSET = 552862793;
 
-const INPUT_PMTILES  = process.argv[2] || path.join(__dirname, '../public/dpe-44.pmtiles');
-const OUTPUT_PMTILES = process.argv[3] || path.join(__dirname, '../public/dpe-44.pmtiles');
+const INPUT_PMTILES  = process.argv[2] || path.join(__dirname, '../static/public/dpe-44.pmtiles');
+const OUTPUT_PMTILES = process.argv[3] || path.join(__dirname, '../static/public/dpe-44.pmtiles');
 
 // ─── HTTP partial download ─────────────────────────────────────────────────────
 function fetchRange(url, start, length) {

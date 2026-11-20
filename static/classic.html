@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scope</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css" rel="stylesheet"/>
+<script src="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+<script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#F0F4F8;--surface:#FFFFFF;--surface2:#F7F9FC;--border:#E1E8F0;--border-med:#C8D5E2;
+    --accent:#2BB573;--accent-dark:#1e9459;--accent-dim:rgba(43,181,115,0.10);--accent-dim2:rgba(43,181,115,0.18);
+    --text:#0F1C2E;--text-dim:#3D5166;--text-muted:#7E96B0;--danger:#e53e3e;--warn:#d97706;
+    --panel-w:390px;--header-h:64px;--radius:12px;--radius-sm:8px;
+    --shadow-sm:0 1px 4px rgba(15,28,46,0.07),0 1px 2px rgba(15,28,46,0.04);
+    --shadow-md:0 4px 20px rgba(15,28,46,0.10),0 2px 6px rgba(15,28,46,0.05);
+    --shadow-lg:0 8px 40px rgba(15,28,46,0.12),0 2px 8px rgba(15,28,46,0.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px;line-height:1.5}
+  /* ── HEADER ── */
+  #header{background:var(--surface);display:flex;flex-direction:column;flex-shrink:0;z-index:100;box-shadow:0 2px 12px rgba(15,28,46,0.07)}
+  #header-top{height:var(--header-h);display:flex;align-items:center;gap:16px;padding:0 20px}
+  #logo{display:flex;align-items:center;gap:10px;white-space:nowrap;text-decoration:none}
+  #logo-box{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;box-shadow:0 2px 8px rgba(43,181,115,.30);flex-shrink:0}
+  #logo-text{font-size:24px;font-weight:700;color:var(--accent);letter-spacing:-.5px}
+  #search-wrap{flex:1;position:relative;max-width:540px}
+  #search-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:28px;color:var(--text);font-family:inherit;font-size:13px;padding:10px 50px 10px 50px;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+  #search-input::placeholder{color:var(--text-muted)}
+  #search-input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px var(--accent-dim)}
+  #search-btn{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:var(--accent);border:none;border-radius:50%;cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(43,181,115,.35);transition:background .15s,transform .1s}
+  #search-btn:hover{background:var(--accent-dark);transform:translateY(-50%) scale(1.05)}
+  #geolocate-btn{position:absolute;left:2px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:var(--accent);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(43,181,115,.35);transition:background .15s,transform .1s;z-index:2}
+  #geolocate-btn:hover{background:var(--accent-dark);transform:translateY(-50%) scale(1.05)}
+  #geolocate-btn.active{background:var(--accent-dark);box-shadow:0 2px 8px rgba(43,181,115,.5)}
+  #geolocate-btn.locating{animation:pulse 1s ease-in-out infinite}
+  #suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:200;max-height:280px;overflow-y:auto}
+  .suggestion-item{padding:10px 16px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);line-height:1.4;color:var(--text-dim);display:flex;align-items:flex-start;gap:8px;transition:background .1s}
+  .suggestion-item::before{content:'📍';font-size:11px;margin-top:1px;flex-shrink:0;opacity:.5}
+  .suggestion-item:last-child{border-bottom:none}
+  .suggestion-item:hover{background:var(--accent-dim);color:var(--text)}
+  .suggestion-item strong{color:var(--text);font-weight:600}
+  /* ── INFO BUTTON ── */
+  #info-wrap{margin-left:auto;position:relative;flex-shrink:0}
+  #info-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0;position:relative}
+  #info-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #info-btn .info-dot{width:8px;height:8px;border-radius:50%;background:var(--border-med);position:absolute;top:6px;right:6px;flex-shrink:0;transition:background .2s;border:1.5px solid #fff}
+  #info-btn.loading .info-dot{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+  #info-btn.error .info-dot{background:var(--danger)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  #info-panel{display:none;position:absolute;top:calc(100% + 8px);right:0;width:480px;max-width:calc(100vw - 40px);background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;overflow:hidden}
+  #info-panel.open{display:block}
+  #info-panel-header{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  #info-panel-header h3{font-size:12px;font-weight:700;color:var(--text);flex:1;letter-spacing:-.1px}
+  .src-table{width:100%;border-collapse:collapse;font-size:11px}
+  .src-table th{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);padding:6px 12px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border)}
+  .src-table td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text-dim)}
+  .src-table tr:last-child td{border-bottom:none}
+  .src-table tr:hover td{background:var(--surface2)}
+  .src-table .src-name{font-weight:700;color:var(--text);white-space:nowrap}
+  .src-toggle{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-dim);cursor:pointer;user-select:none}
+  .src-toggle input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer}
+  #src-test-btn{font-size:10px;padding:3px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text-dim);font-weight:600;transition:background .15s}
+  #src-test-btn:hover{background:var(--border);color:var(--text)}
+  #src-test-btn:disabled{opacity:.5;cursor:default}
+  .src-status{text-align:center;display:none;width:28px;font-size:13px;padding-left:0!important;padding-right:8px!important}
+  #src-status-th{display:none;text-align:center;padding-left:0!important;padding-right:8px!important}
+  .src-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:1px 6px;white-space:nowrap}
+  .src-api{background:rgba(43,181,115,.12);color:#1e9459}
+  .src-dl{background:rgba(245,158,11,.12);color:#b45309}
+  .src-tile{background:rgba(99,102,241,.12);color:#4338ca}
+  /* ── BODY ── */
+  #body{flex:1;display:flex;overflow:hidden}
+  #map-area{flex:1;display:flex;flex-direction:column;position:relative}
+  /* ── FLOATING LAYER BAR ── */
+  .lb-sep{width:1px;height:16px;background:var(--border);margin:0 4px;flex-shrink:0}
+  /* ── OVERLAY PICKER ── */
+  #toggle-dpe-layer,#toggle-cadastre,#toggle-rcu,#toggle-gaz,#toggle-gsv,#toggle-panoramax,#btn-measure-poly{display:none!important}
+  /* ── VUES PICKER ── */
+  #vues-picker{position:relative;flex-shrink:0}
+  #vues-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #vues-picker-btn:hover,#vues-picker-btn.open{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #vues-picker-panel{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px;display:none;flex-direction:column;gap:8px;width:170px;z-index:200}
+  #vues-picker-panel.open{display:flex}
+  .vue-opt{display:flex;flex-direction:row;align-items:center;gap:10px;cursor:pointer;border-radius:8px;padding:8px 10px;border:1.5px solid var(--border);background:var(--surface2);transition:border-color .12s,background .12s;flex-shrink:0}
+  .vue-opt:hover{border-color:var(--accent);background:var(--accent-dim2)}
+  .vue-opt.active{border-color:var(--accent);background:var(--accent-dim2)}
+  .vue-opt span{font-size:11px;font-weight:600;color:var(--text-dim)}
+  /* ── SURFACE BUTTON ── */
+  #surface-btn{width:44px;height:44px;padding:0;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #surface-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #surface-btn.active{border-color:var(--accent);background:var(--accent-dim2)}
+  /* ── GEOLOCATION BUTTON ── */
+  #overlay-picker{position:relative;flex-shrink:0}
+  #overlay-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0;background:#f0f4f1}
+  #overlay-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #overlay-badge{position:absolute;top:3px;right:3px;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font-size:8px;font-weight:700;display:none;align-items:center;justify-content:center;border:1.5px solid #fff;line-height:1}
+  #overlay-badge.show{display:flex}
+  #overlay-picker-panel{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px;display:none;gap:8px;flex-wrap:wrap;width:220px;z-index:200}
+  #overlay-picker-panel.open{display:flex}
+  .overlay-opt{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;border-radius:8px;padding:5px;border:1.5px solid var(--border);background:var(--surface2);transition:border-color .12s,background .12s,box-shadow .12s;flex:0 0 auto;width:92px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .overlay-opt:hover{box-shadow:0 2px 6px rgba(0,0,0,.12)}
+  .overlay-opt[data-overlay="dpe-layer"].active{border-color:var(--accent)!important;background:var(--accent-dim2)!important}
+  .overlay-opt[data-overlay="cadastre"].active{border-color:var(--accent)!important;background:var(--accent-dim2)!important}
+  .overlay-opt[data-overlay="rcu"].active{border-color:#e05c00!important;background:rgba(224,92,0,.07)!important}
+  .overlay-opt[data-overlay="gaz"].active{border-color:#d4a000!important;background:rgba(212,160,0,.07)!important}
+  .overlay-preview{width:100%;height:50px;border-radius:5px;overflow:hidden;flex-shrink:0}
+  .overlay-preview img{width:100%;height:100%;object-fit:cover;display:block}
+  .overlay-opt span{font-size:9.5px;font-weight:600;color:var(--text-dim);text-align:center;display:block;line-height:1.25}
+  .overlay-opt.active span{color:var(--text)}
+  /* ── MAP PICKER ── */
+  #map-picker{position:relative;flex-shrink:0}
+  #map-picker-btn{width:44px;height:44px;padding:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;position:relative;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #map-picker-btn:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(43,181,115,.2)}
+  #map-picker-panel{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px;display:none;gap:8px;flex-wrap:wrap;width:282px;z-index:200}
+  #map-picker-panel.open{display:flex}
+  .map-opt{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;border-radius:8px;padding:5px;border:1.5px solid var(--border);background:var(--surface2);transition:border-color .12s,background .12s,box-shadow .12s;flex:0 0 auto;width:78px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .map-opt:hover{border-color:var(--accent);background:var(--accent-dim2);box-shadow:0 2px 6px rgba(43,181,115,.15)}
+  .map-opt.active{border-color:var(--accent);background:var(--accent-dim2);box-shadow:0 2px 6px rgba(43,181,115,.15)}
+  .map-opt img{width:100%;height:50px;object-fit:cover;border-radius:5px;display:block}
+  .map-opt span{font-size:10px;font-weight:600;color:var(--text-dim);text-align:center;line-height:1.2}
+  .map-opt.active span{color:var(--accent-dark)}
+  #toggle-dpe-layer,#toggle-cadastre{color:var(--accent-dark)!important;font-weight:600!important;background:var(--accent-dim2)!important;border:1px solid rgba(43,181,115,.3)!important}
+  #toggle-dpe-layer:hover,#toggle-cadastre:hover,#toggle-dpe-layer.on,#toggle-cadastre.on{background:var(--accent)!important;color:#fff!important}
+  #toggle-rcu{color:#e05c00!important;font-weight:600!important;background:rgba(224,92,0,.09)!important;border:1px solid rgba(224,92,0,.3)!important}
+  #toggle-rcu:hover,#toggle-rcu.on{background:#e05c00!important;color:#fff!important}
+  #toggle-gaz{color:#b08800!important;font-weight:600!important;background:rgba(212,160,0,.1)!important;border:1px solid rgba(212,160,0,.35)!important}
+  #toggle-gaz:hover,#toggle-gaz.on{background:#d4a000!important;color:#fff!important}
+  #btn-measure-poly,#toggle-gsv,#toggle-panoramax{background:var(--accent)!important;color:#fff!important;font-weight:600!important}
+  #btn-measure-poly:hover,#toggle-gsv:hover,#toggle-panoramax:hover{background:var(--accent-dark)!important}
+  #btn-measure-poly.active{background:var(--accent-dark)!important;box-shadow:inset 0 1px 3px rgba(0,0,0,.2)!important}
+  /* ── MAP ── */
+  #map{flex:1}
+  #panoramax-panel{position:absolute;bottom:0;left:0;right:0;height:45%;min-height:280px;border-top:1px solid var(--border);display:none;background:#111;z-index:10}
+  #panoramax-panel.visible{display:flex}
+  #panoramax-panel iframe{width:100%;height:100%;border:none}
+  #panoramax-close,#panoramax-fs{position:absolute;top:10px;width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);border-radius:50%;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;transition:background .15s}
+  #panoramax-close{left:50%;transform:translateX(-50%)}
+  #panoramax-fs{right:10px}
+  #panoramax-close:hover,#panoramax-fs:hover{background:rgba(255,255,255,.3)}
+  #measure-result{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--accent);border-radius:var(--radius);color:var(--accent-dark);font-family:inherit;font-size:13px;font-weight:700;padding:7px 20px;pointer-events:none;white-space:nowrap;display:none;z-index:50;box-shadow:var(--shadow-md)}
+  .addr-marker{line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));cursor:default;user-select:none}
+  /* ── PANEL ── */
+  #panel{width:var(--panel-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;box-shadow:-4px 0 20px rgba(15,28,46,0.05)}
+  #panel-content{flex:1;overflow-y:auto;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--border-med) transparent}
+  #panel-content::-webkit-scrollbar{width:4px}
+  #panel-content::-webkit-scrollbar-thumb{background:var(--border-med);border-radius:4px}
+  /* ── ENERGY TABLE ── */
+  .energy-table{display:flex;flex-direction:column;gap:5px}
+  .energy-row{display:grid;grid-template-columns:34px 1fr 1fr;gap:6px;align-items:start}
+  .energy-source{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);padding-top:4px;text-align:right}
+  .energy-cell{background:var(--surface2);border-radius:var(--radius-sm);padding:6px 8px;border:1px solid var(--border)}
+  .energy-cell .field-label{margin-bottom:2px}
+  .energy-cell .field-value{font-size:12px}
+  .energy-surf-row{grid-column:2/-1;background:var(--surface2);border-radius:var(--radius-sm);padding:5px 8px;border:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .source-pill{display:inline-flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;border-radius:4px;padding:1px 5px;flex-shrink:0}
+  .source-pill-bdnb{background:rgba(43,181,115,.12);color:var(--accent-dark)}
+  .source-pill-dpe{background:rgba(248,113,113,.12);color:#b91c1c}
+  .empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
+  .empty-state .icon{font-size:36px;margin-bottom:12px;opacity:.5}
+  .empty-state p{font-size:12px;line-height:1.7}
+  /* ── CARDS ── */
+  .card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+  .card-title{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .card-title::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+  /* Adresse banner */
+  .addr-banner{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+  .addr-banner-pin{width:32px;height:32px;border-radius:10px;background:var(--accent-dim2);border:1.5px solid rgba(43,181,115,.25);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+  .addr-banner-main{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
+  .addr-banner-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+  /* Fields */
+  .field-label{font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em}
+  .field-value{font-size:14px;color:var(--text);font-weight:700;line-height:1.3}
+  .field-value.na{color:var(--text-muted);font-style:italic;font-size:12px;font-weight:400}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .info-cell{background:var(--surface2);border-radius:var(--radius-sm);padding:9px 11px;border:1px solid var(--border)}
+  .pill{display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid transparent}
+  .pill-blue{background:rgba(37,99,235,.08);color:#2563eb;border-color:rgba(37,99,235,.20)}
+  /* ── DPE TABLES ── */
+  .dpe-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;margin-top:6px}
+  .dpe-table th{text-align:left;padding:4px 5px;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);background:var(--surface2);border-bottom:1px solid var(--border)}
+  .dpe-table th:first-child{border-radius:var(--radius-sm) 0 0 0}
+  .dpe-table th:last-child{border-radius:0 var(--radius-sm) 0 0}
+  .dpe-table td{padding:5px 5px;border-bottom:1px solid var(--border);color:var(--text-dim);vertical-align:middle;line-height:1.4}
+  .dpe-table tr:last-child td{border-bottom:none}
+  .dpe-table tr:hover td{background:var(--accent-dim);color:var(--text)}
+  /* ── DPE BADGES ── */
+  .dpe-badge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;font-weight:800;font-size:13px;border-radius:6px;color:#fff;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .dpe-A{background:#00a651}.dpe-B{background:#50b748}.dpe-C{background:#c8d400;color:#333}.dpe-D{background:#ffd400;color:#333}.dpe-E{background:#f7941d}.dpe-F{background:#ed1c24}.dpe-G{background:#8b0000}.dpe-N{background:var(--text-muted);font-size:9px}
+  .dpe-badge.hatch{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.38) 0px,rgba(255,255,255,.38) 3px,transparent 3px,transparent 8px)}
+  .dpe-neuf-header{display:flex;align-items:center;gap:7px;margin:14px 0 8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+  .dpe-neuf-header::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#50b748}
+  .dpe-neuf-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(80,183,72,.12);color:#2d7a26;border:1px solid rgba(80,183,72,.35);border-radius:20px;font-size:9px;font-weight:700;padding:2px 8px;letter-spacing:.04em}
+  /* ── DVF ACCORDION ── */
+  .dvf-accordion summary::-webkit-details-marker{display:none}
+  .dvf-accordion .dvf-chevron{transition:transform .2s}
+  .dvf-accordion[open] .dvf-chevron{transform:rotate(90deg)}
+  /* ── DPE SUMMARY CARDS ── */
+  .dpe-group-header td{background:var(--surface2)!important;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);padding:5px 8px;border-top:2px solid var(--border-med)}
+  .dpe-group-header .dpe-badge{width:18px;height:18px;font-size:10px;margin-right:6px;vertical-align:middle}
+  .dpe-summary{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+  .dpe-summary-title{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+  .dpe-summary-title::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+  .dpe-dist{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .dpe-dist-item{display:flex;align-items:center;gap:5px;background:var(--surface2);border-radius:var(--radius-sm);padding:5px 9px;border:1.5px solid var(--border)}
+  .dpe-dist-item .count{font-weight:800;color:var(--text);font-size:14px}
+  .dpe-dist-item .label{font-size:10px;color:var(--text-muted)}
+  /* ── MISC ── */
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border-med);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle;flex-shrink:0}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .maplibregl-popup-content{background:var(--surface)!important;color:var(--text)!important;border:1.5px solid var(--border)!important;border-radius:var(--radius)!important;padding:12px 16px!important;font-family:inherit!important;font-size:12px!important;box-shadow:var(--shadow-md)!important}
+  .maplibregl-popup-tip{display:none!important}
+  .maplibregl-ctrl-group{border-radius:var(--radius-sm)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--border)!important}
+  .maplibregl-ctrl-attrib{font-size:9px!important;opacity:.55;transition:opacity .2s}
+  .maplibregl-ctrl-attrib:hover{opacity:1}
+  .maplibregl-ctrl-attrib-button{width:16px!important;height:16px!important;font-size:10px!important}
+  /* ── BOUTON LABELS ── */
+  #map-picker-btn,#overlay-picker-btn,#vues-picker-btn,#timeline-btn,#surface-btn,#info-btn{flex-direction:column!important;height:auto!important;padding:5px 2px 4px!important;gap:1px!important}
+  #map-picker-btn::after    {content:'Cartes'}
+  #overlay-picker-btn::after{content:'Couches'}
+  #vues-picker-btn::after   {content:'Vues'}
+  #timeline-btn::after      {content:'Retour'}
+  #surface-btn::after       {content:'Surface'}
+  #info-btn::after          {content:'Sources'}
+  #map-picker-btn::after,#overlay-picker-btn::after,#vues-picker-btn::after,#timeline-btn::after,#surface-btn::after,#info-btn::after{font-size:7.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);line-height:1;pointer-events:none}
+  .loading-block{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:24px 0;font-weight:500}
+  .rcu-marker{width:28px;height:28px;background:#e05c00;border:2.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(224,92,0,.45);transition:transform .15s,box-shadow .15s}
+  .rcu-marker:hover{transform:scale(1.15);box-shadow:0 3px 10px rgba(224,92,0,.6)}
+  .overlay-opt[data-overlay="plu"].active{border-color:#7c3aed!important;background:rgba(124,58,237,.07)!important}
+  .overlay-opt[data-overlay="ac1"].active{border-color:#c2410c!important;background:rgba(194,65,12,.07)!important}
+  .overlay-opt[data-overlay="ac4"].active{border-color:#0891b2!important;background:rgba(8,145,178,.07)!important}
+  .overlay-opt[data-overlay="ac2"].active{border-color:#166534!important;background:rgba(22,101,52,.07)!important}
+  .overlay-preview-logo{width:100%;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;background:#fff}
+  .overlay-preview .overlay-preview-logo img{width:auto;height:84%;object-fit:contain}
+  .overlay-preview-swatch{width:100%;height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:rgba(255,255,255,.95)}
+  /* ── TIMELINE BUTTON ── */
+  #timeline-btn{width:44px;height:44px;padding:0;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:#f0f4f1;display:flex;align-items:center;justify-content:center;transition:border-color .15s,box-shadow .15s;flex-shrink:0}
+  #timeline-btn:hover{border-color:#0ea5e9;box-shadow:0 2px 8px rgba(14,165,233,.2)}
+  #timeline-btn.active{border-color:#0ea5e9;background:rgba(14,165,233,.08)}
+  /* ── TIMELINE PANEL ── */
+  #timeline-panel{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);padding:10px 14px;z-index:150;display:none;align-items:center;gap:10px;white-space:nowrap}
+  #timeline-panel.open{display:flex}
+  #tl-label{font-size:10.5px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;text-transform:uppercase}
+  #tl-close{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:15px;line-height:1;padding:3px 6px;border-radius:6px;transition:background .15s;flex-shrink:0;margin-left:2px}
+  #tl-close:hover{background:var(--surface2)}
+  .tl-chip{padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);font-size:12px;font-weight:700;color:var(--text);cursor:pointer;transition:border-color .15s,background .15s,color .15s;flex-shrink:0}
+  .tl-chip:hover{border-color:#0ea5e9;background:rgba(14,165,233,.07)}
+  .tl-chip.active{border-color:#0ea5e9;background:rgba(14,165,233,.12);color:#0ea5e9}
+
+  /* ── VERSION MOBILE (body.mobile, choisie au chargement) ── */
+  /* Toujours cacher la poignée sur desktop */
+  #panel-handle{display:none}
+  /* Barre de recherche flotte en haut, par-dessus la carte */
+  body.mobile #search-wrap{position:fixed!important;top:10px;left:12px;right:12px;z-index:300;margin:0;max-width:none;border-radius:24px;border:1.5px solid var(--border);box-shadow:var(--shadow-md);background:var(--surface)}
+  /* Le header devient une barre de navigation en bas */
+  body.mobile #header{position:fixed!important;bottom:0;top:auto;left:0;right:0;z-index:200;border-bottom:none;border-top:1px solid var(--border);box-shadow:0 -2px 12px rgba(15,28,46,.07);background:var(--surface)}
+  body.mobile #header-top{height:60px;padding:0 6px;justify-content:space-around;gap:0}
+  /* Cache logo, barre de couches, bouton sources */
+  body.mobile #logo,body.mobile #header-bottom,body.mobile #info-wrap{display:none!important}
+  /* Carte plein écran */
+  body.mobile #body{position:fixed;inset:0;display:block}
+  body.mobile #map-area{position:absolute;inset:0;flex:none}
+  /* Boutons de la bottom nav : larges, sans bordure */
+  body.mobile #map-picker-btn,body.mobile #overlay-picker-btn,body.mobile #vues-picker-btn,body.mobile #timeline-btn,body.mobile #surface-btn{width:auto!important;min-width:52px;height:52px!important;padding:6px 6px 4px!important;border-radius:10px;flex:1;border-width:0!important;background:none!important;box-shadow:none!important;gap:3px!important}
+  /* Cinq boutons de même largeur dans la barre du bas */
+  body.mobile #map-picker,body.mobile #overlay-picker,body.mobile #vues-picker{flex:1 1 0}
+  body.mobile #map-picker-btn,body.mobile #overlay-picker-btn,body.mobile #vues-picker-btn{width:100%!important}
+  body.mobile #map-picker-btn:hover,body.mobile #overlay-picker-btn:hover,body.mobile #vues-picker-btn:hover,body.mobile #timeline-btn:hover,body.mobile #surface-btn:hover{background:var(--surface2)!important}
+  body.mobile #map-picker-btn.open,body.mobile #overlay-picker-btn.open,body.mobile #vues-picker-btn.open{background:var(--accent-dim)!important}
+  body.mobile #timeline-btn.active{background:rgba(14,165,233,.12)!important}
+  body.mobile #surface-btn.active{background:var(--accent-dim)!important}
+  /* Panneaux dropdown s'ouvrent vers le haut */
+  body.mobile #map-picker-panel{top:auto!important;bottom:calc(100% + 8px)!important}
+  body.mobile #overlay-picker-panel{top:auto!important;bottom:calc(100% + 8px)!important;max-height:65vh;overflow-y:auto}
+  body.mobile #vues-picker-panel{top:auto!important;bottom:calc(100% + 8px)!important}
+  body.mobile #info-panel{top:auto!important;bottom:calc(100% + 8px)!important;right:0}
+  /* Panneau résultat = bottom sheet au-dessus de la nav */
+  body.mobile #panel{position:fixed!important;bottom:60px;left:0;right:0;width:100%!important;max-height:68vh;border-left:none;border-top:1.5px solid var(--border);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:100;box-shadow:0 -4px 24px rgba(15,28,46,.12)}
+  body.mobile #panel.mobile-open{transform:translateY(0)}
+  /* Fiche rabattue : seuls la poignée et l'en-tête de l'adresse restent visibles */
+  body.mobile #panel.mobile-open.mobile-peek{transform:translateY(calc(100% - 112px))}
+  body.mobile #panel.mobile-peek #panel-content{overflow:hidden}
+  body.mobile #panel{touch-action:pan-y}
+  body.mobile #panel-handle{display:flex;justify-content:center;padding:12px 0 6px;cursor:pointer;flex-shrink:0}
+  body.mobile #panel-handle::before{content:'';width:40px;height:4px;background:var(--border-med);border-radius:2px;display:block}
+  /* Timeline et résultat mesure : au-dessus de la recherche */
+  body.mobile #timeline-panel{bottom:auto!important;top:76px!important}
+  /* Résultat de mesure : en haut sous la recherche, au-dessus de la fiche et de la barre du bas */
+  body.mobile #measure-result{position:fixed;top:68px;bottom:auto;z-index:260;max-width:calc(100% - 24px);white-space:normal;text-align:center}
+  /* Contrôles MapLibre : masquer zoom (tactile), remonter attribution */
+  body.mobile .maplibregl-ctrl-zoom-in,body.mobile .maplibregl-ctrl-zoom-out{display:none!important}
+  body.mobile .maplibregl-ctrl-bottom-right,body.mobile .maplibregl-ctrl-bottom-left{bottom:64px!important}
+  /* Timeline panel : pleine largeur dans le viewport */
+  body.mobile #timeline-panel{left:12px!important;right:12px!important;transform:none!important;flex-wrap:wrap;white-space:normal!important;gap:8px 8px}
+
+</style>
+</head>
+<body>
+<script>
+// Mode mobile : téléphone ou tablette (tactile SANS souris ni pavé tactile), ou fenêtre très étroite.
+// Forçage possible : ?version=mobile ou ?version=pc (mémorisé), ?version=auto pour revenir au choix automatique.
+(function () {
+  var q = new URLSearchParams(location.search).get('version'), pref = null;
+  try {
+    if (q === 'mobile' || q === 'pc') localStorage.setItem('scope-version', q);
+    if (q === 'auto') localStorage.removeItem('scope-version');
+    pref = localStorage.getItem('scope-version');
+  } catch (e) {}
+  var tactileSeul = matchMedia('(pointer:coarse)').matches && !matchMedia('(any-pointer:fine)').matches;
+  window.SCOPE_MOBILE = pref ? pref === 'mobile' : (tactileSeul || window.innerWidth <= 600);
+  if (window.SCOPE_MOBILE) document.body.classList.add('mobile');
+})();
+</script>
+<div id="header">
+  <div id="header-top">
+    <div id="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="30" viewBox="0 0 22 30" style="flex-shrink:0">
+        <path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 19 11 19s11-11.3 11-19C22 4.9 17.1 0 11 0z" fill="#2bb573"/>
+        <circle cx="11" cy="11" r="4.5" fill="white" opacity=".9"/>
+      </svg>
+      <div id="logo-text">scope</div>
+    </div>
+    <div id="search-wrap">
+      <button id="geolocate-btn" title="Me localiser">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <circle cx="12" cy="12" r="4" stroke="#fff" stroke-width="2"/>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <input id="search-input" type="text" placeholder="Rechercher une adresse ou me localiser…" autocomplete="off"/>
+      <button id="search-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+      <div id="suggestions"></div>
+    </div>
+    <div id="map-picker">
+      <button id="map-picker-btn" title="Changer le fond de carte">
+        <svg width="27" height="27" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <!-- Carte dépliée 3 volets -->
+          <path d="M1 10 L7 8.5 L7 23 L1 24.5 Z" stroke="#2bb573" stroke-width="1.6" stroke-linejoin="round" fill="rgba(43,181,115,0.08)"/>
+          <path d="M7 8.5 L17 8.5 L17 23 L7 23 Z" stroke="#2bb573" stroke-width="1.6" stroke-linejoin="round" fill="rgba(43,181,115,0.08)"/>
+          <path d="M17 8.5 L23 10 L23 24.5 L17 23 Z" stroke="#2bb573" stroke-width="1.6" stroke-linejoin="round" fill="rgba(43,181,115,0.08)"/>
+          <!-- Pin de localisation centré sur la carte -->
+          <path d="M12 1C9.8 1 8 2.8 8 5C8 7.8 12 13 12 13S16 7.8 16 5C16 2.8 14.2 1 12 1Z" stroke="#2bb573" stroke-width="1.7" fill="rgba(43,181,115,0.15)"/>
+          <circle cx="12" cy="5" r="1.6" stroke="#2bb573" stroke-width="1.5" fill="none"/>
+        </svg>
+      </button>
+      <div id="map-picker-panel">
+        <div class="map-opt" data-layer="voyager">
+          <img src="https://tile.openstreetmap.org/13/4061/2882.png" loading="lazy" />
+          <span>OSM</span>
+        </div>
+        <div class="map-opt active" data-layer="ign-plan">
+          <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
+          <span>IGN Plan</span>
+        </div>
+        <div class="map-opt" data-layer="ign-ortho">
+          <img src="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061" loading="lazy" />
+          <span>IGN Sat</span>
+        </div>
+      </div>
+    </div>
+    <div id="overlay-picker">
+      <button id="overlay-picker-btn" title="Surcouches">
+        <span id="overlay-badge"></span>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <path d="M12 2L2 7l10 5 10-5z" fill="#2bb573"/>
+          <path d="M2 12l10 5 10-5" stroke="#f97316" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="#d4a000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div id="overlay-picker-panel">
+        <div class="overlay-opt" data-overlay="dpe-layer">
+          <div class="overlay-preview">
+            <img src="/public/thumb-dpe.jpg" loading="lazy"/>
+          </div>
+          <span>DPE</span>
+        </div>
+        <div class="overlay-opt" data-overlay="cadastre">
+          <div class="overlay-preview">
+            <img src="/public/thumb-cad.jpg" loading="lazy"/>
+          </div>
+          <span>Cadastre</span>
+        </div>
+        <div class="overlay-opt" data-overlay="rcu">
+          <div class="overlay-preview">
+            <img src="/public/thumb-rcu.jpg" loading="lazy"/>
+          </div>
+          <span>Réseau de chaleur</span>
+        </div>
+        <div class="overlay-opt" data-overlay="gaz">
+          <div class="overlay-preview">
+            <div class="overlay-preview-logo"><img src="/public/logo-grdf.png" alt="GRDF"/></div>
+          </div>
+          <span>Réseau gaz</span>
+        </div>
+        <div class="overlay-opt" data-overlay="plu">
+          <div class="overlay-preview">
+            <div class="overlay-preview-logo"><img src="/public/logo-gpu.png" alt="Géoportail de l'Urbanisme" style="width:88%;height:auto"/></div>
+          </div>
+          <span>Zones PLU</span>
+        </div>
+        <div class="overlay-opt" data-overlay="ac1">
+          <div class="overlay-preview">
+            <div class="overlay-preview-logo"><img src="/public/logo-mh.svg" alt="Monument historique"/></div>
+          </div>
+          <span>Abords MH</span>
+        </div>
+        <div class="overlay-opt" data-overlay="ac4">
+          <div class="overlay-preview">
+            <div class="overlay-preview-logo"><img src="/public/logo-spr.png" alt="Site patrimonial remarquable"/></div>
+          </div>
+          <span>Patr. remarq.</span>
+        </div>
+        <div class="overlay-opt" data-overlay="ac2">
+          <div class="overlay-preview">
+            <div class="overlay-preview-logo"><img src="/public/logo-mte.svg" alt="Ministère de la Transition écologique"/></div>
+          </div>
+          <span>Sites classés</span>
+        </div>
+      </div>
+    </div>
+    <div id="vues-picker">
+      <button id="vues-picker-btn" title="Vues de rue">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#f97316" stroke-width="2" fill="rgba(249,115,22,0.1)"/>
+          <circle cx="12" cy="13" r="3.5" stroke="#f97316" stroke-width="2"/>
+        </svg>
+      </button>
+      <div id="vues-picker-panel">
+        <div class="vue-opt" data-vue="panoramax">
+          <svg width="20" height="20" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#FBBC05" stroke-width="1.5"/><circle cx="7" cy="7" r="2.5" fill="#FBBC05"/><line x1="7" y1="1" x2="7" y2="3" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="11" x2="7" y2="13" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="3" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="7" x2="13" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span>Panoramax</span>
+        </div>
+      </div>
+    </div>
+    <button id="timeline-btn" title="Remonter le temps — photos aériennes IGN">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+        <path d="M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12" stroke="#0ea5e9" stroke-width="2"/>
+        <polyline points="12,7 12,12 9,15" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3.5 5.5v4h4" stroke="#0ea5e9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button id="surface-btn" title="Mesurer une surface">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+        <polygon points="12,3 21,9 18,20 6,20 3,9" stroke="#d4a000" stroke-width="2" fill="rgba(212,160,0,0.1)" stroke-linejoin="round"/>
+        <circle cx="12" cy="3" r="1.8" fill="#d4a000"/>
+        <circle cx="21" cy="9" r="1.8" fill="#d4a000"/>
+        <circle cx="18" cy="20" r="1.8" fill="#d4a000"/>
+        <circle cx="6"  cy="20" r="1.8" fill="#d4a000"/>
+        <circle cx="3"  cy="9"  r="1.8" fill="#d4a000"/>
+      </svg>
+    </button>
+    <div id="info-wrap">
+    <button id="info-btn" title="Connexion aux sources de données">
+      <span class="info-dot"></span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none">
+        <!-- Broches -->
+        <path d="M9 2v5M15 2v5" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+        <!-- Corps de la prise -->
+        <rect x="6" y="7" width="12" height="8" rx="2.5" stroke="#64748b" stroke-width="1.8" fill="rgba(100,116,139,0.1)"/>
+        <!-- Câble -->
+        <path d="M12 15v3" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+        <!-- Connecteur bas -->
+        <path d="M9 18h6" stroke="#64748b" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div id="info-panel">
+      <div id="info-panel-header">
+        <h3>Sources de données · Scope</h3>
+        <button id="src-test-btn" onclick="testSources()">⬡ Tester</button>
+        <button onclick="document.getElementById('info-panel').classList.remove('open')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;padding:0;margin-left:4px">×</button>
+      </div>
+      <table class="src-table">
+        <thead><tr><th>Source</th><th>Jeu de données</th><th>Accès</th><th>Mise à jour</th><th id="src-status-th">État</th></tr></thead>
+        <tbody>
+          <tr><td class="src-name">BAN <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Géocodage d'adresses</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-ban"></td></tr>
+          <tr><td class="src-name">BDNB <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Données bâtiments</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-bdnb"></td></tr>
+          <tr><td class="src-name">ADEME</td><td>DPE — diagnostics énergétiques</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-ademe"></td></tr>
+          <tr><td class="src-name">IGN Géoplateforme</td><td>Cadastre parcellaire</td><td><span class="src-badge src-api">API WFS</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-wfs"></td></tr>
+          <tr><td class="src-name">DVF <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Transactions immobilières</td><td><span class="src-badge src-api">API REST</span></td><td><label class="src-toggle"><input type="checkbox" id="dvf-enable" onchange="toggleDVF(this.checked)"> Activer</label></td><td class="src-status" id="src-st-dvf"></td></tr>
+          <tr><td class="src-name">RNIC <span style="font-weight:400;color:var(--text-muted)">data.gouv.fr</span></td><td>Registre des copropriétés</td><td><span class="src-badge src-api">API REST</span></td><td>Temps réel</td><td class="src-status" id="src-st-rnic"></td></tr>
+          <tr><td class="src-name">BDNB + IGN</td><td>Couche DPE bâtiments (carte)</td><td><span class="src-badge src-dl">PMTiles</span></td><td><span id="pmtiles-edition">BDNB 2025-07-a</span></td><td class="src-status" id="src-st-pmtiles"></td></tr>
+          <tr><td class="src-name">France Chaleur Urbaine</td><td>Réseaux de chaleur (France)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>Mensuel</td><td class="src-status" id="src-st-rcu"></td></tr>
+          <tr><td class="src-name">GRDF Open Data</td><td>Réseau de gaz (France)</td><td><span class="src-badge src-dl">PMTiles</span></td><td>Mensuel</td><td class="src-status" id="src-st-gaz"></td></tr>
+          <tr><td class="src-name">IGN GPU <span style="font-weight:400;color:var(--text-muted)">apicarto.ign.fr</span></td><td>PLU, Abords MH (AC1), SPR (AC4), Sites classés (AC2)</td><td><span class="src-badge src-api">WMS + API</span></td><td>Temps réel</td><td class="src-status" id="src-st-gpu"></td></tr>
+          <tr><td class="src-name">OpenStreetMap</td><td>Fond de carte OSM</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-carto"></td></tr>
+          <tr><td class="src-name">IGN Géoplateforme</td><td>Fond IGN Plan · Ortho</td><td><span class="src-badge src-tile">Tuiles raster</span></td><td>Temps réel</td><td class="src-status" id="src-st-ign-tiles"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </div>
+  <div id="header-bottom" style="display:none">
+    <div class="lb-sep"></div>
+    <button class="layer-toggle" id="toggle-dpe-layer" title="Colorer les bâtiments par note DPE">DPE</button>
+    <button class="layer-toggle" id="toggle-cadastre">Cadastre</button>
+    <button class="layer-toggle" id="toggle-rcu" title="Réseaux de chaleur (France Chaleur Urbaine)">RCU</button>
+    <button class="layer-toggle" id="toggle-gaz" title="Réseau de gaz GRDF">Gaz</button>
+    <button class="layer-toggle" id="toggle-plu" title="Zones PLU">PLU</button>
+    <button class="layer-toggle" id="toggle-ac1" title="Abords monuments historiques AC1">AC1</button>
+    <button class="layer-toggle" id="toggle-ac4" title="Sites patrimoniaux remarquables AC4">AC4</button>
+    <button class="layer-toggle" id="toggle-ac2" title="Sites classés ou inscrits AC2">AC2</button>
+    <div class="lb-sep"></div>
+    <button class="measure-btn" id="btn-measure-poly">⬡ m²</button>
+    <button class="layer-toggle" id="toggle-panoramax"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#FBBC05" stroke-width="1.5"/><circle cx="7" cy="7" r="2.5" fill="#FBBC05"/><line x1="7" y1="1" x2="7" y2="3" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="11" x2="7" y2="13" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="7" x2="3" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="7" x2="13" y2="7" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/></svg>Panor.</button>
+  </div>
+</div>
+<div id="body">
+  <div id="map-area">
+    <div id="map"></div>
+
+    <div id="measure-result"></div>
+    <!-- Timeline panel -->
+    <div id="timeline-panel">
+      <span id="tl-label">Photos IGN</span>
+      <button class="tl-chip" data-layer="ORTHOIMAGERY.ORTHOPHOTOS.1950-1965">1950-1965</button>
+      <button class="tl-chip" data-layer="ORTHOIMAGERY.ORTHOPHOTOS.1965-1980">1965-1980</button>
+      <button class="tl-chip" data-layer="ORTHOIMAGERY.ORTHOPHOTOS.1980-1995">1980-1995</button>
+      <button id="tl-close" title="Fermer"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div id="panoramax-panel">
+      <button id="panoramax-close">✕</button>
+      <button id="panoramax-fs" title="Plein écran"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4V1h3M8 1h3v3M11 8v3H8M4 11H1V8"/></svg></button>
+      <iframe id="panoramax-iframe" src="" allow="fullscreen; xr-spatial-tracking; geolocation" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+  </div>
+  <div id="panel">
+    <div id="panel-handle"></div>
+    <div id="panel-content">
+      <div style="padding:12px">
+<div id="batiment-data" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const isMobile = !!window.SCOPE_MOBILE;
+
+
+const TILE_URLS = {
+  'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+  'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+  'voyager':     'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+};
+// Emprise des fonds de carte
+const FRANCE_BOUNDS = [-5.6, 41.2, 9.8, 51.2]; // France métropolitaine
+// Tuiles DPE nationales (Cloudflare R2). Vide = repli sur le fichier Loire-Atlantique du site.
+const DPE_TILES_BASE = 'https://pub-ba3b84e9a7d644e1854486f04e1f0116.r2.dev';
+const LAYERS = {
+  'ign-plan':    { type:'raster', tiles:[TILE_URLS['ign-plan']],    tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
+  'ign-ortho':   { type:'raster', tiles:[TILE_URLS['ign-ortho']],   tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Géoplateforme' },
+  'voyager':     { type:'raster', tiles:[TILE_URLS['voyager']],     tileSize:256, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© OpenStreetMap contributors' }
+};
+const CADASTRE_SOURCE = {
+  type:'raster',
+  tiles:['https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'],
+  tileSize:256, minzoom:0, maxzoom:19, bounds:FRANCE_BOUNDS, attribution:'© IGN Cadastre'
+};
+
+// Enregistre le protocole PMTiles pour MapLibre
+const USAGE_LOGEMENT_KEYWORDS = ['résidentiel_individuel','résidentiel_collectif','résidentiel_mixte','résidentiel','habitation'];
+function isLogement(usage) {
+  if (!usage) return false;
+  const u = usage.toLowerCase();
+  return USAGE_LOGEMENT_KEYWORDS.some(k => u.includes(k));
+}
+
+const _pmtilesProtocol = new pmtiles.Protocol();
+maplibregl.addProtocol('pmtiles', _pmtilesProtocol.tile.bind(_pmtilesProtocol));
+
+let currentLayer = 'ign-plan', cadastreOn = false, dpeLayerOn = false, currentCoords = null;
+let measureMode = null, measurePoints = [], measureMarkers = [], addrMarker = null;
+let streetviewActive = null;
+// Identifiants BAN fournis par BDNB — principal + tous les adresses du bâtiment (coins de rue, etc.)
+// Partagé entre loadBatiment (producteur) et loadDPE (consommateur)
+let _canonicalBanId = null;
+let _allBanIds = [];
+// Promise résolue quand le fetch BDNB est terminé — loadDPE l'attend avant de lire _allBanIds
+let _bdnbPromise = Promise.resolve();
+let _lastDPEApplyArgs = null; // stocké par loadDPE, consommé par le idle de selectAddress
+let _pmtilesDpeGrade = null;  // note DPE issue des tuiles PMTiles (ancienne norme)
+let _dpeResultsReady = null;  // DPE arrivé avant le DOM batiment → appliqué par renderBatiment
+let dvfEnabled = localStorage.getItem('dvf-enabled') !== 'false';
+document.getElementById('dvf-enable').checked = dvfEnabled;
+let _rncQueryParams = null;
+let _selectedBatId = null;     // identifiant BDNB du bâtiment affiché (couleur de sélection sur la carte)
+// Couleurs ADEME vérifiées pendant la session (id BDNB → polygones colorés) : elles restent affichées
+// quand on sélectionne un autre bâtiment, par-dessus les tuiles qui peuvent être plus anciennes.
+const _dpeCorrections = new Map();
+function renderDpeCorrections(selSrc) {
+  selSrc.setData({type:'FeatureCollection', features: [..._dpeCorrections.values()].flat()});
+}
+let _gpuQueryPoint = null;    // {lat,lng} pour le lazy-load GPU urbanisme
+
+const DPE_COLOR = ['match',['get','dpe'],
+  'A','#00a651','B','#50b748','C','#c8d400',
+  'D','#ffd400','E','#f7941d','F','#ed1c24','G','#8b0000',
+  '#aaaaaa'
+];
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: { version:8, sources:{'base':LAYERS['ign-plan']}, layers:[{id:'base-layer',type:'raster',source:'base'}], glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf' },
+  center: [-2.28, 47.27], zoom: 10, minZoom: 5, maxBounds: [-7.5, 40.0, 11.5, 52.5],
+  attributionControl: false, preserveDrawingBuffer: true
+});
+window._map = map;
+map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
+map.addControl(new maplibregl.AttributionControl({compact:true}), 'bottom-right');
+map.addControl(new maplibregl.ScaleControl({unit:'metric'}), 'bottom-left');
+
+map.on('load', () => {
+  map.addSource('cadastre', CADASTRE_SOURCE);
+  map.addLayer({id:'cadastre-layer',type:'raster',source:'cadastre',layout:{visibility:'none'},paint:{'raster-opacity':0.7}});
+  // Couche DPE bâtiments (PMTiles national sur R2, voir plus bas)
+  map.addSource('dpe-src', {
+    type: 'vector',
+    url: `pmtiles://${location.origin}/public/dpe-44.pmtiles`
+  });
+  map.addLayer({id:'dpe-fill', type:'fill', source:'dpe-src', 'source-layer':'dpe',
+    minzoom: 13,
+    layout:{visibility:'none'},
+    paint:{'fill-color':DPE_COLOR,'fill-opacity':0.55}
+  });
+  map.addLayer({id:'dpe-line', type:'line', source:'dpe-src', 'source-layer':'dpe',
+    minzoom: 13,
+    layout:{visibility:'none'},
+    paint:{'line-color':DPE_COLOR,'line-width':1,'line-opacity':0.85}
+  });
+  // Layer transparent toujours actif — sert uniquement à queryRenderedFeatures
+  // pour récupérer les polygones bâtiments même quand le toggle DPE est OFF
+  map.addLayer({id:'dpe-query', type:'fill', source:'dpe-src', 'source-layer':'dpe',
+    minzoom: 13,
+    paint:{'fill-opacity':0}
+  });
+  // Pattern hachuré pour DPE neufs
+  const hSz=8, hData=new Uint8Array(hSz*hSz*4);
+  for(let y=0;y<hSz;y++) for(let x=0;x<hSz;x++){
+    const i=(y*hSz+x)*4;
+    if((x+y)%hSz<2){hData[i]=255;hData[i+1]=255;hData[i+2]=255;hData[i+3]=170;}
+  }
+  map.addImage('hatch-pat',{width:hSz,height:hSz,data:hData});
+  // Couche de surcharge couleur ADEME sur le bâtiment sélectionné
+  map.addSource('sel-dpe-src',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'sel-dpe-fill',type:'fill',source:'sel-dpe-src',
+    paint:{'fill-color':['get','color'],'fill-opacity':0.82}
+  });
+  map.addLayer({id:'sel-dpe-line',type:'line',source:'sel-dpe-src',
+    paint:{'line-color':['get','color'],'line-width':2,'line-opacity':1}
+  });
+  // Hachures sur tous les bâtiments neufs (neuf=1 dans PMTiles)
+  map.addLayer({id:'dpe-neuf-hatch', type:'fill', source:'dpe-src', 'source-layer':'dpe',
+    minzoom: 13,
+    layout:{visibility:'none'},
+    filter: ['==', ['get', 'neuf'], 1],
+    paint: {'fill-pattern': 'hatch-pat'}
+  });
+  // Source GeoJSON pour les hachures du bâtiment sélectionné (fallback)
+  map.addSource('neuf-hatch-src',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'neuf-hatch-fill',type:'fill',source:'neuf-hatch-src',
+    paint:{'fill-pattern':'hatch-pat'}
+  });
+
+  // Popup DPE au survol
+  const dpePopup = new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:4});
+  map.on('mouseenter','dpe-fill', e => {
+    map.getCanvas().style.cursor='pointer';
+    const p=e.features[0].properties;
+    const dpe=p.dpe||'NC';
+    const nb=p.nb_log>0?`${p.nb_log} log.`:'';
+    dpePopup.setLngLat(e.lngLat)
+      .setHTML(`<b style="font-size:14px">${dpe}</b>${nb?' &nbsp;'+nb:''}`)
+      .addTo(map);
+  });
+  map.on('mouseleave','dpe-fill', () => { map.getCanvas().style.cursor=''; dpePopup.remove(); });
+
+  // Réseaux de chaleur (France Chaleur Urbaine) et gaz (GRDF) : sources ajoutées au premier affichage
+  rcuPopup = new maplibregl.Popup({closeButton:true, closeOnClick:true, maxWidth:'280px', offset:6});
+  for (const id of ['rcu-layer','rcu-points']) {
+    map.on('mouseenter', id, () => { map.getCanvas().style.cursor='pointer'; });
+    map.on('mouseleave', id, () => { map.getCanvas().style.cursor=''; });
+    map.on('click', id, e => { showRcuPopup(e.lngLat, e.features[0].properties); });
+  }
+  map.addSource('measure-src', {type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'measure-fill',type:'fill',source:'measure-src',paint:{'fill-color':'#e06090','fill-opacity':0.12},filter:['==','$type','Polygon']});
+  map.addLayer({id:'measure-line',type:'line',source:'measure-src',paint:{'line-color':'#e06090','line-width':2,'line-dasharray':[4,2]}});
+
+  // Couches patrimoine — PLU (GeoJSON dynamique), AC1/AC4/AC2 (WMS IGN wms-v)
+  const IGN_WMS_V = 'https://data.geopf.fr/wms-v/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&STYLES=&FORMAT=image/png&TRANSPARENT=true&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}&LAYERS=';
+  // PLU — zones chargées dynamiquement via apicarto.ign.fr/api/gpu
+  const PLU_ZONE_COLOR = ['case',['==',['get','typezone'],'U'],'#7c3aed',['==',['get','typezone'],'AU'],'#a78bfa',['==',['get','typezone'],'A'],'#4ade80',['==',['get','typezone'],'N'],'#166534','#94a3b8'];
+  map.addSource('plu-src', {type:'geojson', data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'plu-fill', type:'fill', source:'plu-src', layout:{visibility:'none'}, paint:{'fill-color':PLU_ZONE_COLOR,'fill-opacity':0.18}});
+  map.addLayer({id:'plu-line', type:'line', source:'plu-src', layout:{visibility:'none'}, paint:{'line-color':PLU_ZONE_COLOR,'line-width':1.5,'line-opacity':0.8}});
+  // AC1 — monuments historiques et périmètres de protection (abords)
+  map.addSource('ac1-src', {type:'raster', tiles:[IGN_WMS_V+'monument_historique'], tileSize:256});
+  map.addLayer({id:'ac1-layer', type:'raster', source:'ac1-src', layout:{visibility:'none'}, paint:{'raster-opacity':0.8}});
+  // AC4 — sites patrimoniaux remarquables (zonages SPR)
+  map.addSource('ac4-src', {type:'raster', tiles:[IGN_WMS_V+'zone_secteur'], tileSize:256});
+  map.addLayer({id:'ac4-layer', type:'raster', source:'ac4-src', layout:{visibility:'none'}, paint:{'raster-opacity':0.8}});
+  // AC2 — sites classés ou inscrits
+  map.addSource('ac2-src', {type:'raster', tiles:[IGN_WMS_V+'monument_naturel_site'], tileSize:256});
+  map.addLayer({id:'ac2-layer', type:'raster', source:'ac2-src', layout:{visibility:'none'}, paint:{'raster-opacity':0.8}});
+  // Popup survol zones PLU
+  const pluPopup = new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:4,maxWidth:'200px'});
+  map.on('mouseenter','plu-fill', e => {
+    map.getCanvas().style.cursor='pointer';
+    const p=e.features[0].properties;
+    pluPopup.setLngLat(e.lngLat).setHTML(`<b>${p.libelle||'?'}</b>${p.libelong?' – '+p.libelong:''}`).addTo(map);
+  });
+  map.on('mouseleave','plu-fill', () => { map.getCanvas().style.cursor=''; pluPopup.remove(); });
+
+  setStatus('Prêt');
+});
+
+
+// ── Map picker ──
+const THUMB_URLS = {
+  'voyager':     'https://tile.openstreetmap.org/13/4061/2882.png',
+  'ign-plan':    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061',
+  'ign-ortho':   'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image/jpeg&TILEMATRIXSET=PM&TILEMATRIX=13&TILEROW=2882&TILECOL=4061',
+};
+const LAYER_LABELS = {'voyager':'OSM','ign-plan':'IGN Plan','ign-ortho':'IGN Sat'};
+
+const mapPickerBtn = document.getElementById('map-picker-btn');
+const mapPickerPanel = document.getElementById('map-picker-panel');
+
+function closeAllPickers() {
+  mapPickerPanel.classList.remove('open');
+  document.getElementById('overlay-picker-panel').classList.remove('open');
+  document.getElementById('vues-picker-panel').classList.remove('open');
+  document.getElementById('vues-picker-btn').classList.remove('open');
+  document.getElementById('info-panel').classList.remove('open');
+  if (typeof _tlActive !== 'undefined' && _tlActive) closeTL();
+}
+
+mapPickerBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const wasOpen = mapPickerPanel.classList.contains('open');
+  closeAllPickers();
+  if (!wasOpen) mapPickerPanel.classList.add('open');
+});
+document.addEventListener('click', () => closeAllPickers());
+
+document.querySelectorAll('.map-opt').forEach(opt => {
+  opt.addEventListener('click', e => {
+    e.stopPropagation();
+    const lId = opt.dataset.layer;
+    if (lId === currentLayer) { mapPickerPanel.classList.remove('open'); return; }
+    currentLayer = lId;
+    map.getSource('base').setTiles([TILE_URLS[lId]]);
+    document.querySelectorAll('.map-opt').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    mapPickerPanel.classList.remove('open');
+  });
+});
+
+// ── Overlay picker ──
+(function() {
+  const btn = document.getElementById('overlay-picker-btn');
+  const panel = document.getElementById('overlay-picker-panel');
+  const badge = document.getElementById('overlay-badge');
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = panel.classList.contains('open');
+    closeAllPickers();
+    if (!wasOpen) panel.classList.add('open');
+  });
+
+  function syncBadge() {
+    const n = document.querySelectorAll('.overlay-opt.active').length;
+    badge.textContent = n;
+    badge.classList.toggle('show', n > 0);
+  }
+
+  document.querySelectorAll('.overlay-opt').forEach(card => {
+    card.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = 'toggle-' + card.dataset.overlay;
+      document.getElementById(id).click(); // forward to existing handler
+      // sync card state after click (state is updated by the handler)
+      requestAnimationFrame(() => {
+        const isOn = document.getElementById(id).classList.contains('on');
+        card.classList.toggle('active', isOn);
+        syncBadge();
+      });
+    });
+  });
+})();
+
+document.getElementById('toggle-cadastre').addEventListener('click', function() {
+  cadastreOn = !cadastreOn;
+  map.setLayoutProperty('cadastre-layer', 'visibility', cadastreOn ? 'visible' : 'none');
+  this.classList.toggle('on', cadastreOn);
+});
+
+// ── Vues picker ──
+(function() {
+  const btn = document.getElementById('vues-picker-btn');
+  const panel = document.getElementById('vues-picker-panel');
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = panel.classList.contains('open');
+    closeAllPickers();
+    if (!wasOpen) { panel.classList.add('open'); btn.classList.add('open'); }
+  });
+  document.querySelectorAll('.vue-opt').forEach(card => {
+    card.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = 'toggle-' + card.dataset.vue;
+      document.getElementById(id).click();
+      panel.classList.remove('open');
+      btn.classList.remove('open');
+      requestAnimationFrame(() => {
+        const isOn = document.getElementById(id).classList.contains('on');
+        document.querySelectorAll('.vue-opt').forEach(c => c.classList.remove('active'));
+        card.classList.toggle('active', isOn);
+      });
+    });
+  });
+})();
+
+// ── Surface button ──
+(function() {
+  const surfBtn = document.getElementById('surface-btn');
+  const measureBtn = document.getElementById('btn-measure-poly');
+  surfBtn.addEventListener('click', () => {
+    measureBtn.click();
+    requestAnimationFrame(() => {
+      surfBtn.classList.toggle('active', measureBtn.classList.contains('active'));
+    });
+  });
+  // Mirror active state changes from the measure button
+  const observer = new MutationObserver(() => {
+    surfBtn.classList.toggle('active', measureBtn.classList.contains('active'));
+  });
+  observer.observe(measureBtn, { attributes: true, attributeFilter: ['class'] });
+})();
+
+// ── GEOLOCATION ──
+(function() {
+  const btn = document.getElementById('geolocate-btn');
+  let marker = null;
+  let watching = false;
+  let watchId = null;
+
+  function placeMarker(lng, lat) {
+    if (marker) marker.remove();
+    const el = document.createElement('div');
+    el.style.cssText = `
+      width:18px;height:18px;border-radius:50%;
+      background:#2bb573;border:3px solid #fff;
+      box-shadow:0 0 0 3px rgba(43,181,115,0.35);
+    `;
+    marker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+  }
+
+  btn.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      alert('La géolocalisation n\'est pas disponible sur cet appareil.');
+      return;
+    }
+    if (watching) {
+      // Désactiver
+      navigator.geolocation.clearWatch(watchId);
+      watching = false;
+      watchId = null;
+      btn.classList.remove('active', 'locating');
+      if (marker) { marker.remove(); marker = null; }
+      return;
+    }
+    btn.classList.add('locating');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { longitude: lng, latitude: lat } = pos.coords;
+        btn.classList.remove('locating');
+        btn.classList.add('active');
+        watching = true;
+        placeMarker(lng, lat);
+        map.flyTo({ center: [lng, lat], zoom: 17, speed: 1.6 });
+        // Suivi continu
+        watchId = navigator.geolocation.watchPosition(
+          p => placeMarker(p.coords.longitude, p.coords.latitude),
+          null,
+          { enableHighAccuracy: true }
+        );
+      },
+      err => {
+        btn.classList.remove('locating');
+        alert('Impossible d\'obtenir votre position.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+})();
+
+// ── RÉSEAUX DE CHALEUR (France Chaleur Urbaine, national) ──
+let rcuPopup;   // initialisé dans map.on('load')
+let rcuOn = false, rcuLoaded = false;
+
+function rcuPopupHTML(p) {
+  const nom  = (p.nom || 'Réseau de chaleur').trim();
+  const gest = p.gestionnaire || '—';
+  const enr  = p.enr  || '—';
+  const co2  = p.co2  || '—';
+  return `<div style="min-width:210px">
+    <div style="font-size:13px;font-weight:700;color:#e05c00;margin-bottom:10px;line-height:1.35">${nom}</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:11.5px;align-items:baseline">
+      <span style="color:var(--text-dim)">Gestionnaire</span><span style="font-weight:600">${gest}</span>
+      <span style="color:var(--text-dim)">Taux EnR&amp;R</span><span style="font-weight:700;color:#2bb573">${enr}</span>
+      <span style="color:var(--text-dim)">Facteur CO₂</span><span style="font-weight:600">${co2}</span>
+    </div>${p.trace === 0 || p.trace === '0' ? '<div style="margin-top:8px;font-size:10.5px;color:var(--text-dim)">Tracé non publié : position approximative</div>' : ''}</div>`;
+}
+function showRcuPopup(lngLat, props) {
+  if (rcuPopup) rcuPopup.setLngLat(lngLat).setHTML(rcuPopupHTML(props)).addTo(map);
+}
+
+
+// Fichiers réseaux sur R2 (générés par le workflow generate-reseaux-tiles)
+async function reseauMeta(couche) {
+  const r = await fetch(`${DPE_TILES_BASE}/${couche}-meta.json`, {cache:'no-store'});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+function reseauBefore() { return map.getLayer('measure-fill') ? 'measure-fill' : undefined; }
+
+document.getElementById('toggle-rcu').addEventListener('click', async function() {
+  rcuOn = !rcuOn;
+  this.classList.toggle('on', rcuOn);
+  if (rcuLoaded) {
+    ['rcu-layer','rcu-points'].forEach(id => map.setLayoutProperty(id, 'visibility', rcuOn ? 'visible' : 'none'));
+    return;
+  }
+  if (!rcuOn) return;
+  setStatus('Chargement réseaux de chaleur…', 'loading');
+  try {
+    const m = await reseauMeta('rcu');
+    const pts = await fetch(`${DPE_TILES_BASE}/${m.points}`).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    if (!map.getSource('rcu-src')) {
+      map.addSource('rcu-src', {type:'vector', url:`pmtiles://${DPE_TILES_BASE}/${m.fichier}`});
+      map.addLayer({id:'rcu-layer', type:'line', source:'rcu-src', 'source-layer':'rcu',
+        paint:{'line-color':'#e05c00','line-width':['interpolate',['linear'],['zoom'],8,1,12,2,16,4],'line-opacity':0.85}}, reseauBefore());
+      map.addSource('rcu-pts', {type:'geojson', data:pts});
+      // Un point par réseau ; cercle creux = réseau connu sans tracé publié
+      map.addLayer({id:'rcu-points', type:'circle', source:'rcu-pts',
+        paint:{'circle-radius':['interpolate',['linear'],['zoom'],5,3,10,6,14,8],
+               'circle-color':['case',['==',['get','trace'],1],'#e05c00','#ffffff'],
+               'circle-stroke-color':['case',['==',['get','trace'],1],'#ffffff','#e05c00'],
+               'circle-stroke-width':2}}, reseauBefore());
+    }
+    rcuLoaded = true;
+    if (!rcuOn) ['rcu-layer','rcu-points'].forEach(id => map.setLayoutProperty(id, 'visibility', 'none'));
+    setStatus(`${pts.features.length.toLocaleString()} réseaux de chaleur en France`, 'ok');
+    setTimeout(() => setStatus('Prêt'), 3000);
+  } catch(e) {
+    setStatus('Erreur chargement réseaux de chaleur', 'error');
+    setTimeout(() => setStatus('Prêt'), 3000);
+    rcuOn = false; this.classList.remove('on');
+  }
+});
+
+let gazOn = false, gazLoaded = false;
+document.getElementById('toggle-gaz').addEventListener('click', async function() {
+  gazOn = !gazOn;
+  this.classList.toggle('on', gazOn);
+  if (gazLoaded) { map.setLayoutProperty('gaz-layer', 'visibility', gazOn ? 'visible' : 'none'); }
+  else if (gazOn) {
+    setStatus('Chargement réseau de gaz…', 'loading');
+    try {
+      const m = await reseauMeta('gaz');
+      if (!map.getSource('gaz-src')) {
+        map.addSource('gaz-src', {type:'vector', url:`pmtiles://${DPE_TILES_BASE}/${m.fichier}`});
+        // Tronçons propane en violet, gaz naturel en jaune
+        map.addLayer({id:'gaz-layer', type:'line', source:'gaz-src', 'source-layer':'gaz', minzoom:12,
+          paint:{'line-color':['match',['downcase',['to-string',['get','propane']]],['oui','true','1','o'],'#8b5cf6','#d4a000'],
+                 'line-width':['interpolate',['linear'],['zoom'],12,1.5,16,3.5],'line-opacity':0.9}}, reseauBefore());
+      }
+      gazLoaded = true;
+      if (!gazOn) map.setLayoutProperty('gaz-layer', 'visibility', 'none');
+    } catch(e) {
+      setStatus('Erreur chargement réseau gaz', 'error');
+      setTimeout(() => setStatus('Prêt'), 3000);
+      gazOn = false; this.classList.remove('on');
+      return;
+    }
+  }
+  if (gazOn) {
+    setStatus(map.getZoom() < 12 ? 'Réseau gaz GRDF : zoomez pour l’afficher' : 'Réseau gaz GRDF', 'ok');
+    setTimeout(() => setStatus('Prêt'), 3000);
+  }
+});
+
+let pluOn = false;
+async function loadPLUData() {
+  if (!pluOn || map.getZoom() < 12) return;
+  const b = map.getBounds();
+  const geom = encodeURIComponent(JSON.stringify({
+    type:'Polygon',
+    coordinates:[[[b.getWest(),b.getSouth()],[b.getEast(),b.getSouth()],[b.getEast(),b.getNorth()],[b.getWest(),b.getNorth()],[b.getWest(),b.getSouth()]]]
+  }));
+  try {
+    const r = await fetch(`https://apicarto.ign.fr/api/gpu/zone-urba?geom=${geom}&_limit=200`);
+    if (r.ok) map.getSource('plu-src').setData(await r.json());
+  } catch(e) { /* silent */ }
+}
+document.getElementById('toggle-plu').addEventListener('click', function() {
+  pluOn = !pluOn;
+  this.classList.toggle('on', pluOn);
+  const vis = pluOn ? 'visible' : 'none';
+  map.setLayoutProperty('plu-fill', 'visibility', vis);
+  map.setLayoutProperty('plu-line', 'visibility', vis);
+  if (pluOn) {
+    if (map.getZoom() < 12) map.flyTo({zoom: 13});
+    else loadPLUData();
+  }
+});
+map.on('moveend', () => { if (pluOn) loadPLUData(); });
+document.getElementById('toggle-ac1').addEventListener('click', function() {
+  this.classList.toggle('on');
+  map.setLayoutProperty('ac1-layer', 'visibility', this.classList.contains('on') ? 'visible' : 'none');
+});
+document.getElementById('toggle-ac4').addEventListener('click', function() {
+  this.classList.toggle('on');
+  map.setLayoutProperty('ac4-layer', 'visibility', this.classList.contains('on') ? 'visible' : 'none');
+});
+document.getElementById('toggle-ac2').addEventListener('click', function() {
+  this.classList.toggle('on');
+  map.setLayoutProperty('ac2-layer', 'visibility', this.classList.contains('on') ? 'visible' : 'none');
+});
+
+
+document.getElementById('toggle-dpe-layer').addEventListener('click', function() {
+  dpeLayerOn = !dpeLayerOn;
+  this.classList.toggle('on', dpeLayerOn);
+  const vis = dpeLayerOn ? 'visible' : 'none';
+  map.setLayoutProperty('dpe-fill', 'visibility', vis);
+  map.setLayoutProperty('dpe-line', 'visibility', vis);
+  map.setLayoutProperty('dpe-neuf-hatch', 'visibility', vis);
+});
+
+function openImmersive(url, source) {
+  streetviewActive = source;
+  document.getElementById('panoramax-iframe').src = url;
+  document.getElementById('panoramax-panel').classList.add('visible');
+  document.getElementById('toggle-panoramax').classList.toggle('on', source === 'panoramax');
+}
+function closeStreetview() {
+  streetviewActive = null;
+  document.getElementById('panoramax-panel').classList.remove('visible');
+  document.getElementById('panoramax-iframe').src = '';
+  document.getElementById('toggle-panoramax').classList.remove('on');
+}
+
+
+document.getElementById('toggle-panoramax').addEventListener('click', async function() {
+  if (streetviewActive === 'panoramax') { closeStreetview(); return; }
+  if (!currentCoords) { setStatus("Cherchez d'abord une adresse", 'error'); setTimeout(() => setStatus('Prêt'), 2000); return; }
+  const [lng, lat] = currentCoords;
+  setStatus('Recherche Panoramax…', 'loading');
+  try {
+    const d = 0.005;
+    const r = await fetch(`https://panoramax.ign.fr/api/search?bbox=${lng-d},${lat-d},${lng+d},${lat+d}&limit=1`);
+    const js = await r.json();
+    const pic = js.features?.[0]?.id;
+    const url = pic
+      ? `https://api.panoramax.xyz/?focus=pic&pic=${pic}&map=18/${lat}/${lng}`
+      : `https://api.panoramax.xyz/?focus=map&map=18/${lat}/${lng}`;
+    if (!pic) setStatus('Aucune photo Panoramax à proximité', 'error'), setTimeout(() => setStatus('Prêt'), 3000);
+    else setStatus('Prêt');
+    openImmersive(url, 'panoramax');
+  } catch(e) {
+    setStatus('Erreur Panoramax', 'error'); setTimeout(() => setStatus('Prêt'), 2000);
+  }
+});
+
+document.getElementById('panoramax-close').addEventListener('click', closeStreetview);
+document.getElementById('panoramax-fs').addEventListener('click', () => {
+  const panel = document.getElementById('panoramax-panel');
+  if (!document.fullscreenElement) panel.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+
+
+let suggestTimeout = null;
+document.getElementById('search-input').addEventListener('input', function() {
+  const q = this.value.trim(); clearTimeout(suggestTimeout);
+  if (q.length < 3) { hideSuggestions(); return; }
+  suggestTimeout = setTimeout(() => fetchSuggestions(q), 250);
+});
+document.getElementById('search-input').addEventListener('keydown', e => { if (e.key==='Enter') { const q=document.getElementById('search-input').value.trim(); if(q.length>2) fetchSuggestions(q,true); }});
+document.getElementById('search-btn').addEventListener('click', () => { const q=document.getElementById('search-input').value.trim(); if(q.length>2) fetchSuggestions(q,true); });
+document.addEventListener('click', e => { if (!e.target.closest('#search-wrap')) hideSuggestions(); });
+
+async function fetchSuggestions(q, autoSelect=false) {
+  try {
+    // Résultats orientés vers la zone affichée
+    const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&lat=${map.getCenter().lat.toFixed(4)}&lon=${map.getCenter().lng.toFixed(4)}&limit=15`);
+    const all = (await r.json()).features || [];
+    const feats44 = all;
+    if (autoSelect) {
+      const best = feats44[0] || all[0];
+      if (best) { hideSuggestions(); selectAddress(best); }
+      return;
+    }
+    renderSuggestions(feats44.slice(0, 6));
+  } catch(e) { setStatus('Erreur BAN','error'); }
+}
+function renderSuggestions(features) {
+  const box = document.getElementById('suggestions');
+  if (!features.length) { box.innerHTML=''; return; }
+  box.innerHTML = features.map((f,i) => { const p=f.properties; return `<div class="suggestion-item" data-i="${i}"><strong>${p.name||''}</strong> ${p.postcode||''} ${p.city||''}</div>`; }).join('');
+  box._features = features;
+  box.querySelectorAll('.suggestion-item').forEach(el => el.addEventListener('click', () => { selectAddress(box._features[parseInt(el.dataset.i)]); hideSuggestions(); }));
+}
+function hideSuggestions() { document.getElementById('suggestions').innerHTML=''; }
+
+function selectAddress(feature, clickLng, clickLat, bldGroupId) {
+  const [lng,lat] = feature.geometry.coordinates;
+  const label = feature.properties.label || '';
+  document.getElementById('search-input').value = label;
+  // Si clic carte : marqueur au centroïde PMTiles (bldGroupId dispo) ou au point de clic
+  // Si recherche texte : on utilise les coords BAN
+  const mLng = clickLng !== undefined ? clickLng : lng;
+  const mLat = clickLat !== undefined ? clickLat : lat;
+  currentCoords = [mLng, mLat];
+  _lastDPEApplyArgs = null;  // reset avant chaque nouvelle adresse
+  _pmtilesDpeGrade = null;
+  map.flyTo({center:[mLng, mLat], zoom:18, speed:1.4});
+  // Filet de sécurité : quand la carte est stable + tuiles chargées après flyTo,
+  // on réessaie applySelectedDPE si loadDPE a déjà ses résultats
+  map.once('idle', () => {
+    if (_lastDPEApplyArgs) applySelectedDPE(..._lastDPEApplyArgs);
+  });
+  if (addrMarker) addrMarker.remove();
+  const el = document.createElement('div'); el.className='addr-marker';
+  el.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="22" height="30" viewBox="0 0 22 30"><path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 19 11 19s11-11.3 11-19C22 4.9 17.1 0 11 0z" fill="#2bb573"/><circle cx="11" cy="11" r="4.5" fill="white" opacity=".9"/></svg>';
+  addrMarker = new maplibregl.Marker({element:el, anchor:'bottom'}).setLngLat([mLng, mLat]).addTo(map);
+  const isClick = clickLng !== undefined; // clic sur la carte (et non adresse saisie)
+  loadBatiment(mLat, mLng, label, feature, bldGroupId, isClick);
+  loadDPE(feature, mLng, mLat, isClick);
+}
+
+// WFS IGN CADASTRALPARCELS — point-in-polygon exact via turf.js
+// Fetch jusqu'à 10 parcelles dans un BBOX ±20m, puis filtre par containment géographique
+// Parcelle à partir de son identifiant (14 caractères : commune 5, préfixe 3, section 2, numéro 4)
+function parcelFromIdu(idu) {
+  if (!idu || idu.length !== 14) return null;
+  return { idu, code_insee: idu.slice(0, 5), section: idu.slice(8, 10).replace(/^0+(?=[A-Z])/, ''),
+           numero: idu.slice(10).replace(/^0+/, ''), confident: true };
+}
+
+async function fetchCadastre(lat, lng) {
+  const d = 0.0002; // ~20m
+  const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
+  try {
+    const r = await fetch(
+      `https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature` +
+      `&TYPENAMES=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle` +
+      `&OUTPUTFORMAT=application/json&COUNT=10&BBOX=${bbox},EPSG:4326`
+    );
+    if (!r.ok) return null;
+    const js = await r.json();
+    if (!js.features?.length) return null;
+    // Point-in-polygon exact : trouver la parcelle qui contient le point cliqué
+    const pt = turf.point([lng, lat]);
+    const pip = js.features.find(f => {
+      try { return turf.booleanPointInPolygon(pt, f); } catch(e) { return false; }
+    });
+    const match = pip || js.features[0]; // fallback : première parcelle si aucun match
+    // Score de confiance : exact si le point est dans la parcelle,
+    // ou s'il n'y a qu'une seule parcelle dans la zone (pas d'ambiguïté)
+    const confident = !!pip || js.features.length === 1;
+    const p = match?.properties;
+    if (!p) return null;
+    const section = (p.section || '').replace(/^0+(?=[A-Z])/, '') || p.section || '';
+    const numero  = (p.numero  || '').replace(/^0+/, '')           || p.numero  || '';
+    return { idu: p.idu || '', section, numero, code_insee: p.code_insee || '', confident };
+  } catch(e) { return null; }
+}
+
+async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
+  const BASE = 'https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/';
+  function closest(data, maxDistSq) {
+    let best = null, bestDist = Infinity;
+    for (const e of data) {
+      if (e.lat != null && e.long != null) {
+        const d = (e.long-lng)**2 + (e.lat-lat)**2;
+        if (d < bestDist) { bestDist = d; best = e; }
+      }
+    }
+    return (best && bestDist < maxDistSq) ? best : null;
+  }
+  // Stratégie 1 : IDU cadastral exact
+  if (idu) {
+    const [ra, rb, rc] = await Promise.all([
+      fetch(`${BASE}?page_size=5&reference_cadastrale_1__exact=${encodeURIComponent(idu)}`),
+      fetch(`${BASE}?page_size=5&reference_cadastrale_2__exact=${encodeURIComponent(idu)}`),
+      fetch(`${BASE}?page_size=5&reference_cadastrale_3__exact=${encodeURIComponent(idu)}`),
+    ]);
+    for (const r of [ra, rb, rc]) {
+      if (r.ok) { const d = await r.json(); if (d.data?.length) return d.data[0]; }
+    }
+  }
+  if (!cc) return null;
+  // Stratégie 2 : numéro de voirie + GPS 150m
+  if (hn) {
+    const r = await fetch(`${BASE}?page_size=50&code_officiel_commune__exact=${cc}&adresse_reference__contains=${encodeURIComponent(hn)}`);
+    if (r.ok) {
+      const d = await r.json();
+      const cands = (d.data||[]).filter(e => { const a=(e.adresse_reference||'').trim(); return a===hn||a.startsWith(hn+' ')||a.startsWith(hn+','); });
+      const res = closest(cands, 0.000003);
+      if (res) return res;
+    }
+  }
+  // Stratégie 3 : mot-clé rue + GPS 80m (accents retirés car l'API rejette les caractères non-ASCII)
+  if (streetKey) {
+    const asciiKey = streetKey.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const r = await fetch(`${BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_reference__contains=${encodeURIComponent(asciiKey)}`);
+    if (r.ok) { const d = await r.json(); return closest(d.data||[], 0.0000008); }
+  }
+  return null;
+}
+
+async function loadBatiment(lat, lng, label, feature, bldGroupId, isClick = false) {
+  _canonicalBanId = null;
+  _allBanIds = [];
+  _selectedBatId = null;
+  _dpeResultsReady = null; // reset pour la course ADEME vs BDNB
+  const el = document.getElementById('batiment-data');
+  el.style.display = 'block';
+  if (isMobile) { const pnl = document.getElementById('panel'); pnl.classList.add('mobile-open'); pnl.classList.remove('mobile-peek'); }
+  el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement BDNB…</div>';
+  setStatus('Chargement bâtiment…','loading');
+
+  // Exposer la promise BDNB pour que loadDPE puisse attendre les identifiants BAN
+  let _resolveBdnb;
+  _bdnbPromise = new Promise(res => { _resolveBdnb = res; });
+
+  try {
+    // Identifiant BAN de l'adresse recherchée (ou trouvée au clic) : sert à retrouver le bon bâtiment
+    const searchedBanId = !isClick && feature?.properties?.type === 'housenumber' ? (feature.properties.id || null) : null;
+    // Choix du bâtiment parmi une liste de candidats BDNB
+    function pickBest(candidates) {
+      if (!candidates?.length) return null;
+      // 1. Clic sur la carte : identifiant exact du bâtiment (tuiles PMTiles)
+      if (bldGroupId) {
+        const exact = candidates.find(b => b.batiment_groupe_id === bldGroupId);
+        if (exact) return exact;
+      }
+      // 2. Adresse : le bâtiment auquel la BDNB rattache cet identifiant BAN (même méthode que Go-Rénove)
+      if (searchedBanId) {
+        const exact = candidates.find(b => b.cle_interop_adr_principale_ban === searchedBanId
+          || (Array.isArray(b.l_cle_interop_adr) && b.l_cle_interop_adr.includes(searchedBanId)));
+        if (exact) return exact;
+      }
+      // 3. Aucun rattachement certain : on n'affiche pas un bâtiment voisin (ni ses DPE)
+      return null;
+    }
+
+    async function fetchBDNB(d) {
+      const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
+      const r = await fetch(`/api/bdnb?bbox=${encodeURIComponent(bbox)}`);
+      if (!r.ok) return [];
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    }
+
+    let bdnbData = null, cadastreData = null;
+    try {
+      if (isClick) {
+        // Clic sur la carte : parcelle et bâtiment sont ceux qui CONTIENNENT le point cliqué.
+        // On n'utilise pas l'adresse la plus proche, qui peut être celle du voisin (point BAN côté route).
+        cadastreData = await fetchCadastre(lat, lng).catch(() => null);
+        if (bldGroupId) bdnbData = pickBest(await fetchBDNB(0.0003).catch(() => []));
+        if (!bdnbData) {
+          const r = await fetch(`/api/bdnb?point=${lng},${lat}`).catch(() => null);
+          const inside = r?.ok ? await r.json() : [];
+          if (Array.isArray(inside) && inside.length) bdnbData = inside[0];
+        }
+        if (!bdnbData && cadastreData?.idu && cadastreData.confident) {
+          // Clic hors bâtiment (jardin, cour) : seulement s'il n'y a qu'un bâtiment sur la parcelle
+          const onParcel = (await fetchBDNB(0.0005).catch(() => []))
+            .filter(b => Array.isArray(b.l_parcelle_id) && b.l_parcelle_id.includes(cadastreData.idu));
+          if (onParcel.length === 1) bdnbData = onParcel[0];
+        }
+      } else {
+        const [bdnbRes, cadRes] = await Promise.all([
+          (async () => {
+            // Élargit la zone tant que le bâtiment rattaché à l'adresse n'est pas trouvé
+            for (const d of [0.0001, 0.0003, 0.0008]) {
+              const found = pickBest(await fetchBDNB(d).catch(() => []));
+              if (found) return found;
+            }
+            return null;
+          })(),
+          fetchCadastre(lat, lng).catch(() => null)
+        ]);
+        bdnbData = bdnbRes;
+        cadastreData = cadRes;
+        // Le point d'adresse est souvent en bord de parcelle, côté route : si la parcelle sous ce point
+        // n'est pas une parcelle du bâtiment, on prend celle que la BDNB associe au bâtiment.
+        const parcels = Array.isArray(bdnbData?.l_parcelle_id) ? bdnbData.l_parcelle_id : [];
+        if (parcels.length && !parcels.includes(cadastreData?.idu)) cadastreData = parcelFromIdu(parcels[0]) || cadastreData;
+      }
+    } catch(e) {}
+
+    // Extraire les identifiants canoniques BDNB et les partager avec loadDPE
+    _selectedBatId = bdnbData?.batiment_groupe_id || null;
+    _canonicalBanId = bdnbData?.cle_interop_adr_principale_ban || null;
+    _allBanIds = Array.isArray(bdnbData?.l_cle_interop_adr) ? bdnbData.l_cle_interop_adr : (_canonicalBanId ? [_canonicalBanId] : []);
+    _resolveBdnb(); // débloquer loadDPE qui attend les identifiants BAN
+    const bdnbUdu = Array.isArray(bdnbData?.l_parcelle_id) ? bdnbData.l_parcelle_id[0] : null;
+
+
+    // Stocker les params RNIC pour le lazy-load de l'accordéon copropriété
+    const cc = feature?.properties?.citycode || '';
+    const hn = (feature?.properties?.housenumber || '').trim();
+    const street = (feature?.properties?.street || feature?.properties?.name || '').trim();
+    const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
+    const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP.test(w)) || '';
+    _rncQueryParams = (cc || bdnbUdu) ? { idu: isClick ? (cadastreData?.idu || bdnbUdu) : (bdnbUdu || cadastreData?.idu), cc, hn, streetKey, lat, lng } : null;
+    _gpuQueryPoint = (lat != null && lng != null) ? { lat, lng } : null;
+
+    const dvfIdu = isClick ? (cadastreData?.idu || bdnbUdu) : (bdnbUdu || cadastreData?.idu);
+    renderBatiment(bdnbData, label, cadastreData, dvfIdu, bldGroupId || isClick);
+    setStatus('Prêt');
+  } catch(e) {
+    _resolveBdnb?.(); // toujours débloquer loadDPE même en cas d'erreur
+    el.innerHTML = '<div class="empty-state"><p>Erreur chargement données bâtiment</p></div>';
+    setStatus('Erreur','error');
+  }
+}
+
+function buildDVFTable(dvf) {
+  if (!Array.isArray(dvf) || !dvf.length) return '<div style="font-size:11px;color:var(--text-muted)">Aucune transaction trouvée sur cette parcelle</div>';
+  const fmt = v => v ? new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v) : '—';
+  const rows = dvf.map(m => {
+    const types = m.types_locaux?.join(', ') || m.nature_mutation || '—';
+    const surf = m.surface_bati ? ` · ${Math.round(m.surface_bati)} m²` : '';
+    const pieces = m.nb_pieces ? ` · ${m.nb_pieces} p.` : '';
+    return `<tr><td style="color:var(--text-muted);font-size:11px">${m.date_mutation?.slice(0,7)||'—'}</td><td style="font-size:11px">${types}${surf}${pieces}</td><td style="font-weight:600;white-space:nowrap">${fmt(m.valeur_fonciere)}</td></tr>`;
+  }).join('');
+  return `<table class="dpe-table" style="width:100%"><thead><tr><th>Date</th><th>Bien</th><th>Prix</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderBatiment(bdnb, label, cad, dvfIdu, bldGroupId) {
+  const el = document.getElementById('batiment-data');
+  const addrLabel = (bldGroupId && bdnb?.libelle_adr_principale_ban) ? bdnb.libelle_adr_principale_ban : label;
+  if (bldGroupId && bdnb?.libelle_adr_principale_ban) {
+    document.getElementById('search-input').value = bdnb.libelle_adr_principale_ban;
+  }
+  const [addrL1, addrL2] = splitAddress(addrLabel);
+  const fv = v => (v != null && v !== '') ? `<span class="field-value">${v}</span>` : `<span class="field-value na">—</span>`;
+
+  // Énergie BDNB
+  const bdnbCh = formatEnergie(bdnb?.type_energie_chauffage);
+  const bdnbChInst = shortInstall(bdnb?.type_installation_chauffage_n1);
+  const bdnbEcs = formatEnergie(bdnb?.type_generateur_ecs);
+  const bdnbEcsInst = shortInstall(bdnb?.type_installation_ecs_n1);
+
+  el.innerHTML = `
+    <!-- Adresse -->
+    <div class="addr-banner" style="margin-bottom:${cad?'6px':'10px'}">
+      <div class="addr-banner-pin"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="22" viewBox="0 0 22 30"><path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 19 11 19s11-11.3 11-19C22 4.9 17.1 0 11 0z" fill="#2bb573" stroke="white" stroke-width="1.5"/><circle cx="11" cy="11" r="4.5" fill="white" opacity=".9"/></svg></div>
+      <div style="flex:1;min-width:0">
+        <div class="addr-banner-main">${addrL1||addrLabel}</div>
+        ${addrL2 ? `<div class="addr-banner-sub">${addrL2}</div>` : ''}
+      </div>
+    </div>
+
+    <!-- Section cadastrale -->
+    ${cad?.section ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <div style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 8px">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span style="font-size:9.5px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase">Cadastre</span>
+        <span style="font-size:11px;font-weight:700;color:var(--text-dim)">${cad.section}${cad.confident && cad.numero ? ' · ' + cad.numero : ''}</span>
+      </div>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>` : ''}
+
+    <!-- Info principale : 4 cellules -->
+    <div class="card" style="padding:10px 12px;margin-bottom:10px">
+      <div class="info-grid">
+        <div class="info-cell"><div class="field-label">Date (BDNB)</div>${fv(bdnb?.annee_construction)}</div>
+        <div class="info-cell"><div class="field-label">Date (DPE)</div><span class="field-value" id="panel-dpe-year">—</span></div>
+        <div class="info-cell"><div class="field-label">Usage</div>${fv(formatUsage(bdnb?.usage_principal_bdnb_open))}</div>
+        <div class="info-cell"><div class="field-label">Emprise sol</div>${fv(bdnb?.surface_emprise_sol ? Math.round(bdnb.surface_emprise_sol)+' m²' : null)}</div>
+      </div>
+    </div>
+
+    <!-- Systèmes énergétiques -->
+    <div class="card" style="padding:10px 12px;margin-bottom:10px">
+      <div class="card-title">Systèmes énergétiques</div>
+      <div class="energy-table">
+        <div class="energy-row">
+          <div class="energy-source">BDNB</div>
+          <div class="energy-cell"><div class="field-label">Chauffage</div><span class="field-value" style="font-size:12px">${bdnbCh ? bdnbCh+bdnbChInst : '<span class="field-value na" style="font-size:11px">—</span>'}</span></div>
+          <div class="energy-cell"><div class="field-label">ECS</div><span class="field-value" style="font-size:12px">${bdnbEcs ? bdnbEcs+bdnbEcsInst : '<span class="field-value na" style="font-size:11px">—</span>'}</span></div>
+        </div>
+        <div class="energy-row" id="panel-dpe-nrj-row">
+          <div class="energy-source">DPE</div>
+          <div class="energy-cell" id="panel-dpe-ch"><div class="field-label">Chauffage</div><span class="field-value na" style="font-size:11px">—</span></div>
+          <div class="energy-cell" id="panel-dpe-ecs"><div class="field-label">ECS</div><span class="field-value na" style="font-size:11px">—</span></div>
+        </div>
+        <div class="energy-row" id="panel-dpe-surf-row" style="display:none">
+          <div class="energy-source"></div>
+          <div class="energy-surf-row">
+            <span style="font-size:9.5px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase">Surface DPE</span>
+            <span class="field-value" style="font-size:12px" id="panel-dpe-surf">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Module DPE (rempli par renderDPE) -->
+    <div id="dpe-data"><div class="loading-block" style="padding:16px"><span class="spinner"></span> Chargement DPE ADEME…</div></div>
+
+    <!-- Copropriété lazy -->
+    <details class="card rnc-accordion" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none;padding:12px 14px">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0"></span>
+        <span style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);flex:1">Copropriété · RNIC</span>
+        <span style="font-size:9px;color:var(--text-muted)">▶</span>
+      </summary>
+      <div class="rnc-content"></div>
+    </details>
+
+    <!-- DVF lazy -->
+    <details class="card dvf-accordion"${dvfIdu ? ` data-idu="${dvfIdu}"` : ''} style="padding:0;overflow:hidden;margin-bottom:10px;${dvfEnabled?'':'display:none'}"
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none;padding:12px 14px">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d97706;flex-shrink:0"></span>
+        <span style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);flex:1">Transactions · DVF</span>
+        <span style="font-size:9px;color:var(--text-muted)">▶</span>
+      </summary>
+      <div class="dvf-content" style="padding:0 14px 12px">${dvfIdu ? '' : '<div style="font-size:11px;color:var(--text-muted)">Parcelle non identifiée</div>'}</div>
+    </details>
+
+    <!-- GPU Urbanisme & Patrimoine lazy -->
+    <details class="card gpu-accordion" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none;padding:12px 14px">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7c3aed;flex-shrink:0"></span>
+        <span style="font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);flex:1">Urbanisme · GPU</span>
+        <span style="font-size:9px;color:var(--text-muted)">▶</span>
+      </summary>
+      <div class="gpu-content"></div>
+    </details>`;
+
+  // Lazy-load DVF
+  const dvfDetails = el.querySelector('.dvf-accordion');
+  if (dvfDetails && dvfIdu) {
+    dvfDetails.addEventListener('toggle', async function() {
+      if (!this.open || this.dataset.loaded) return;
+      this.dataset.loaded = '1';
+      const content = this.querySelector('.dvf-content');
+      content.innerHTML = '<div style="text-align:center;padding:10px;color:var(--text-muted);font-size:11px"><span class="spinner"></span> Chargement…</div>';
+      try {
+        const r = await fetch(`/api/dvf?idpar=${encodeURIComponent(this.dataset.idu)}`);
+        const dvf = r.ok ? await r.json() : null;
+        content.innerHTML = buildDVFTable(dvf);
+      } catch(e) {
+        content.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">Erreur de chargement</div>';
+      }
+    });
+  }
+
+  // Lazy-load Copropriété RNIC
+  const rncDetails = el.querySelector('.rnc-accordion');
+  if (rncDetails && _rncQueryParams) {
+    rncDetails.addEventListener('toggle', async function() {
+      if (!this.open || this.dataset.loaded) return;
+      this.dataset.loaded = '1';
+      const content = this.querySelector('.rnc-content');
+      content.innerHTML = '<div style="text-align:center;padding:10px;color:var(--text-muted);font-size:11px"><span class="spinner"></span> Chargement…</div>';
+      try {
+        const rnc = await fetchRNC(_rncQueryParams);
+        content.innerHTML = buildRNCContent(rnc);
+      } catch(e) {
+        content.innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Erreur de chargement</p>';
+      }
+    });
+  } else if (rncDetails) {
+    rncDetails.querySelector('.rnc-content').innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Adresse non identifiée</p>';
+  }
+
+  // Lazy-load Urbanisme GPU
+  const gpuDetails = el.querySelector('.gpu-accordion');
+  if (gpuDetails && _gpuQueryPoint) {
+    gpuDetails.addEventListener('toggle', async function() {
+      if (!this.open || this.dataset.loaded) return;
+      this.dataset.loaded = '1';
+      const content = this.querySelector('.gpu-content');
+      content.innerHTML = '<div style="text-align:center;padding:10px;color:var(--text-muted);font-size:11px"><span class="spinner"></span> Chargement GPU…</div>';
+      try {
+        const data = await fetchPatrimoine(_gpuQueryPoint.lat, _gpuQueryPoint.lng);
+        content.innerHTML = buildPatrimoineContent(data);
+      } catch(e) {
+        content.innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Erreur de chargement</p>';
+      }
+    });
+  } else if (gpuDetails) {
+    gpuDetails.querySelector('.gpu-content').innerHTML = '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Adresse non identifiée</p>';
+  }
+
+  // Si DPE déjà arrivé avant le DOM (race condition inverse), l'appliquer maintenant
+  if (_dpeResultsReady) {
+    const { results, resultsNeufs } = _dpeResultsReady;
+    _dpeResultsReady = null;
+    renderDPE(results, resultsNeufs);
+  }
+}
+
+function formatInstall(val) {
+  if (!val) return '';
+  if (val.toLowerCase().includes('collectif')) return ' <span style="font-size:10px;color:var(--text-muted)">Coll.</span>';
+  if (val.toLowerCase().includes('individuel')) return ' <span style="font-size:10px;color:var(--text-muted)">Indiv.</span>';
+  return '';
+}
+function shortInstall(val) {
+  if (!val) return '';
+  if (val.toLowerCase().includes('collectif')) return '<span style="font-size:9px;color:var(--text-muted);margin-left:3px">Coll.</span>';
+  if (val.toLowerCase().includes('individuel')) return '<span style="font-size:9px;color:var(--text-muted);margin-left:3px">Indiv.</span>';
+  return '';
+}
+function formatEnergie(val) {
+  if (!val) return null;
+  return {'electricity':'Électricité','natural_gas':'Gaz naturel','gaz':'Gaz naturel','fuel_oil':'Fioul','fioul':'Fioul','wood':'Bois','bois':'Bois','heat_network':'Réseau chaleur','reseau_chaleur':'Réseau chaleur','thermodynamic':'PAC','pompe_a_chaleur':'PAC','coal':'Charbon','propane':'GPL','gpl':'GPL','other':'Autre'}[val.toLowerCase()] || val;
+}
+function formatUsage(val) {
+  if (!val) return null;
+  if (val.toLowerCase().includes('individuel')) return 'Résidentiel indiv.';
+  if (val.toLowerCase().includes('collectif')) return 'Résidentiel coll.';
+  if (val.toLowerCase().includes('tertiaire')) return 'Tertiaire';
+  return val;
+}
+
+// Découpe une adresse "5 Rue Racine, 44000 Nantes" ou "5 RUE RACINE 44000 NANTES"
+// en [ligne1, ligne2] → ligne2 = code postal + ville
+function splitAddress(addr) {
+  if (!addr) return ['', ''];
+  const ci = addr.indexOf(',');
+  if (ci > 0) return [addr.slice(0, ci).trim(), addr.slice(ci + 1).trim()];
+  const m = addr.match(/^(.+?)\s{1,3}(\d{5}\s+.+)$/);
+  if (m) return [m[1].trim(), m[2].trim()];
+  return [addr, ''];
+}
+
+// Résumé énergie DPE : chauffage, ECS, année la plus récente, surface
+function getDPEEnergySummary(results, resultsNeufs) {
+  const all = [...(results || []), ...(resultsNeufs || [])];
+  if (!all.length) return null;
+  const imm = all.find(r => r.methode_application_dpe === 'dpe immeuble collectif');
+  const ref = imm || [...all].sort((a, b) => (b.date_reception_dpe || '').localeCompare(a.date_reception_dpe || ''))[0];
+  const ch = shortEnergie(ref.type_energie_principale_chauffage) + shortInstall(ref.type_installation_chauffage_n1);
+  const ecs = shortEnergie(ref.type_energie_principale_ecs) + shortInstall(ref.type_installation_ecs_n1);
+  // Année de construction du bien (pas la date du DPE)
+  const constrVals = all.map(r => r.annee_construction || r.periode_construction).filter(Boolean);
+  const year = constrVals.length ? constrVals.sort((a,b) => String(b).localeCompare(String(a)))[0] : '—';
+  const surfs = all.filter(r => r.methode_application_dpe !== 'dpe immeuble collectif').map(r => parseFloat(r.surface_habitable_logement)).filter(v => v > 0);
+  const mn = Math.round(Math.min(...surfs)), mx = Math.round(Math.max(...surfs));
+  const surf = surfs.length === 0 ? '—' : mn === mx ? mn + ' m²' : mn + '–' + mx + ' m²';
+  return { ch, ecs, year, surf };
+}
+
+// Rendu HTML du contenu copropriété RNIC
+function buildRNCContent(rnc) {
+  if (!rnc) return '<p style="font-size:11px;color:var(--text-muted);padding:0 14px 12px">Aucune copropriété répertoriée au RNIC à cette adresse.</p>';
+  const na = v => v != null && v !== '' ? `<span class="field-value">${v}</span>` : `<span class="field-value na">—</span>`;
+  return `<div style="padding:0 14px 12px">
+    <div style="margin-bottom:8px"><div class="field-label">Nom</div>${na(rnc.nom_usage_copropriete)}</div>
+    <div style="margin-bottom:8px"><div class="field-label">Syndic</div>${na(rnc.raison_sociale_representant_legal)}</div>
+    <div class="info-grid">
+      <div class="info-cell"><div class="field-label">Lots total</div>${na(rnc.nombre_total_lots)}</div>
+      <div class="info-cell"><div class="field-label">Habitation</div>${na(rnc.nombre_lots_habitation)}</div>
+      <div class="info-cell"><div class="field-label">Stationnement</div>${na(rnc.nombre_lots_stationnement)}</div>
+      <div class="info-cell"><div class="field-label">Période constr.</div>${na(rnc.periode_construction)}</div>
+    </div>
+  </div>`;
+}
+
+async function fetchPatrimoine(lat, lng) {
+  const geom = encodeURIComponent(JSON.stringify({type:'Point',coordinates:[lng, lat]}));
+  const pluR = await fetch(`https://apicarto.ign.fr/api/gpu/zone-urba?geom=${geom}`).then(r => r.json()).catch(() => null);
+  return { plu: pluR };
+}
+
+function buildPatrimoineContent(data) {
+  const pluZone = data.plu?.features?.[0]?.properties;
+  let html = '<div style="padding:0 14px 12px">';
+  html += '<div class="field-label">Zone PLU</div>';
+  if (pluZone) {
+    html += `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px">`;
+    html += `<span style="background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px;letter-spacing:.03em">${pluZone.libelle || '?'}</span>`;
+    if (pluZone.libelong) html += `<span class="field-value" style="font-size:11.5px">${pluZone.libelong}</span>`;
+    html += '</div>';
+    if (pluZone.partition) html += `<div style="margin-top:3px;font-size:10px;color:var(--text-muted)">Doc. ${pluZone.partition}${pluZone.nom_commune ? ' · ' + pluZone.nom_commune : ''}</div>`;
+  } else {
+    html += '<span class="field-value na">Zone non identifiée</span>';
+  }
+  html += '</div>';
+  return html;
+}
+
+const DPE_GRADE_NUM = {A:1,B:2,C:3,D:4,E:5,F:6,G:7};
+const DPE_NUM_GRADE = ['A','B','C','D','E','F','G'];
+const DPE_HEX = {A:'#00a651',B:'#50b748',C:'#c8d400',D:'#ffd400',E:'#f7941d',F:'#ed1c24',G:'#8b0000'};
+
+function updateDpeBadgeArrow() {
+  const badge = document.getElementById('immeuble-dpe-badge');
+  if (!badge || !_pmtilesDpeGrade) return;
+  // Lire la note ADEME depuis la classe CSS du badge (dpe-A/B/C…)
+  const ademeClass = [...badge.classList].find(c => c.startsWith('dpe-') && c.length === 5);
+  const ademeGrade = ademeClass?.slice(4);
+  if (!ademeGrade || _pmtilesDpeGrade === ademeGrade) return;
+  badge.textContent = _pmtilesDpeGrade + '→' + ademeGrade;
+  badge.style.fontSize = '13px';
+  badge.style.width = 'auto';
+  badge.style.minWidth = '36px';
+  badge.style.padding = '0 5px';
+}
+
+function getBestDpeGrade(results, resultsNeufs) {
+  // Priorité 1 : DPE immeuble collectif (note directe, pas de moyenne)
+  const immeuble = (results||[]).find(r => r.methode_application_dpe === 'dpe immeuble collectif');
+  if (immeuble?.etiquette_dpe && DPE_GRADE_NUM[immeuble.etiquette_dpe]) return immeuble.etiquette_dpe;
+  // Maison individuelle : le DPE le plus récent remplace les précédents (même logement)
+  const allDpe = [...(results||[]), ...(resultsNeufs||[])];
+  if (allDpe.length && allDpe.every(r => r.methode_application_dpe === 'dpe maison individuelle' || !r.methode_application_dpe)) {
+    const latest = allDpe.filter(r => DPE_GRADE_NUM[r.etiquette_dpe])
+      .sort((a, b) => String(b.date_reception_dpe || '').localeCompare(String(a.date_reception_dpe || '')))[0];
+    if (latest) return latest.etiquette_dpe;
+  }
+  // Priorité 2 : moyenne des DPE individuels
+  const all = [...(results||[]), ...(resultsNeufs||[])];
+  const nums = all.map(r => DPE_GRADE_NUM[r.etiquette_dpe]).filter(Boolean);
+  if (!nums.length) return null;
+  return DPE_NUM_GRADE[Math.round(nums.reduce((a,b)=>a+b,0)/nums.length) - 1] || null;
+}
+
+function applySelectedDPE(results, resultsNeufs, lng, lat, retry) {
+  const selSrc = map.getSource('sel-dpe-src');
+  const hatchSrc = map.getSource('neuf-hatch-src');
+  if (!selSrc || !hatchSrc) return;
+
+  const hasAny = results?.length || resultsNeufs?.length;
+  if (!hasAny || lng == null || lat == null) {
+    if (_selectedBatId && !hasAny) _dpeCorrections.delete(_selectedBatId); // plus de DPE ADEME : couleur des tuiles
+    renderDpeCorrections(selSrc);
+    hatchSrc.setData({type:'FeatureCollection',features:[]});
+    return;
+  }
+
+  // Récupérer le polygone du bâtiment via dpe-query (toujours actif, opacité 0)
+  // → fonctionne que le toggle DPE soit ON ou OFF
+  const pt = map.project([lng, lat]);
+  // Polygones du bâtiment sélectionné, retrouvés par son identifiant BDNB exact (jamais « le plus proche »)
+  const selFeatures = _selectedBatId
+    ? map.queryRenderedFeatures({layers:['dpe-query']}).filter(f => f.properties.id === _selectedBatId)
+    : [];
+  if (!selFeatures.length) {
+    renderDpeCorrections(selSrc);
+    hatchSrc.setData({type:'FeatureCollection',features:[]});
+    // Tuiles pas encore rendues (flyTo en cours) → nouvel essai quand la carte est stable
+    if (_selectedBatId && (retry||0) < 4) map.once('idle', () => applySelectedDPE(results, resultsNeufs, lng, lat, (retry||0)+1));
+    return;
+  }
+  const closestFeat = selFeatures[0];
+
+  // Lire la note PMTiles (ancienne norme) depuis le feature
+  const pmGrade = closestFeat?.properties?.dpe || null;
+  if (pmGrade) {
+    _pmtilesDpeGrade = pmGrade;
+    // Si renderDPE a déjà tourné (recherche texte), mettre à jour le badge
+    updateDpeBadgeArrow();
+  }
+  const grade = getBestDpeGrade(results, resultsNeufs);
+  const color = DPE_HEX[grade] || '#aaaaaa';
+  const isNeuf = resultsNeufs?.length > 0 && !(results?.length);
+
+  // Surcharge couleur ADEME sur tous les polygones du bâtiment
+  // Copie explicite de la géométrie : les objets renvoyés par queryRenderedFeatures la calculent
+  // à la demande, et une copie {...f} la perd (la surcouche ne dessinait alors rien).
+  const plain = selFeatures.map(f => ({type:'Feature', geometry:f.geometry, properties:{...f.properties, color}}));
+  _dpeCorrections.set(_selectedBatId, plain);
+  renderDpeCorrections(selSrc);
+
+  // Hachures uniquement si DPE neuf sans existant
+  hatchSrc.setData({type:'FeatureCollection', features: isNeuf ? plain : []});
+}
+
+async function loadDPE(feature, clickLng, clickLat, isClick = false) {
+  // Attendre que loadBatiment ait récupéré les identifiants BAN depuis BDNB
+  // (les deux fonctions démarrent en parallèle depuis selectAddress)
+  await _bdnbPromise;
+
+  // #dpe-data est créé par renderBatiment — s'il n'existe pas encore, on continue quand même
+  // renderDPE le trouvera ou stockera dans _dpeResultsReady
+  const p = feature.properties;
+  // Priorité : clé d'interopérabilité BDNB (lien bâtiment→BAN fiable) > BAN reverse geocode
+  const banId = _canonicalBanId || (isClick ? '' : (p.id || '')), citycode = p.citycode||'';
+  const housenumber = p.housenumber||'', street = p.street||p.name||'';
+  try {
+    const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,surface_habitable_immeuble,nombre_appartement,methode_application_dpe,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction,conso_5_usages_par_m2_ep';
+
+    // Mot-clé significatif de la rue (ignore préfixes génériques)
+    const SKIP_WORDS = /^(rue|avenue|boulevard|allée|allee|impasse|place|chemin|route|voie|passage|du|de|la|le|les|des|aux|au|d|l)$/i;
+    const streetKey = street.split(/\s+/).find(w => w.length >= 4 && !SKIP_WORDS.test(w)) || '';
+
+    // Fetch avec retry automatique sur 429 (backoff 1s puis 2s)
+    async function ademeGet(url) {
+      for (let i = 0; i < 3; i++) {
+        if (i > 0) await new Promise(ok => setTimeout(ok, 1000 * i));
+        const r = await fetch(url);
+        if (r.status === 429) continue;          // rate-limited → retry
+        if (!r.ok) return null;
+        return await r.json();
+      }
+      return null;
+    }
+
+    async function fetchDPEDataset(dataset, size=100) {
+      const base = `https://data.ademe.fr/data-fair/api/v1/datasets/${dataset}/lines?size=${size}&select=${SEL}&sort=-date_reception_dpe`;
+      // Uniquement les adresses BAN que la BDNB rattache au bâtiment (bâtiments d'angle = plusieurs adresses),
+      // ou à défaut l'adresse recherchée elle-même. Aucune recherche approchée :
+      // mieux vaut aucun DPE qu'un DPE du voisin.
+      const banIds = [...new Set(_allBanIds.length ? _allBanIds : (banId ? [banId] : []))];
+      const all = [], seen = new Set();
+      for (let i = 0; i < banIds.length; i += 30) {
+        const ids = banIds.slice(i, i + 30).map(encodeURIComponent).join(',');
+        const d = await ademeGet(base + `&identifiant_ban_in=${ids}`);
+        for (const r of (d?.results || [])) {
+          if (!seen.has(r.numero_dpe)) { seen.add(r.numero_dpe); all.push(r); }
+        }
+      }
+      all.sort((a, b) => String(b.date_reception_dpe || '').localeCompare(String(a.date_reception_dpe || '')));
+      return all;
+    }
+
+    // Séquentiel (pas de Promise.all) pour éviter le burst de requêtes → 429
+    const results = await fetchDPEDataset('dpe03existant', 100, true).catch(()=>[]);
+    const resultsNeufs = await fetchDPEDataset('g3cgx7jb3cmys5voxz1mrm22', 50, false).catch(()=>[]);
+    renderDPE(results, resultsNeufs);
+    const _applyLng = clickLng ?? currentCoords?.[0];
+    const _applyLat = clickLat ?? currentCoords?.[1];
+    // Stocker pour le idle de selectAddress (filet si ADEME répond après idle)
+    _lastDPEApplyArgs = [results, resultsNeufs, _applyLng, _applyLat];
+    applySelectedDPE(results, resultsNeufs, _applyLng, _applyLat);
+  } catch(e) { el.innerHTML = '<div class="empty-state"><p>Erreur chargement DPE</p></div>'; }
+}
+
+
+function renderDPE(results, resultsNeufs=[]) {
+  const el = document.getElementById('dpe-data');
+  if (!el) { _dpeResultsReady = { results, resultsNeufs }; return; }
+
+  // Mettre à jour les cellules énergie + année dans le panneau bâtiment
+  const summary = getDPEEnergySummary(results, resultsNeufs);
+  if (summary) {
+    const yearEl = document.getElementById('panel-dpe-year');
+    if (yearEl) yearEl.textContent = summary.year;
+    const chEl = document.getElementById('panel-dpe-ch');
+    if (chEl) chEl.innerHTML = `<div class="field-label">Chauffage</div><span class="field-value" style="font-size:12px">${summary.ch}</span>`;
+    const ecsEl = document.getElementById('panel-dpe-ecs');
+    if (ecsEl) ecsEl.innerHTML = `<div class="field-label">ECS</div><span class="field-value" style="font-size:12px">${summary.ecs}</span>`;
+    if (summary.surf !== '—') {
+      const surfRow = document.getElementById('panel-dpe-surf-row');
+      const surfEl = document.getElementById('panel-dpe-surf');
+      if (surfRow) surfRow.style.display = '';
+      if (surfEl) surfEl.textContent = summary.surf;
+    }
+  }
+
+  if (!results.length && !resultsNeufs.length) { el.innerHTML=`<div class="empty-state" style="padding:24px 16px"><div class="icon">◇</div><p>Aucun DPE disponible dans le registre ADEME.</p><p style="font-size:10px;margin-top:6px;color:var(--text-muted)">La couleur sur la carte provient du BDNB et peut correspondre à un DPE antérieur à 2021, non disponible en open data.</p></div>`; return; }
+  const ORDER=['A','B','C','D','E','F','G'];
+
+  // Séparer DPE immeuble collectif des DPE logements individuels
+  const resultsImmeuble = results.filter(r => r.methode_application_dpe === 'dpe immeuble collectif');
+  const resultsLogements = results.filter(r => r.methode_application_dpe !== 'dpe immeuble collectif');
+
+  function buildImmeubleSection(rows) {
+    if (!rows.length) return '';
+    const r = rows[0]; // On prend le plus récent (déjà trié par date desc)
+    const note = ORDER.includes(r.etiquette_dpe) ? r.etiquette_dpe : 'N';
+    const surf = r.surface_habitable_immeuble ? Math.round(r.surface_habitable_immeuble)+'m²' : '—';
+    const nbLog = r.nombre_appartement ? r.nombre_appartement+' logements' : '';
+    const date = r.date_reception_dpe ? r.date_reception_dpe.substring(0,10) : '—';
+    const num = r.numero_dpe||'';
+    const link = num ? `<a href="https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;" title="Voir sur ADEME">↗</a>` : '';
+    const constrVal = r.annee_construction||r.periode_construction||null;
+    const constrLabel = constrVal ? (String(constrVal).includes('-')?'Période':'Année') : null;
+    const constrHtml = constrVal ? `<span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">${constrLabel}</span><span style="font-size:13px;font-weight:700;color:var(--text);margin-left:6px;">${constrVal}</span>` : '';
+    const ch = shortEnergie(r.type_energie_principale_chauffage)+shortInstall(r.type_installation_chauffage_n1);
+    const ecs = shortEnergie(r.type_energie_principale_ecs)+shortInstall(r.type_installation_ecs_n1);
+    return `<div class="dpe-summary" style="border-left:3px solid ${DPE_HEX[note]||'#aaa'};padding-left:10px;">
+      <div class="dpe-summary-title" style="display:flex;align-items:center;gap:8px;">
+        <span id="immeuble-dpe-badge" class="dpe-badge dpe-${note}" style="font-size:20px;width:36px;height:36px;line-height:36px;">${(_pmtilesDpeGrade && _pmtilesDpeGrade !== note) ? _pmtilesDpeGrade+'→'+note : note}</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text);">DPE du bâtiment</span>
+        <span style="font-size:10px;color:var(--text-muted);margin-left:auto;">${link}</span>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;">
+        ${surf!=='—'?`<div style="font-size:10px;color:var(--text-muted);">Surface<br><span style="font-size:13px;font-weight:700;color:var(--text);">${surf}</span></div>`:''}
+        ${nbLog?`<div style="font-size:10px;color:var(--text-muted);">Logements<br><span style="font-size:13px;font-weight:700;color:var(--text);">${nbLog}</span></div>`:''}
+        ${ch&&ch!=='—'?`<div style="font-size:10px;color:var(--text-muted);">Chauffage<br><span style="font-size:13px;font-weight:700;color:var(--text);">${ch}</span></div>`:''}
+        ${ecs&&ecs!=='—'?`<div style="font-size:10px;color:var(--text-muted);">ECS<br><span style="font-size:13px;font-weight:700;color:var(--text);">${ecs}</span></div>`:''}
+        ${constrVal?`<div style="font-size:10px;color:var(--text-muted);">${constrLabel}<br><span style="font-size:13px;font-weight:700;color:var(--text);">${constrVal}</span></div>`:''}
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Date diagnostic : ${date}${rows.length>1?' · '+rows.length+' DPE immeuble disponibles':''}</div>
+    </div>`;
+  }
+
+  // Calcule la note DPE avant le changement de coefficient électricité du 1er janvier 2026.
+  // Retourne la note pré-2026 si elle diffère de la note courante, sinon null.
+  function preCoeffGrade(r) {
+    const date = r['date_reception_dpe'] || '';
+    // Seuls les DPE de la méthode 3CL (post juil. 2021) et antérieurs à 2026 sont concernés
+    if (date < '2021-07-01' || date >= '2026-01-01') return null;
+    // Uniquement si l'électricité est utilisée en chauffage ou ECS
+    const ch = r['type_energie_principale_chauffage'] || '';
+    const ecs = r['type_energie_principale_ecs'] || '';
+    if (!ch.includes('Électricité') && !ecs.includes('Électricité')) return null;
+    const ep = parseFloat(r['conso_5_usages_par_m2_ep']);
+    if (!ep || isNaN(ep) || ep <= 0) return null;
+    // Le coefficient électricité est passé de 2.58 à 2.3 → on reconstitue l'ancienne conso ep
+    const oldEp = ep * (2.58 / 2.3);
+    const thr = [70, 110, 180, 250, 330, 420];
+    const grades = ['A','B','C','D','E','F','G'];
+    const idx = thr.findIndex(t => oldEp <= t);
+    return idx === -1 ? 'G' : grades[idx];
+  }
+
+  function buildSection(rows, hatch=false) {
+    const h = hatch ? ' hatch' : '';
+    const groups={}; ORDER.forEach(k=>groups[k]=[]);
+    const chauffageCount={};
+    rows.forEach(r=>{
+      const note=ORDER.includes(r['etiquette_dpe'])?r['etiquette_dpe']:'N';
+      if(!groups[note])groups[note]=[];
+      groups[note].push(r);
+      const ch=r['type_energie_principale_chauffage']||'';
+      if(ch) chauffageCount[ch]=(chauffageCount[ch]||0)+1;
+    });
+    // Distribution — badges hachurés pour neufs
+    const distHtml=ORDER.map(note=>{
+      const n=groups[note].length; if(!n)return'';
+      return`<div class="dpe-dist-item"><span class="dpe-badge dpe-${note}${h}">${note}</span><span class="count">${n}</span><span class="label">DPE</span></div>`;
+    }).join('');
+    // Chauffage
+    const topCh=Object.entries(chauffageCount).sort((a,b)=>b[1]-a[1]);
+    const chHtml=topCh.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:3px;"><span>${k}</span><span style="color:var(--text)">${v} DPE</span></div>`).join('');
+    // Construction
+    const constrCount={};
+    rows.forEach(r=>{const yr=r['annee_construction']||r['periode_construction']||'';if(yr)constrCount[yr]=(constrCount[yr]||0)+1;});
+    const topConstr=Object.entries(constrCount).sort((a,b)=>b[1]-a[1]);
+    const constrVal=topConstr.length?topConstr[0][0]:null;
+    const constrLabel=constrVal?(String(constrVal).includes('-')?'Période':'Année'):null;
+    const constrHtml=constrVal?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;"><span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">${constrLabel}</span><span style="font-size:13px;font-weight:700;color:var(--text)">${constrVal}</span></div>`:'';
+    // Tableau — max 10 lignes (1 bâtiment = potentiellement 1 DPE/logement)
+    const TABLE_MAX = 10;
+    let tableRows='', tableCount=0;
+    ORDER.forEach(note=>{
+      const rr=groups[note]; if(!rr.length)return;
+      rr.forEach(r=>{
+        if(tableCount>=TABLE_MAX) return;
+        const _d=r['date_reception_dpe']||''; const date=_d.length>=7?_d.substring(5,7)+'/'+_d.substring(0,4):'—';
+        const surf=r['surface_habitable_logement']?Math.round(r['surface_habitable_logement'])+'m²':'—';
+        const constr=r['annee_construction']||r['periode_construction']||'—';
+        const num=r['numero_dpe']||'';
+        const link=num?`<a href="https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${num}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:13px;line-height:1" title="Voir sur ADEME">↗</a>`:'';
+        const oldGrade = preCoeffGrade(r);
+        const badgeLabel = (oldGrade && oldGrade !== note) ? `${oldGrade}→${note}` : note;
+        const badgeWidth = (oldGrade && oldGrade !== note) ? 'width:auto;padding:0 5px;min-width:38px;font-size:10px;' : '';
+        tableRows+=`<tr><td><span class="dpe-badge dpe-${note}${h}" style="${badgeWidth}">${badgeLabel}</span></td><td>${surf}</td><td style="color:var(--text-muted)">${constr}</td><td>${shortEnergie(r['type_energie_principale_chauffage'])}${shortInstall(r['type_installation_chauffage_n1'])}</td><td>${shortEnergie(r['type_energie_principale_ecs'])}${shortInstall(r['type_installation_ecs_n1'])}</td><td style="color:var(--text-muted)">${date}</td><td style="text-align:center">${link}</td></tr>`;
+        tableCount++;
+      });
+    });
+    const hiddenCount=rows.length-tableCount;
+    const title = hatch
+      ? `<div class="dpe-summary-title"><span class="dpe-neuf-badge">✓ Neuf</span>Distribution — ${rows.length} DPE</div>`
+      : `<div class="dpe-summary-title">Distribution — ${rows.length} DPE</div>`;
+    if(hiddenCount>0) tableRows+=`<tr><td colspan="7" style="text-align:center;color:var(--text-muted);font-size:10px;padding:8px">… et ${hiddenCount} autre${hiddenCount>1?'s':''} DPE</td></tr>`;
+    return `<div class="dpe-summary">${title}<div class="dpe-dist">${distHtml}</div></div><table class="dpe-table"><thead><tr><th>Note</th><th>Surface</th><th>Constr.</th><th>Chauff.</th><th>ECS</th><th>Date</th><th></th></tr></thead><tbody>${tableRows}</tbody></table>`;
+  }
+
+  let out = '';
+  if (resultsImmeuble.length) out += buildImmeubleSection(resultsImmeuble);
+  if (resultsLogements.length) out += buildSection(resultsLogements, false);
+  if (resultsNeufs.length) out += buildSection(resultsNeufs, true);
+  el.innerHTML = out;
+}
+
+function shortEnergie(val) {
+  if (!val) return '—';
+  return {'Électricité':'Élec.','Gaz naturel':'Gaz','Réseau de chaleur urbain':'RCU','Fioul domestique':'Fioul','Bois – Granulés (pellets) ou briquettes':'Pellets','Bois – Bûches':'Bois','GPL':'GPL','Charbon':'Charbon','Propane':'Propane','Autre':'Autre'}[val]||val.substring(0,12);
+}
+
+const CURSOR_PENCIL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath d='M15 1l4 4L7 17l-5 2 2-5Z' fill='%232bb573' stroke='white' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M13 3l4 4' stroke='rgba(0,0,0,0.25)' stroke-width='1'/%3E%3C/svg%3E") 2 17, crosshair`;
+
+document.getElementById('btn-measure-poly').addEventListener('click', ()=>toggleMeasure('poly'));
+
+function setCursorMeasure(on) {
+  document.getElementById('measure-cursor-style')?.remove();
+  if (on) {
+    const s = document.createElement('style');
+    s.id = 'measure-cursor-style';
+    s.textContent = `#map.measuring, #map.measuring * { cursor: ${CURSOR_PENCIL} !important; }`;
+    document.head.appendChild(s);
+    map.getCanvas().style.cursor = CURSOR_PENCIL;
+  } else {
+    map.getCanvas().style.cursor = '';
+  }
+}
+
+function toggleMeasure(mode) {
+  if(measureMode===mode){ clearMeasure(); return; }
+  clearMeasure(); measureMode=mode;
+  document.getElementById('map').classList.add('measuring');
+  setCursorMeasure(true);
+  document.getElementById('btn-measure-poly').classList.add('active');
+  // Mobile : rabattre la fiche pour libérer la carte pendant la mesure
+  if (isMobile && window.scopeRabattreFiche) window.scopeRabattreFiche();
+}
+map.on('click',e=>{
+  if(measureMode) {
+    const pt=[e.lngLat.lng,e.lngLat.lat]; measurePoints.push(pt);
+    const dot=document.createElement('div'); dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#e06090;border:2px solid #fff;';
+    measureMarkers.push(new maplibregl.Marker({element:dot}).setLngLat(pt).addTo(map));
+    updateMeasureGeom();
+    return;
+  }
+  const {lng, lat} = e.lngLat;
+  // Chercher le polygone bâtiment sous le curseur → centroïde comme référence spatiale
+  const pt = map.project([lng, lat]);
+  const bldFeats = map.queryRenderedFeatures(
+    [{x:pt.x-8,y:pt.y-8},{x:pt.x+8,y:pt.y+8}], {layers:['dpe-query']}
+  ).filter(f => { try { return turf.booleanPointInPolygon(turf.point([lng, lat]), f); } catch(_) { return false; } }); // seulement le bâtiment qui contient le point cliqué
+  let markerLng = lng, markerLat = lat;
+  let bldGroupId = null;
+  if (bldFeats.length) {
+    try {
+      const c = turf.centroid(bldFeats[0]);
+      [markerLng, markerLat] = c.geometry.coordinates;
+      bldGroupId = bldFeats[0].properties?.id || null;
+      _pmtilesDpeGrade = bldFeats[0].properties?.dpe || null;
+    } catch(_) {}
+  }
+  // Reverse geocode au centroïde si PMTiles trouvé (adresse du bâtiment, pas du portail)
+  // Sinon au point de clic (fallback)
+  const geocodeLng = bldFeats.length ? markerLng : lng;
+  const geocodeLat = bldFeats.length ? markerLat : lat;
+  reverseGeocode(geocodeLng, geocodeLat, lng, lat, bldGroupId);
+});
+
+async function reverseGeocode(lng, lat, markerLng, markerLat, bldGroupId) {
+  try {
+    setStatus('Chargement adresse…','loading');
+    const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lng}&lat=${lat}`);
+    const d = await r.json();
+    const feature = d.features?.[0];
+    if (feature) {
+      selectAddress(feature, markerLng ?? lng, markerLat ?? lat, bldGroupId);
+    } else {
+      setStatus('Aucune adresse trouvée ici', 'error');
+      setTimeout(() => setStatus('Prêt'), 2000);
+    }
+  } catch(e) {
+    setStatus('Erreur géocodage inverse', 'error');
+    setTimeout(() => setStatus('Prêt'), 2000);
+  }
+}
+
+map.on('dblclick',e=>{
+  if(!measureMode)return; e.preventDefault();
+  if(measurePoints.length>=3)finalizeMeasure();
+});
+function updateMeasureGeom(){
+  const pts=measurePoints; if(pts.length<2)return;
+  let geojson;
+  if(measureMode==='poly'){
+    if(pts.length>=3){
+      geojson={type:'Feature',geometry:{type:'Polygon',coordinates:[[...pts,pts[0]]]}};
+      const area=turf.area(geojson);
+      const perimM=Math.round(turf.length({type:'Feature',geometry:{type:'LineString',coordinates:[...pts,pts[0]]}},{units:'kilometers'})*1000);
+      const areaStr=area<10000?`${Math.round(area)} m²`:`${(area/10000).toFixed(2)} ha`;
+      const perimStr=perimM<1000?`${perimM} m`:`${(perimM/1000).toFixed(2)} km`;
+      showMeasureResult(`${areaStr}  ·  ${perimStr}`);
+    } else {
+      geojson={type:'Feature',geometry:{type:'LineString',coordinates:pts}};
+      const m=Math.round(turf.length(geojson,{units:'kilometers'})*1000);
+      showMeasureResult(m<1000?`${m} m`:`${(m/1000).toFixed(2)} km`);
+    }
+  }
+  const src=map.getSource('measure-src'); if(src&&geojson)src.setData({type:'FeatureCollection',features:[geojson]});
+}
+function finalizeMeasure(){measureMode=null;document.getElementById('map').classList.remove('measuring');setCursorMeasure(false);document.getElementById('btn-measure-poly').classList.remove('active');}
+function clearMeasure(){
+  measureMode=null;measurePoints=[];measureMarkers.forEach(m=>m.remove());measureMarkers=[];
+  document.getElementById('map').classList.remove('measuring');
+  setCursorMeasure(false);
+  document.getElementById('btn-measure-poly').classList.remove('active');
+  document.getElementById('measure-result').style.display='none';
+  const src=map.getSource('measure-src');if(src)src.setData({type:'FeatureCollection',features:[]});
+}
+function showMeasureResult(text){const el=document.getElementById('measure-result');el.textContent=text;el.style.display='block';}
+function setStatus(msg,type=''){
+  const btn=document.getElementById('info-btn');
+  if(!btn)return;
+  btn.className=type; // loading | error | ''
+}
+// ── Test sources ──────────────────────────────────────────────────────────
+async function testSources() {
+  const btn = document.getElementById('src-test-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  // Afficher colonne état
+  document.querySelectorAll('.src-status').forEach(el => { el.style.display='table-cell'; el.textContent='·'; });
+  document.getElementById('src-status-th').style.display = 'table-cell';
+
+  function pending(id) {
+    const el = document.getElementById('src-st-' + id);
+    if (el) el.innerHTML = '<span style="color:var(--text-muted);font-size:10px">…</span>';
+  }
+  function setOk(id, ok) {
+    const el = document.getElementById('src-st-' + id);
+    if (!el) return;
+    el.innerHTML = ok
+      ? '<span style="color:#2bb573;font-size:13px" title="OK">✓</span>'
+      : '<span style="color:#e53e3e;font-size:13px" title="Erreur">✗</span>';
+  }
+
+  function testTile(urlTemplate) {
+    const url = urlTemplate.replace('{z}','8').replace('{x}','128').replace('{y}','88');
+    return new Promise(resolve => {
+      const img = new Image();
+      const t = setTimeout(() => { img.src=''; resolve(false); }, 6000);
+      img.onload  = () => { clearTimeout(t); resolve(true);  };
+      img.onerror = () => { clearTimeout(t); resolve(false); };
+      img.src = url;
+    });
+  }
+
+  const tests = [
+    { id:'ban',      fn: () => fetch('https://api-adresse.data.gouv.fr/search/?q=nantes&limit=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'bdnb',     fn: () => fetch('/api/bdnb?bbox='+encodeURIComponent('-1.56,47.20,-1.54,47.22'), {signal:AbortSignal.timeout(8000)}).then(r=>r.status<500) },
+    { id:'ademe',    fn: () => fetch('https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'ign-wfs',  fn: () => fetch('https://data.geopf.fr/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetCapabilities', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'dvf',      fn: () => fetch('/api/dvf?idpar=440109000B0100', {signal:AbortSignal.timeout(8000)}).then(r=>r.status<500) },
+    { id:'rnic',     fn: () => fetch('https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/?page_size=1', {signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'pmtiles',  fn: () => fetch(_dpeTilesUrl, {method:'HEAD', headers:{'Range':'bytes=0-1'}, signal:AbortSignal.timeout(6000)}).then(r=>r.ok||r.status===206) },
+    { id:'rcu',      fn: () => fetch(`${DPE_TILES_BASE}/rcu-meta.json`, {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'gaz',      fn: () => fetch(`${DPE_TILES_BASE}/gaz-meta.json`, {method:'HEAD', signal:AbortSignal.timeout(6000)}).then(r=>r.ok) },
+    { id:'carto',    fn: () => testTile(TILE_URLS['voyager']) },
+    { id:'ign-tiles',fn: () => testTile(TILE_URLS['ign-plan']) },
+  ];
+
+  tests.forEach(t => pending(t.id));
+
+  await Promise.all(tests.map(async ({id, fn}) => {
+    try { setOk(id, await fn()); }
+    catch(e) { setOk(id, false); }
+  }));
+
+  btn.disabled = false;
+  btn.textContent = '↺ Retester';
+}
+
+function toggleDVF(checked) {
+  dvfEnabled = checked;
+  localStorage.setItem('dvf-enabled', checked);
+  const el = document.querySelector('.dvf-accordion');
+  if (el) el.style.display = checked ? '' : 'none';
+}
+
+// Tuiles DPE : nationales sur R2 si disponibles, sinon fichier Loire-Atlantique du site
+let _dpeTilesUrl = '/public/dpe-44.pmtiles';
+(DPE_TILES_BASE ? fetch(DPE_TILES_BASE + '/dpe-france-meta.json', {cache:'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null))
+.then(nat => {
+  if (nat?.fichier) {
+    _dpeTilesUrl = DPE_TILES_BASE + '/' + nat.fichier;
+    // Attendre la fin du chargement de la source initiale : sinon sa réponse
+    // arrive après et remet l'emprise Loire-Atlantique (bâtiments absents ailleurs)
+    const apply = () => {
+      const src = map.getSource('dpe-src'); if (!src) return;
+      const go = () => src.setUrl(`pmtiles://${_dpeTilesUrl}`);
+      if (src.loaded()) return go();
+      const h = e => { if (e.sourceId === 'dpe-src' && e.sourceDataType === 'metadata') { map.off('sourcedata', h); go(); } };
+      map.on('sourcedata', h);
+    };
+    if (map.getSource('dpe-src')) apply(); else map.once('load', () => setTimeout(apply, 0));
+    return nat;
+  }
+  return fetch('/public/dpe-44-meta.json').then(r => r.ok ? r.json() : null);
+}).then(m => {
+  const el = document.getElementById('pmtiles-edition');
+  if (el && m?.millesime) el.textContent = `BDNB ${m.millesime} (${m.genere_le || ''})`;
+}).catch(() => {});
+
+// Toggle info panel
+document.getElementById('info-btn').addEventListener('click',function(e){
+  e.stopPropagation();
+  const wasOpen = document.getElementById('info-panel').classList.contains('open');
+  closeAllPickers();
+  if (!wasOpen) document.getElementById('info-panel').classList.add('open');
+});
+
+// ── Timeline "Remonter le temps" ──
+const IGN_ORTHO_TILE = l => `https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=${l}&STYLE=BDORTHOHISTORIQUE&FORMAT=image%2Fpng&TILEMATRIXSET=PM_3_18&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
+let _tlActive = false, _tlPrevLayer = null, _tlChip = null;
+const tlBtn = document.getElementById('timeline-btn');
+const tlPanel = document.getElementById('timeline-panel');
+function closeTL() {
+  _tlActive = false;
+  tlBtn.classList.remove('active');
+  tlPanel.classList.remove('open');
+  if (_tlChip) { _tlChip.classList.remove('active'); _tlChip = null; }
+  if (_tlPrevLayer) { map.getSource('base').setTiles([TILE_URLS[_tlPrevLayer]]); _tlPrevLayer = null; }
+}
+function openTL() {
+  const prev = currentLayer;
+  closeAllPickers();
+  _tlActive = true;
+  _tlPrevLayer = prev;
+  tlBtn.classList.add('active');
+  tlPanel.classList.add('open');
+}
+tlBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  if (_tlActive) { closeTL(); } else { openTL(); }
+});
+tlPanel.querySelectorAll('.tl-chip').forEach(chip => {
+  chip.addEventListener('click', e => {
+    e.stopPropagation();
+    if (_tlChip) _tlChip.classList.remove('active');
+    if (_tlChip === chip) { _tlChip = null; closeTL(); return; }
+    _tlChip = chip;
+    chip.classList.add('active');
+    map.getSource('base').setTiles([IGN_ORTHO_TILE(chip.dataset.layer)]);
+  });
+});
+document.getElementById('tl-close').addEventListener('click', closeTL);
+
+// ── Mobile : fiche du bien qu'on rabat en la glissant vers le bas ──
+// Ouverte → glisser vers le bas (depuis la poignée, ou depuis le contenu quand il est en haut) = rabattue.
+// Rabattue → glisser vers le haut ou toucher la fiche = rouverte. La poignée bascule entre les deux.
+(function () {
+  const panel = document.getElementById('panel');
+  const content = document.getElementById('panel-content');
+  const handle = document.getElementById('panel-handle');
+  const PEEK = 112;
+  let y0 = null, dy = 0, dragging = false, base = 0, fromHandle = false;
+  const isPeek = () => panel.classList.contains('mobile-peek');
+  function setPeek(on) {
+    panel.classList.toggle('mobile-peek', on);
+    if (on) content.scrollTop = 0;
+  }
+  panel.addEventListener('touchstart', e => {
+    if (!isMobile || !panel.classList.contains('mobile-open')) return;
+    fromHandle = handle.contains(e.target);
+    if (!fromHandle && !isPeek() && content.scrollTop > 0) return;   // laisser défiler la fiche
+    y0 = e.touches[0].clientY; dy = 0; dragging = false;
+    base = isPeek() ? panel.offsetHeight - PEEK : 0;
+  }, {passive: true});
+  panel.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    dy = e.touches[0].clientY - y0;
+    if (!dragging) {
+      if (Math.abs(dy) < 8) return;
+      // Fiche ouverte : un geste vers le haut sur le contenu fait défiler, il ne déplace pas la fiche
+      if (!isPeek() && dy < 0 && !fromHandle) { y0 = null; return; }
+      dragging = true;
+      panel.style.transition = 'none';
+    }
+    const t = Math.max(0, Math.min(panel.offsetHeight - PEEK, base + dy));
+    panel.style.transform = `translateY(${t}px)`;
+    if (e.cancelable) e.preventDefault();
+  }, {passive: false});
+  function end() {
+    if (y0 === null) return;
+    y0 = null;
+    if (!dragging) return;
+    dragging = false;
+    panel.style.transition = ''; panel.style.transform = '';
+    if (!isPeek() && dy > 70) setPeek(true);
+    else if (isPeek() && dy < -40) setPeek(false);
+  }
+  panel.addEventListener('touchend', end);
+  panel.addEventListener('touchcancel', end);
+  handle.addEventListener('click', () => setPeek(!isPeek()));
+  window.scopeRabattreFiche = () => { if (panel.classList.contains('mobile-open')) setPeek(true); };
+  // Fiche rabattue : un toucher la rouvre (sans déclencher le bouton touché)
+  panel.addEventListener('click', e => {
+    if (isMobile && isPeek() && !handle.contains(e.target)) { e.stopPropagation(); e.preventDefault(); setPeek(false); }
+  }, true);
+})();
+</script>
+
+</body>
+</html>
