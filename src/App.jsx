@@ -4,6 +4,7 @@ import area from '@turf/area';
 import length from '@turf/length';
 import Icon from './components/Icon.jsx';
 import Search from './components/Search.jsx';
+import LayerIcon from './components/LayerIcon.jsx';
 import Fiche from './components/Fiche.jsx';
 import { Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
@@ -222,8 +223,8 @@ export default function App() {
               <div className="layer-grid">
                 {OVERLAYS.filter(o => o.group === g).map(o => (
                   <button key={o.id} className="layer-tile" aria-pressed={!!overlays[o.id]} onClick={() => { toggleOverlay(o.id); setPanel(null); }}>
-                    <span className="layer-sw" style={{ background: o.sw }} aria-hidden="true" />
-                    <span>{o.label}<small>{o.sub}</small></span>
+                    <LayerIcon id={o.id} />
+                    <span>{o.label}</span>
                     {overlays[o.id] && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
                   </button>
                 ))}
