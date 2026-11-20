@@ -8,9 +8,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '17 4 22 * *'   # le 22 de chaque mois (FCU publie vers le milieu du mois)
-  push:
-    branches: [etape4-rcu-gaz]
-    paths: ['.github/workflows/generate-reseaux-tiles.yml', 'scripts/prepare_rcu.py']
 
 env:
   R2_BUCKET: scope-tuiles-eu
