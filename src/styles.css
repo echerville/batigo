@@ -176,7 +176,7 @@ a:hover { color: var(--action-dark); }
 .historic button[aria-pressed="true"] { background: var(--action); color: #fff; }
 .toast { bottom: 100px; padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #fff; background: rgba(18,24,38,.78); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 
-.streetview { position: absolute; right: 16px; bottom: 100px; width: min(560px, calc(100% - 470px)); height: 360px; border-radius: 20px; overflow: hidden; z-index: 24; display: flex; flex-direction: column; }
+.streetview { position: absolute; right: 16px; bottom: 100px; width: max(340px, min(640px, calc(100% - 470px))); height: min(420px, calc(100% - 220px)); border-radius: 20px; overflow: hidden; z-index: 24; display: flex; flex-direction: column; }
 .streetview header { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; font-weight: 700; font-size: 14px; }
 .streetview iframe { flex: 1; border: 0; background: #ddd; }
 
