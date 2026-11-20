@@ -290,7 +290,8 @@
   body.mobile #panel-handle::before{content:'';width:40px;height:4px;background:var(--border-med);border-radius:2px;display:block}
   /* Timeline et résultat mesure : au-dessus de la recherche */
   body.mobile #timeline-panel{bottom:auto!important;top:76px!important}
-  body.mobile #measure-result{bottom:72px}
+  /* Résultat de mesure : en haut sous la recherche, au-dessus de la fiche et de la barre du bas */
+  body.mobile #measure-result{position:fixed;top:68px;bottom:auto;z-index:260;max-width:calc(100% - 24px);white-space:normal;text-align:center}
   /* Contrôles MapLibre : masquer zoom (tactile), remonter attribution */
   body.mobile .maplibregl-ctrl-zoom-in,body.mobile .maplibregl-ctrl-zoom-out{display:none!important}
   body.mobile .maplibregl-ctrl-bottom-right,body.mobile .maplibregl-ctrl-bottom-left{bottom:64px!important}
@@ -1920,6 +1921,8 @@ function toggleMeasure(mode) {
   document.getElementById('map').classList.add('measuring');
   setCursorMeasure(true);
   document.getElementById('btn-measure-poly').classList.add('active');
+  // Mobile : rabattre la fiche pour libérer la carte pendant la mesure
+  if (isMobile && window.scopeRabattreFiche) window.scopeRabattreFiche();
 }
 map.on('click',e=>{
   if(measureMode) {
@@ -2187,6 +2190,7 @@ document.getElementById('tl-close').addEventListener('click', closeTL);
   panel.addEventListener('touchend', end);
   panel.addEventListener('touchcancel', end);
   handle.addEventListener('click', () => setPeek(!isPeek()));
+  window.scopeRabattreFiche = () => { if (panel.classList.contains('mobile-open')) setPeek(true); };
   // Fiche rabattue : un toucher la rouvre (sans déclencher le bouton touché)
   panel.addEventListener('click', e => {
     if (isMobile && isPeek() && !handle.contains(e.target)) { e.stopPropagation(); e.preventDefault(); setPeek(false); }
