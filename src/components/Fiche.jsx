@@ -95,8 +95,6 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
           <strong>Aucun bâtiment n’est rattaché de façon certaine à cette adresse.</strong>
           Scope n’affiche pas de bâtiment voisin. Cliquez directement sur le bâtiment dans la carte pour l’identifier.
         </div>
-        {dpeOk && nbDpe > 0 && <button className="btn secondary" onClick={() => setTab('dpe')}>{nbDpe > 1 ? `Voir les ${nbDpe} DPE de cette adresse` : 'Voir le DPE de cette adresse'}</button>}
-        <button className="btn ghost" onClick={onStreetview}><Icon name="camera" /> Vue de rue</button>
       </>
     );
   }
@@ -140,10 +138,6 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
         </div>
       )}
 
-      {dpeOk && nbDpe > 0 && (
-        <button className="btn secondary" onClick={() => setTab('dpe')}>{nbDpe > 1 ? `Voir les ${nbDpe} DPE du bâtiment` : 'Voir le DPE du bâtiment'}</button>
-      )}
-      <button className="btn ghost" onClick={onStreetview}><Icon name="camera" /> Vue de rue</button>
     </>
   );
 }

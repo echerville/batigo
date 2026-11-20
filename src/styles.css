@@ -246,3 +246,27 @@ a:hover { color: var(--action-dark); }
 .fiche-scroll .empty { padding: 4px 0; border-radius: 0; }
 .fiche-scroll .card .facts { border-top: 0; }
 .fiche-scroll .btn.ghost { background: rgba(18,24,38,.06); }
+
+/* Fiche compacte : tout l'onglet Bâtiment tient sans défiler */
+.fiche-scroll { padding: 16px 18px; gap: 12px; }
+.fiche .kicker { font-size: 11px; }
+.fiche-scroll .addr { font-size: 20px; }
+.fiche-scroll .addr-sub { font-size: 14px; }
+.fiche-scroll .tabs button { padding: 6px 10px; font-size: 13px; }
+.fiche-scroll [role="tabpanel"] { gap: 12px !important; }
+.fiche-scroll .card { padding-top: 10px; gap: 8px; }
+.fiche-scroll .card-title { font-size: 13px; }
+.fiche-scroll .card-title span { font-size: 12px; }
+.fiche-scroll .grade.lg { width: 34px; height: 34px; font-size: 19px; }
+.fiche-scroll .grade.xs { min-width: 22px; height: 22px; font-size: 11px; }
+.fiche-scroll .fact { padding: 8px 0; }
+.fiche-scroll .fact-label { font-size: 11px; }
+.fiche-scroll .fact-value { font-size: 15px; margin-top: 2px; }
+.fiche-scroll .fact-note { font-size: 11px; margin-top: 0; }
+.fiche-scroll .small { font-size: 12px; }
+.fiche-scroll .section-title { font-size: 14px; }
+.fiche-scroll .list-row { padding: 8px 0; gap: 10px; }
+.fiche-scroll .list-row .t { font-size: 13px; }
+.fiche-scroll .list-row .s { font-size: 12px; }
+/* La fiche prend la hauteur de son contenu (au plus la hauteur de l'écran) */
+.fiche { bottom: auto; max-height: calc(100% - var(--fiche-top, 129px) - 16px); }
