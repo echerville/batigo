@@ -224,7 +224,7 @@ const bearing = ([lng1, lat1], [lng2, lat2]) => {
 };
 // Cherche la photo prise depuis la rue la plus proche (voiture Google : « © Google »),
 // en écartant les photos d'intérieur et les photos de particuliers. Métadonnées gratuites.
-export async function googleStreetViewUrl(lng, lat) {
+export async function googleStreetView(lng, lat) {
   if (!GMAPS_KEY) return { found: false };
   const base = `https://www.google.com/maps/embed/v1/streetview?key=${encodeURIComponent(GMAPS_KEY)}&language=fr&fov=80`;
   const meta = (la, ln, radius) => json(`https://maps.googleapis.com/maps/api/streetview/metadata?location=${la},${ln}&radius=${radius}&source=outdoor&key=${encodeURIComponent(GMAPS_KEY)}`).catch(() => null);
@@ -252,17 +252,13 @@ export async function googleStreetViewUrl(lng, lat) {
   }
   if (!best) return { found: false };
   const h = bearing([best.location.lng, best.location.lat], [lng, lat]);
-  return { found: true, url: `${base}&pano=${encodeURIComponent(best.pano_id)}&heading=${h}&pitch=5` };
-}
-
-// ── Vue de rue (Panoramax) ──
-export async function panoramaxUrl(lng, lat) {
-  const d = 0.005;
-  const js = await json(`https://panoramax.ign.fr/api/search?bbox=${lng - d},${lat - d},${lng + d},${lat + d}&limit=1`);
-  const pic = js.features?.[0]?.id;
+  const q = `pano=${encodeURIComponent(best.pano_id)}&heading=${h}&pitch=5&fov=80&key=${encodeURIComponent(GMAPS_KEY)}`;
   return {
-    found: !!pic,
-    url: pic ? `https://api.panoramax.xyz/?focus=pic&pic=${pic}&map=18/${lat}/${lng}` : `https://api.panoramax.xyz/?focus=map&map=18/${lat}/${lng}`,
+    found: true,
+    url: `${base}&pano=${encodeURIComponent(best.pano_id)}&heading=${h}&pitch=5`,
+    // Aperçu fixe (API Street View Static : 10 000 images gratuites par mois, payant au-delà)
+    preview: `https://maps.googleapis.com/maps/api/streetview?size=640x320&scale=2&return_error_code=true&${q}`,
+    date: best.date || null,
   };
 }
 

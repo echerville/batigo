@@ -270,3 +270,11 @@ a:hover { color: var(--action-dark); }
 .fiche-scroll .list-row .s { font-size: 12px; }
 /* La fiche prend la hauteur de son contenu (au plus la hauteur de l'écran) */
 .fiche { bottom: auto; max-height: calc(100% - var(--fiche-top, 129px) - 16px); }
+
+/* Aperçu Street View dans la fiche */
+.sv-thumb { position: relative; display: block; width: 100%; aspect-ratio: 2 / 1; padding: 0; border: 0; border-radius: 14px; overflow: hidden; background: rgba(18,24,38,.08); cursor: pointer; flex-shrink: 0; }
+.sv-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sv-label { position: absolute; left: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; background: rgba(18,24,38,.7); color: #fff; font-size: 12px; font-weight: 700; }
+.sv-thumb:hover .sv-label { background: var(--action); }
+.sv-none { padding: 2px 0; }
+.mobile .sv-thumb { aspect-ratio: 5 / 2; }

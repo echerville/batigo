@@ -11,7 +11,6 @@ const WMTS = (layer, fmt = 'image/png', style = 'normal', matrix = 'PM') =>
   `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=${style}&FORMAT=${encodeURIComponent(fmt)}&TILEMATRIXSET=${matrix}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
 
 export const BASEMAPS = {
-  plan:  { label: 'Plan',      tiles: WMTS('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2'), attribution: '© IGN Géoplateforme' },
   ortho: { label: 'Satellite', tiles: WMTS('ORTHOIMAGERY.ORTHOPHOTOS', 'image/jpeg'), attribution: '© IGN Géoplateforme' },
   osm:   { label: 'OSM',       tiles: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
 };

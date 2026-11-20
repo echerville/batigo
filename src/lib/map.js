@@ -36,7 +36,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
     container,
     style: {
       version: 8,
-      sources: { base: { type: 'raster', tiles: [BASEMAPS.plan.tiles], tileSize: 256, maxzoom: 19, attribution: BASEMAPS.plan.attribution } },
+      sources: { base: { type: 'raster', tiles: [BASEMAPS.ortho.tiles], tileSize: 256, maxzoom: 19, attribution: BASEMAPS.ortho.attribution } },
       layers: [{ id: 'base-layer', type: 'raster', source: 'base' }],
     },
     // Démarrage sur la France entière (le fond IGN couvre aussi les pays voisins aux petits zooms : pas de bord blanc)
@@ -49,7 +49,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
 
   const state = {
     overlays: {}, loaded: {}, measure: null, selBatId: null, corrections: new Map(),
-    addrMarker: null, measureMarkers: [], basemap: 'plan', historic: null, dpeTiles: DPE_TILES_FALLBACK,
+    addrMarker: null, measureMarkers: [], basemap: 'ortho', historic: null, dpeTiles: DPE_TILES_FALLBACK,
   };
   const ready = new Promise(res => map.once('load', res));
   let rcuPopup;

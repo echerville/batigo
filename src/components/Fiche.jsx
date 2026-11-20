@@ -36,7 +36,7 @@ function useLazy(enabled, key, loader) {
   return s.key === key ? s : { status: enabled ? 'loading' : 'idle' };
 }
 
-export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile }) {
+export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile, streetPreview }) {
   const [tab, setTab] = useState('batiment');
   useEffect(() => { setTab('batiment'); }, [place.key]);
 
@@ -65,6 +65,8 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
       </div>
       {onClose && !mobile && <button className="icon-btn fiche-close" onClick={onClose} aria-label="Fermer la fiche"><Icon name="x" /></button>}
 
+      <StreetPreview sv={streetPreview} onOpen={onStreetview} />
+
       <div className="tabs" role="tablist" aria-label="Rubriques de la fiche">
         {TABS.map(([id, name]) => (
           <button key={id} role="tab" id={`tab-${id}`} aria-selected={tab === id} aria-controls={`panel-${id}`} onClick={() => setTab(id)}>
@@ -84,6 +86,22 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
 
       <div className="small muted">Sources : ADEME, BDNB (CSTB), IGN, DGFiP · consulté le {today}</div>
     </>
+  );
+}
+
+// Aperçu Google Street View du bâtiment ; un clic ouvre la vue de rue interactive
+function StreetPreview({ sv, onOpen }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [sv?.preview]);
+  if (!sv || sv.status === 'idle' || sv.status === 'error') return null;
+  if (sv.status === 'loading') return <div className="sv-thumb skeleton" aria-hidden="true" />;
+  if (sv.status === 'none' || failed) return <div className="sv-none small muted">Pas de photo de rue Google à proximité.</div>;
+  const d = sv.date ? sv.date.split('-').reverse().join('/') : null;
+  return (
+    <button className="sv-thumb" onClick={onOpen} aria-label="Ouvrir la vue de rue">
+      <img src={sv.preview} alt="Vue de rue du bâtiment (Google Street View)" onError={() => setFailed(true)} />
+      <span className="sv-label"><Icon name="camera" size={14} /> Vue de rue{d ? ` · ${d}` : ''}</span>
+    </button>
   );
 }
 

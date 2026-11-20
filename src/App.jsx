@@ -7,7 +7,7 @@ import Search from './components/Search.jsx';
 import Fiche from './components/Fiche.jsx';
 import { Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
-import { fetchDPE, googleStreetViewUrl, hasGoogleStreetView, panoramaxUrl, resolveBuilding, reverseAddress } from './lib/data.js';
+import { fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
 import { BASEMAPS, HISTORIC, OVERLAYS } from './lib/config.js';
 
 const mobile = !!window.SCOPE_MOBILE;
@@ -33,7 +33,7 @@ export default function App() {
   const [dpe, setDpe] = useState({ status: 'idle' });
   const [tileGrade, setTileGrade] = useState(null);
   const [overlays, setOverlays] = useState({});
-  const [basemap, setBasemap] = useState('plan');
+  const [basemap, setBasemap] = useState('ortho');
   const [historic, setHistoric] = useState(null);     // null = fermé, '' = ouvert sans année
   const [measure, setMeasure] = useState(null);       // { points, done }
   const [panel, setPanel] = useState(null);           // 'layers' | 'basemap' | 'tools' | 'sources'
@@ -131,18 +131,28 @@ export default function App() {
     if ((measure?.points.length || 0) >= 2) api.current.stopMeasure(true);
     else { api.current.stopMeasure(false); setMeasure(null); }
   }
-  // Vue de rue : Google Street View, sinon Panoramax
-  async function openStreet(source) {
+  // Photo de rue Google du bien sélectionné (cherchée une fois par bien, partagée avec l'aperçu de la fiche)
+  const [sv, setSv] = useState({ status: 'idle' });
+  useEffect(() => {
+    if (!place || !hasGoogleStreetView()) { setSv({ status: 'idle' }); return; }
+    let alive = true;
+    setSv({ status: 'loading', key: place.key });
+    googleStreetView(place.lngLat[0], place.lngLat[1])
+      .then(r => alive && setSv({ status: r.found ? 'ok' : 'none', key: place.key, ...r }))
+      .catch(() => alive && setSv({ status: 'error', key: place.key }));
+    return () => { alive = false; };
+  }, [place]);
+
+  // Vue de rue interactive
+  async function openStreet() {
+    if (!hasGoogleStreetView()) { say('Vue de rue non configurée', 3000); return; }
+    if (place && sv.key === place.key && sv.status === 'ok') { setStreet({ url: sv.url }); return; }
     const at = place?.lngLat || api.current.map.getCenter().toArray();
     say('Recherche de la vue de rue…');
     try {
-      if (source !== 'panoramax' && hasGoogleStreetView()) {
-        const g = await googleStreetViewUrl(at[0], at[1]);
-        if (g.found) { say(null); setStreet({ url: g.url, source: 'google' }); return; }
-      }
-      const r = await panoramaxUrl(at[0], at[1]);
-      say(r.found ? null : 'Aucune photo de rue à proximité', r.found ? 0 : 3000);
-      setStreet({ url: r.url, source: 'panoramax' });
+      const g = await googleStreetView(at[0], at[1]);
+      if (g.found) { say(null); setStreet({ url: g.url }); }
+      else say('Aucune photo de rue Google à proximité', 3000);
     } catch { say('Vue de rue indisponible pour le moment', 3000); }
   }
   function locate() {
@@ -168,7 +178,7 @@ export default function App() {
 
   // Fiche commune PC / mobile
   const fiche = place && (
-    <Fiche place={place} building={building} dpe={dpe} tileGrade={tileGrade} mobile={mobile}
+    <Fiche place={place} building={building} dpe={dpe} tileGrade={tileGrade} mobile={mobile} streetPreview={sv.key === place?.key ? sv : null}
       onClose={closeFiche} onStreetview={openStreet}
       onShowLayer={id => { toggleOverlay(id, true); if (mobile) setSheet('peek'); say('Couche affichée sur la carte', 2000); }} />
   );
@@ -313,11 +323,7 @@ export default function App() {
       {/* Vue de rue */}
       {street && (
         <div className="streetview glass" role="dialog" aria-label="Vue de rue">
-          <header>Vue de rue · {street.source === 'google' ? 'Google Street View' : 'Panoramax'}<span className="spacer" />
-            {street.source === 'google'
-              ? <button className="btn ghost" style={{ minHeight: 32, padding: '4px 10px', fontSize: 13 }} onClick={() => openStreet('panoramax')}>Photos Panoramax</button>
-              : hasGoogleStreetView() && <button className="btn ghost" style={{ minHeight: 32, padding: '4px 10px', fontSize: 13 }} onClick={() => openStreet('google')}>Google</button>}
-            {street.source === 'panoramax' && <a className="icon-btn" href={street.url} target="_blank" rel="noopener noreferrer" aria-label="Ouvrir dans un nouvel onglet"><Icon name="expand" size={18} /></a>}
+          <header>Vue de rue · Google Street View<span className="spacer" />
             <button className="icon-btn" aria-label="Fermer la vue de rue" onClick={() => setStreet(null)}><Icon name="x" size={18} /></button>
           </header>
           <iframe key={street.url} title="Vue de rue" src={street.url} allow="fullscreen; accelerometer; gyroscope" allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
@@ -403,7 +409,6 @@ function Sources({ onClose, meta }) {
     ['RNIC', 'Registre des copropriétés', 'Temps réel'],
     ['DVF (DGFiP)', 'Ventes immobilières', 'Semestrielle'],
     ['Google Street View', 'Photos de rue', 'Temps réel'],
-    ['Panoramax', 'Photos de rue (complément)', 'Temps réel'],
   ];
   return (
     <div className="modal-back" onClick={onClose}>
