@@ -206,10 +206,18 @@ export function createMap(container, { onPick, onStatus, mobile }) {
     const m = await r2Meta('fond');
     map.addSource('fond', { type: 'vector', url: `pmtiles://${R2_BASE}/${m.fichier}`, attribution: PLAN_ATTRIBUTION });
     const below = map.getLayer('cadastre-layer') ? 'cadastre-layer' : undefined;
-    for (const l of pmLayers('fond', namedFlavor('light'), { lang: 'fr' })) {
+    const add = (l) => {
       const id = `pm-${l.id}`;
       map.addLayer({ ...l, id, layout: { ...(l.layout || {}), visibility: 'none' } }, below);
       planIds.push(id);
+    };
+    for (const l of pmLayers('fond', namedFlavor('light'), { lang: 'fr' })) {
+      if (l.id === 'pois') continue; // pas de commerces ni de lieux
+      add(l);
+      // Contour des bâtiments : sépare les bâtiments mitoyens
+      if (l.id === 'buildings') add({ id: 'buildings-outline', type: 'line', source: 'fond', 'source-layer': 'buildings',
+        filter: l.filter, minzoom: 14,
+        paint: { 'line-color': '#8f8f8f', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 0.3, 17, 0.8, 20, 1.4] } });
     }
   }
   function showPlan(on) {
