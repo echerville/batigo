@@ -222,19 +222,37 @@ const bearing = ([lng1, lat1], [lng2, lat2]) => {
   const x = Math.cos(lat1 * r) * Math.sin(lat2 * r) - Math.sin(lat1 * r) * Math.cos(lat2 * r) * Math.cos((lng2 - lng1) * r);
   return Math.round(((Math.atan2(y, x) / r) + 360) % 360);
 };
-// Cherche la photo Google la plus proche (métadonnées gratuites) et oriente la vue vers le bien
+// Cherche la photo prise depuis la rue la plus proche (voiture Google : « © Google »),
+// en écartant les photos d'intérieur et les photos de particuliers. Métadonnées gratuites.
 export async function googleStreetViewUrl(lng, lat) {
   if (!GMAPS_KEY) return { found: false };
   const base = `https://www.google.com/maps/embed/v1/streetview?key=${encodeURIComponent(GMAPS_KEY)}&language=fr&fov=80`;
-  try {
-    const m = await json(`https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&radius=80&source=outdoor&key=${encodeURIComponent(GMAPS_KEY)}`);
-    if (m.status === 'ZERO_RESULTS') return { found: false };
-    if (m.status === 'OK' && m.pano_id) {
-      const h = bearing([m.location.lng, m.location.lat], [lng, lat]);
-      return { found: true, url: `${base}&pano=${encodeURIComponent(m.pano_id)}&heading=${h}&pitch=5` };
+  const meta = (la, ln, radius) => json(`https://maps.googleapis.com/maps/api/streetview/metadata?location=${la},${ln}&radius=${radius}&source=outdoor&key=${encodeURIComponent(GMAPS_KEY)}`).catch(() => null);
+  const isCar = m => m?.status === 'OK' && m.pano_id && /google/i.test(m.copyright || '');
+  const dist = m => Math.hypot((m.location.lng - lng) * Math.cos(lat * Math.PI / 180), m.location.lat - lat);
+
+  let best = null;
+  const first = await meta(lat, lng, 60);
+  if (first?.status === 'ZERO_RESULTS') {
+    // rien à 60 m : on élargit une fois
+    const far = await meta(lat, lng, 150);
+    if (isCar(far)) best = far;
+  } else if (isCar(first)) {
+    best = first;
+  } else {
+    // La photo la plus proche n'est pas une photo de rue Google : on sonde autour du bâtiment (25 et 50 m)
+    const d = m => m / 111320;
+    const probes = [];
+    for (const r of [25, 50]) for (let k = 0; k < 8; k++) {
+      const a = (k * Math.PI) / 4;
+      probes.push(meta(lat + d(r) * Math.sin(a), lng + (d(r) * Math.cos(a)) / Math.cos(lat * Math.PI / 180), 40));
     }
-  } catch { /* métadonnées inaccessibles : on laisse Google choisir la photo */ }
-  return { found: true, url: `${base}&location=${lat},${lng}` };
+    const cands = (await Promise.all(probes)).filter(isCar);
+    best = cands.sort((x, y) => dist(x) - dist(y))[0] || null;
+  }
+  if (!best) return { found: false };
+  const h = bearing([best.location.lng, best.location.lat], [lng, lat]);
+  return { found: true, url: `${base}&pano=${encodeURIComponent(best.pano_id)}&heading=${h}&pitch=5` };
 }
 
 // ── Vue de rue (Panoramax) ──
