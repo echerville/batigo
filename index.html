@@ -252,26 +252,62 @@
   .tl-chip:hover{border-color:#0ea5e9;background:rgba(14,165,233,.07)}
   .tl-chip.active{border-color:#0ea5e9;background:rgba(14,165,233,.12);color:#0ea5e9}
 
-  /* ── MOBILE ── */
+  /* ── VERSION MOBILE (body.mobile, choisie au chargement) ── */
+  /* Toujours cacher la poignée sur desktop */
   #panel-handle{display:none}
-  body.mobile #info-wrap{display:none!important}
-  body.mobile #panel{position:fixed;bottom:0;left:0;right:0;width:100%;max-height:76vh;border-left:none;border-top:1.5px solid var(--border);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:100;box-shadow:0 -4px 24px rgba(15,28,46,.12)}
+  /* Barre de recherche flotte en haut, par-dessus la carte */
+  body.mobile #search-wrap{position:fixed!important;top:10px;left:12px;right:12px;z-index:300;margin:0;max-width:none;border-radius:24px;border:1.5px solid var(--border);box-shadow:var(--shadow-md);background:var(--surface)}
+  /* Le header devient une barre de navigation en bas */
+  body.mobile #header{position:fixed!important;bottom:0;top:auto;left:0;right:0;z-index:200;border-bottom:none;border-top:1px solid var(--border);box-shadow:0 -2px 12px rgba(15,28,46,.07);background:var(--surface)}
+  body.mobile #header-top{height:60px;padding:0 6px;justify-content:space-around;gap:0}
+  /* Cache logo, barre de couches, bouton sources */
+  body.mobile #logo,body.mobile #header-bottom,body.mobile #info-wrap{display:none!important}
+  /* Carte plein écran */
+  body.mobile #body{position:fixed;inset:0;display:block}
+  body.mobile #map-area{position:absolute;inset:0;flex:none}
+  /* Boutons de la bottom nav : larges, sans bordure */
+  body.mobile #map-picker-btn,body.mobile #overlay-picker-btn,body.mobile #vues-picker-btn,body.mobile #timeline-btn,body.mobile #surface-btn{width:auto!important;min-width:52px;height:52px!important;padding:6px 6px 4px!important;border-radius:10px;flex:1;border-width:0!important;background:none!important;box-shadow:none!important;gap:3px!important}
+  body.mobile #map-picker-btn:hover,body.mobile #overlay-picker-btn:hover,body.mobile #vues-picker-btn:hover,body.mobile #timeline-btn:hover,body.mobile #surface-btn:hover{background:var(--surface2)!important}
+  body.mobile #map-picker-btn.open,body.mobile #overlay-picker-btn.open,body.mobile #vues-picker-btn.open{background:var(--accent-dim)!important}
+  body.mobile #timeline-btn.active{background:rgba(14,165,233,.12)!important}
+  body.mobile #surface-btn.active{background:var(--accent-dim)!important}
+  /* Panneaux dropdown s'ouvrent vers le haut */
+  body.mobile #map-picker-panel{top:auto!important;bottom:calc(100% + 8px)!important}
+  body.mobile #overlay-picker-panel{top:auto!important;bottom:calc(100% + 8px)!important;max-height:65vh;overflow-y:auto}
+  body.mobile #vues-picker-panel{top:auto!important;bottom:calc(100% + 8px)!important}
+  body.mobile #info-panel{top:auto!important;bottom:calc(100% + 8px)!important;right:0}
+  /* Panneau résultat = bottom sheet au-dessus de la nav */
+  body.mobile #panel{position:fixed!important;bottom:60px;left:0;right:0;width:100%!important;max-height:68vh;border-left:none;border-top:1.5px solid var(--border);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:100;box-shadow:0 -4px 24px rgba(15,28,46,.12)}
   body.mobile #panel.mobile-open{transform:translateY(0)}
   body.mobile #panel-handle{display:flex;justify-content:center;padding:12px 0 6px;cursor:pointer;flex-shrink:0}
   body.mobile #panel-handle::before{content:'';width:40px;height:4px;background:var(--border-med);border-radius:2px;display:block}
-  body.mobile #timeline-panel{bottom:auto;top:calc(var(--header-h) + 8px)}
-  @media (max-width:768px){
-    #info-wrap{display:none!important}
-    #panel{position:fixed;bottom:0;left:0;right:0;width:100%;max-height:76vh;border-left:none;border-top:1.5px solid var(--border);border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:100;box-shadow:0 -4px 24px rgba(15,28,46,.12)}
-    #panel.mobile-open{transform:translateY(0)}
-    #panel-handle{display:flex;justify-content:center;padding:12px 0 6px;cursor:pointer;flex-shrink:0}
-    #panel-handle::before{content:'';width:40px;height:4px;background:var(--border-med);border-radius:2px;display:block}
-    #timeline-panel{bottom:auto;top:calc(var(--header-h) + 8px)}
-  }
+  /* Timeline et résultat mesure : au-dessus de la recherche */
+  body.mobile #timeline-panel{bottom:auto!important;top:76px!important}
+  body.mobile #measure-result{bottom:72px}
+  /* Contrôles MapLibre : masquer zoom (tactile), remonter attribution */
+  body.mobile .maplibregl-ctrl-zoom-in,body.mobile .maplibregl-ctrl-zoom-out{display:none!important}
+  body.mobile .maplibregl-ctrl-bottom-right,body.mobile .maplibregl-ctrl-bottom-left{bottom:64px!important}
+  /* Timeline panel : pleine largeur dans le viewport */
+  body.mobile #timeline-panel{left:12px!important;right:12px!important;transform:none!important;flex-wrap:wrap;white-space:normal!important;gap:8px 8px}
 
 </style>
 </head>
 <body>
+<script>
+// Mode mobile : téléphone ou tablette (tactile SANS souris ni pavé tactile), ou fenêtre très étroite.
+// Forçage possible : ?version=mobile ou ?version=pc (mémorisé), ?version=auto pour revenir au choix automatique.
+(function () {
+  var q = new URLSearchParams(location.search).get('version'), pref = null;
+  try {
+    if (q === 'mobile' || q === 'pc') localStorage.setItem('scope-version', q);
+    if (q === 'auto') localStorage.removeItem('scope-version');
+    pref = localStorage.getItem('scope-version');
+  } catch (e) {}
+  var tactileSeul = matchMedia('(pointer:coarse)').matches && !matchMedia('(any-pointer:fine)').matches;
+  window.SCOPE_MOBILE = pref ? pref === 'mobile' : (tactileSeul || window.innerWidth <= 600);
+  if (window.SCOPE_MOBILE) document.body.classList.add('mobile');
+})();
+</script>
 <div id="header">
   <div id="header-top">
     <div id="logo">
@@ -289,7 +325,7 @@
         </svg>
       </button>
       <input id="search-input" type="text" placeholder="Rechercher une adresse ou me localiser…" autocomplete="off"/>
-      <button id="search-btn">⌕</button>
+      <button id="search-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
       <div id="suggestions"></div>
     </div>
     <div id="map-picker">
@@ -476,7 +512,7 @@
       <button class="tl-chip" data-layer="ORTHOIMAGERY.ORTHOPHOTOS.1950-1965">1950-1965</button>
       <button class="tl-chip" data-layer="ORTHOIMAGERY.ORTHOPHOTOS.1965-1980">1965-1980</button>
       <button class="tl-chip" data-layer="ORTHOIMAGERY.ORTHOPHOTOS.1980-1995">1980-1995</button>
-      <button id="tl-close" title="Fermer">✕</button>
+      <button id="tl-close" title="Fermer"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div id="panoramax-panel">
       <button id="panoramax-close">✕</button>
@@ -494,12 +530,7 @@
   </div>
 </div>
 <script>
-// Redirection automatique vers la version mobile
-if (window.matchMedia('(pointer:coarse)').matches || window.innerWidth <= 768) {
-  window.location.replace('mobile.html');
-}
-// Détection mobile (desktop uniquement ici)
-const isMobile = false;
+const isMobile = !!window.SCOPE_MOBILE;
 
 
 const TILE_URLS = {
@@ -1194,7 +1225,7 @@ async function loadBatiment(lat, lng, label, feature, bldGroupId, isClick = fals
   _dpeResultsReady = null; // reset pour la course ADEME vs BDNB
   const el = document.getElementById('batiment-data');
   el.style.display = 'block';
-  if (window.innerWidth <= 768) document.getElementById('panel').classList.add('mobile-open');
+  if (isMobile) document.getElementById('panel').classList.add('mobile-open');
   el.innerHTML = '<div class="loading-block"><span class="spinner"></span>Chargement BDNB…</div>';
   setStatus('Chargement bâtiment…','loading');
 
