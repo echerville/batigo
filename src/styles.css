@@ -229,7 +229,7 @@ a:hover { color: var(--action-dark); }
   border: 1.5px solid rgba(255,255,255,.75); background: rgba(255,255,255,.5); text-align: left; font-size: 14px; font-weight: 700; line-height: 1.2; color: var(--ink); }
 .layer-tile:hover { background: rgba(255,255,255,.75); }
 .layer-tile[aria-pressed="true"] { border-color: var(--action); background: rgba(255,255,255,.9); box-shadow: 0 0 0 1px var(--action); }
-.layer-tile > span:last-of-type { line-height: 1.25; padding-right: 14px; }
+.layer-tile > span:nth-child(2) { line-height: 1.25; padding-right: 14px; }
 .layer-sw { width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0; overflow: hidden; display: block; }
 .layer-sw svg { display: block; }
 .layer-check { position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 50%; background: var(--action); color: #fff; display: flex; align-items: center; justify-content: center; }
