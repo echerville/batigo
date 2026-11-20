@@ -1,0 +1,83 @@
+name: Generate réseaux chaleur et gaz (R2)
+
+# Réseaux de chaleur (France Chaleur Urbaine, mise à jour mensuelle) et réseau gaz GRDF,
+# convertis en tuiles PMTiles et déposés sur Cloudflare R2.
+# Secrets requis : R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 22 * *'   # le 22 de chaque mois (FCU publie vers le milieu du mois)
+  push:
+    branches: [etape4-rcu-gaz]
+    paths: ['.github/workflows/generate-reseaux-tiles.yml', 'scripts/prepare_rcu.py']
+
+env:
+  R2_BUCKET: scope-tuiles-eu
+
+jobs:
+  reseaux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        couche: [rcu, gaz]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Outils
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y gdal-bin build-essential libsqlite3-dev zlib1g-dev >/dev/null
+          git clone --depth=1 https://github.com/felt/tippecanoe.git /tmp/tippecanoe
+          cd /tmp/tippecanoe && make -j$(nproc) >/dev/null && sudo make install >/dev/null
+
+      - name: Réseaux de chaleur (France Chaleur Urbaine)
+        if: matrix.couche == 'rcu'
+        run: |
+          URL=$(curl -sf "https://www.data.gouv.fr/api/1/datasets/64f05d3568e4d575eb454ffe/" | python3 -c "
+          import sys,json; d=json.load(sys.stdin); rs=[r for r in d['resources'] if r['format']=='zip']
+          print(sorted(rs,key=lambda r:r.get('last_modified',''))[-1]['url'])")
+          echo "Source : $URL"
+          curl -sfL "$URL" -o fcu.zip && mkdir fcu && unzip -q fcu.zip -d fcu
+          ogr2ogr -f GeoJSON -t_srs EPSG:4326 -lco COORDINATE_PRECISION=6 traces.geojson fcu/reseaux_de_chaleur.geojson
+          ogr2ogr -f GeoJSON -t_srs EPSG:4326 -lco COORDINATE_PRECISION=6 sans.geojson fcu/reseaux_de_chaleur_sans_traces.geojson
+          python3 scripts/prepare_rcu.py traces.geojson sans.geojson
+          tippecanoe -q -o rcu.pmtiles -l rcu -Z5 -z16 --simplification=2 --no-tile-size-limit --force rcu-lignes.geojsonl
+          STAMP=$(date +%Y%m%d-%H%M)
+          mv rcu.pmtiles "rcu-$STAMP.pmtiles"; mv rcu-points.json "rcu-points-$STAMP.json"
+          printf '{"fichier":"%s","points":"%s","source":"%s","genere_le":"%s"}\n' "rcu-$STAMP.pmtiles" "rcu-points-$STAMP.json" "$URL" "$(date +%Y-%m-%d)" > rcu-meta.json
+          ls -la rcu-*; cat rcu-meta.json
+
+      - name: Réseau gaz (GRDF)
+        if: matrix.couche == 'gaz'
+        run: |
+          curl -sfL "https://opendata.grdf.fr/api/explore/v2.1/catalog/datasets/cartographie-du-reseau-grdf-en-service/exports/fgb" -o grdf.fgb
+          ls -la grdf.fgb; ogrinfo -so -al grdf.fgb | grep -E "Feature Count|Geometry|: "| head -20
+          # Garder seulement l'indicateur propane ; le reste (commune, département) ne sert pas sur la carte
+          ogr2ogr -f GeoJSONSeq -t_srs EPSG:4326 -lco COORDINATE_PRECISION=6 -select propane gaz.geojsonl grdf.fgb
+          rm grdf.fgb
+          tippecanoe -q -o gaz.pmtiles -l gaz -Z12 -z15 --simplification=4 --drop-densest-as-needed --force gaz.geojsonl
+          STAMP=$(date +%Y%m%d-%H%M)
+          mv gaz.pmtiles "gaz-$STAMP.pmtiles"
+          printf '{"fichier":"%s","source":"GRDF opendata","genere_le":"%s"}\n' "gaz-$STAMP.pmtiles" "$(date +%Y-%m-%d)" > gaz-meta.json
+          ls -la gaz-*; cat gaz-meta.json
+
+      - name: Dépôt sur Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          C: ${{ matrix.couche }}
+        run: |
+          EP="https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          for f in $C-2*.pmtiles $C-points-*.json; do
+            [ -f "$f" ] || continue
+            aws s3 cp "$f" "s3://$R2_BUCKET/$f" --endpoint-url "$EP" --cache-control "public, max-age=31536000, immutable"
+          done
+          aws s3 cp $C-meta.json "s3://$R2_BUCKET/$C-meta.json" --endpoint-url "$EP" --content-type application/json --cache-control "no-cache"
+          # Garder les 2 dernières versions
+          for motif in "^$C-2.*\.pmtiles$" "^$C-points-.*\.json$"; do
+            aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$EP" | awk '{print $4}' | grep -E "$motif" | sort | head -n -2 \
+              | while read f; do aws s3 rm "s3://$R2_BUCKET/$f" --endpoint-url "$EP"; done
+          done
+          aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$EP"
