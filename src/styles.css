@@ -234,3 +234,15 @@ a:hover { color: var(--action-dark); }
 .layer-check { position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 50%; background: var(--action); color: #fff; display: flex; align-items: center; justify-content: center; }
 .layer-active { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
 .layer-active button { display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 999px; padding: 5px 8px 5px 10px; background: var(--action); color: #fff; font-size: 13px; font-weight: 700; }
+
+/* Fiche : un seul encadré, les rubriques sont séparées par de simples filets */
+.fiche-scroll .glass-in { background: transparent; border: 0; box-shadow: none; }
+.fiche-scroll .card { padding: 14px 0 0; border-radius: 0; border-top: 1px solid rgba(18,24,38,.1); }
+.fiche-scroll .facts { gap: 0 16px; border-top: 1px solid rgba(18,24,38,.1); }
+.fiche-scroll .fact { padding: 12px 0; border-radius: 0; border-bottom: 1px solid rgba(18,24,38,.07); }
+.fiche-scroll .list { gap: 0; }
+.fiche-scroll .list-row { padding: 10px 0; border-radius: 0; border-bottom: 1px solid rgba(18,24,38,.07); }
+.fiche-scroll .list-row:last-child { border-bottom: 0; }
+.fiche-scroll .empty { padding: 4px 0; border-radius: 0; }
+.fiche-scroll .card .facts { border-top: 0; }
+.fiche-scroll .btn.ghost { background: rgba(18,24,38,.06); }

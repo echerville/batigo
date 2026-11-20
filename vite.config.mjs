@@ -6,5 +6,6 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   publicDir: 'static',
-  build: { outDir: 'dist', sourcemap: false, chunkSizeWarningLimit: 1500 },
+  // CSS non minifié : le minifieur supprimait backdrop-filter non préfixé (plus de flou dans Chrome)
+  build: { outDir: 'dist', sourcemap: false, chunkSizeWarningLimit: 1500, cssMinify: false },
 });
