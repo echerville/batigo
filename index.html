@@ -267,6 +267,9 @@
   body.mobile #map-area{position:absolute;inset:0;flex:none}
   /* Boutons de la bottom nav : larges, sans bordure */
   body.mobile #map-picker-btn,body.mobile #overlay-picker-btn,body.mobile #vues-picker-btn,body.mobile #timeline-btn,body.mobile #surface-btn{width:auto!important;min-width:52px;height:52px!important;padding:6px 6px 4px!important;border-radius:10px;flex:1;border-width:0!important;background:none!important;box-shadow:none!important;gap:3px!important}
+  /* Cinq boutons de même largeur dans la barre du bas */
+  body.mobile #map-picker,body.mobile #overlay-picker,body.mobile #vues-picker{flex:1 1 0}
+  body.mobile #map-picker-btn,body.mobile #overlay-picker-btn,body.mobile #vues-picker-btn{width:100%!important}
   body.mobile #map-picker-btn:hover,body.mobile #overlay-picker-btn:hover,body.mobile #vues-picker-btn:hover,body.mobile #timeline-btn:hover,body.mobile #surface-btn:hover{background:var(--surface2)!important}
   body.mobile #map-picker-btn.open,body.mobile #overlay-picker-btn.open,body.mobile #vues-picker-btn.open{background:var(--accent-dim)!important}
   body.mobile #timeline-btn.active{background:rgba(14,165,233,.12)!important}
