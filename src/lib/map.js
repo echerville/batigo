@@ -62,8 +62,8 @@ export function createMap(container, { onPick, onStatus, mobile }) {
     map.addLayer({ id: 'cadastre-layer', type: 'raster', source: 'cadastre', layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.7 } });
 
     map.addSource('dpe-src', { type: 'vector', url: `pmtiles://${location.origin}${DPE_TILES_FALLBACK}` });
-    map.addLayer({ id: 'dpe-fill', type: 'fill', source: 'dpe-src', 'source-layer': 'dpe', minzoom: 13, layout: { visibility: 'none' }, paint: { 'fill-color': DPE_COLOR, 'fill-opacity': 0.6 } });
-    map.addLayer({ id: 'dpe-line', type: 'line', source: 'dpe-src', 'source-layer': 'dpe', minzoom: 13, layout: { visibility: 'none' }, paint: { 'line-color': DPE_COLOR, 'line-width': 1, 'line-opacity': 0.9 } });
+    map.addLayer({ id: 'dpe-fill', type: 'fill', source: 'dpe-src', 'source-layer': 'dpe', minzoom: 15, layout: { visibility: 'none' }, paint: { 'fill-color': DPE_COLOR, 'fill-opacity': 0.6 } });
+    map.addLayer({ id: 'dpe-line', type: 'line', source: 'dpe-src', 'source-layer': 'dpe', minzoom: 15, layout: { visibility: 'none' }, paint: { 'line-color': DPE_COLOR, 'line-width': 1, 'line-opacity': 0.9 } });
     // Couche invisible toujours active : sert à retrouver les contours des bâtiments
     map.addLayer({ id: 'dpe-query', type: 'fill', source: 'dpe-src', 'source-layer': 'dpe', minzoom: 13, paint: { 'fill-opacity': 0 } });
 
@@ -71,7 +71,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
     const n = 8, data = new Uint8Array(n * n * 4);
     for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if ((x + y) % n < 2) data.set([255, 255, 255, 170], (y * n + x) * 4);
     map.addImage('hatch-pat', { width: n, height: n, data });
-    map.addLayer({ id: 'dpe-neuf-hatch', type: 'fill', source: 'dpe-src', 'source-layer': 'dpe', minzoom: 13, layout: { visibility: 'none' }, filter: ['==', ['get', 'neuf'], 1], paint: { 'fill-pattern': 'hatch-pat' } });
+    map.addLayer({ id: 'dpe-neuf-hatch', type: 'fill', source: 'dpe-src', 'source-layer': 'dpe', minzoom: 15, layout: { visibility: 'none' }, filter: ['==', ['get', 'neuf'], 1], paint: { 'fill-pattern': 'hatch-pat' } });
 
     // Couleur ADEME vérifiée des bâtiments consultés + contour du bâtiment sélectionné
     map.addSource('sel-dpe-src', { type: 'geojson', data: EMPTY });
