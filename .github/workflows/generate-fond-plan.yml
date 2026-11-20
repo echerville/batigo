@@ -11,8 +11,8 @@ on:
 
 env:
   R2_BUCKET: scope-tuiles-eu
-  # France métropolitaine + Corse, avec une marge sur les pays voisins (pas de bord vide à l'écran)
-  BBOX: '-7.5,40.0,11.5,52.5'
+  # France métropolitaine + Corse (aux petits zooms, les tuiles couvrent aussi les pays voisins)
+  BBOX: '-5.8,41.2,10.0,51.3'
   MAXZOOM: '15'
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
           F=$(ls fond-2*.pmtiles)
           aws s3 cp "$F" "s3://$R2_BUCKET/$F" --endpoint-url "$EP" --cache-control "public, max-age=31536000, immutable"
           aws s3 cp fond-meta.json "s3://$R2_BUCKET/fond-meta.json" --endpoint-url "$EP" --content-type application/json --cache-control "no-cache"
-          # Garder les 2 dernières versions
-          aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$EP" | awk '{print $4}' | grep -E '^fond-2.*\.pmtiles$' | sort | head -n -2 \
+          # Ne garder que la dernière version (fichier volumineux ; fond-meta.json pointe dessus sans cache)
+          aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$EP" | awk '{print $4}' | grep -E '^fond-2.*\.pmtiles$' | sort | head -n -1 \
             | while read f; do aws s3 rm "s3://$R2_BUCKET/$f" --endpoint-url "$EP"; done
           aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$EP"
