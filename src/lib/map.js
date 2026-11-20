@@ -211,13 +211,26 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       map.addLayer({ ...l, id, layout: { ...(l.layout || {}), visibility: 'none' } }, below);
       planIds.push(id);
     };
+    // Bâtiments : BD TOPO de l'IGN (même source que la BDNB, donc calés sur les couleurs DPE)
+    // plutôt que ceux d'OpenStreetMap, décalés de quelques mètres.
+    map.addSource('ign-bati', { type: 'vector', tiles: ['https://data.geopf.fr/tms/1.0.0/PLAN.IGN/{z}/{x}/{y}.pbf'],
+      maxzoom: 18, attribution: '© IGN' });
+    const BATI = ['match', ['get', 'symbo'], ['BATI_QQUE', 'BATI_COMMERCIAL', 'BATI_INDUSTRIEL', 'HANGAR', 'HANGAR_COMMERCIAL',
+      'HANGAR_INDUSTRIEL', 'HANGAR_PUBLIC', 'BATI_PUBLIC', 'BATI_GARE', 'BATI_SPORTIF', 'MAIRIE', 'MAIRIE_ANNEXE',
+      'AUTRE_CULTE_SURF', 'CHAPELLE_SURF', 'CHRETIEN_SURF', 'EGLISE_SURF', 'MOSQUEE_SURF', 'RELIGIEUX_QQUE', 'SYNAGOGUE_SURF',
+      'ARC_TRIOMPHE_SURF', 'ARENE_THEATRE', 'CHATEAU_SURF', 'FORTIF_SURF', 'MONUMENT_SURF', 'TOUR_MOULIN_SURF',
+      'SILO_SURF', 'RESERVOIR_INDUS_SURF', 'SERRE_SURF', 'CHATEAU_EAU_SURF'], true, false];
     for (const l of pmLayers('fond', namedFlavor('light'), { lang: 'fr' })) {
       if (l.id === 'pois') continue; // pas de commerces ni de lieux
+      if (l.id === 'buildings') {
+        add({ id: 'bati-fill', type: 'fill', source: 'ign-bati', 'source-layer': 'bati_surf', filter: BATI, minzoom: 14,
+          paint: { 'fill-color': '#d4d4d4', 'fill-opacity': 0.7 } });
+        // Contour : sépare les bâtiments mitoyens
+        add({ id: 'bati-line', type: 'line', source: 'ign-bati', 'source-layer': 'bati_surf', filter: BATI, minzoom: 14,
+          paint: { 'line-color': '#8f8f8f', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 0.3, 17, 0.8, 20, 1.4] } });
+        continue;
+      }
       add(l);
-      // Contour des bâtiments : sépare les bâtiments mitoyens
-      if (l.id === 'buildings') add({ id: 'buildings-outline', type: 'line', source: 'fond', 'source-layer': 'buildings',
-        filter: l.filter, minzoom: 14,
-        paint: { 'line-color': '#8f8f8f', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 0.3, 17, 0.8, 20, 1.4] } });
     }
   }
   function showPlan(on) {
