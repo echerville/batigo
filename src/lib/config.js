@@ -1,8 +1,7 @@
 // Constantes partagées : sources de données, couleurs, emprises.
 
 export const FRANCE_BOUNDS = [-5.6, 41.2, 9.8, 51.2]; // France métropolitaine
-export const MAX_BOUNDS = [-7.5, 40.0, 11.5, 52.5];
-export const START = { center: [-2.28, 47.27], zoom: 10 };
+export const MAX_BOUNDS = [-14, 35, 18, 57]; // assez large pour voir toute la France sur un téléphone
 
 // Tuiles nationales (DPE, réseaux) sur Cloudflare R2
 export const R2_BASE = 'https://pub-ba3b84e9a7d644e1854486f04e1f0116.r2.dev';

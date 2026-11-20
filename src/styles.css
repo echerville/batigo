@@ -41,7 +41,7 @@ a:hover { color: var(--action-dark); }
 .map { position: absolute; inset: 0; }
 .maplibregl-canvas.is-measuring { cursor: crosshair; }
 .maplibregl-ctrl-bottom-left { margin-left: 452px; }
-.mobile .maplibregl-ctrl-top-left { top: 68px; }
+.mobile .maplibregl-ctrl-top-left { top: var(--top-h, 130px); }
 
 .wordmark { display: inline-flex; align-items: baseline; gap: 3px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); white-space: nowrap; }
 .wordmark i { width: .32em; height: .32em; border-radius: 50%; background: var(--brand); display: inline-block; }
@@ -49,7 +49,11 @@ a:hover { color: var(--action-dark); }
 /* Barre du haut */
 .topbar { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 12px; align-items: flex-start; pointer-events: none; z-index: 20; }
 .topbar > * { pointer-events: auto; }
-.searchbox { position: relative; display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 18px; border-radius: 18px; width: 420px; max-width: 100%; }
+.searchbox { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px 10px 10px; border-radius: 20px; width: 420px; max-width: 100%; }
+.brand { display: flex; align-items: baseline; gap: 12px; padding: 0 8px; flex-wrap: wrap; }
+.tagline { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tagline span:first-child { font-size: 14px; font-weight: 700; color: var(--action); }
+.tagline-keys { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
 .search-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 12px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.75); color: var(--muted); }
 .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; color: var(--ink); }
 .search-field input::placeholder { color: var(--muted); }
@@ -68,7 +72,7 @@ a:hover { color: var(--action-dark); }
 .pill-btn[aria-expanded="true"] { outline: 2px solid var(--action); }
 .count { font-size: 12px; background: var(--action); color: #fff; border-radius: 999px; padding: 1px 7px; }
 
-.dropdown { position: absolute; top: 76px; right: 16px; width: 400px; max-height: calc(100% - 100px); overflow: auto; border-radius: 20px; padding: 16px; z-index: 25; }
+.dropdown { position: absolute; top: 84px; right: 16px; width: 400px; max-height: calc(100% - 100px); overflow: auto; border-radius: 20px; padding: 16px; z-index: 25; }
 .dropdown h2 { margin: 0 0 10px; font-size: 16px; font-weight: 800; }
 .dropdown h3 { margin: 14px 0 6px; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px; font-size: 15px; font-weight: 600; cursor: pointer; border-radius: 10px; }
@@ -79,7 +83,7 @@ a:hover { color: var(--action-dark); }
 .switch:checked::after { transform: translateX(16px); }
 
 /* Fiche (PC) */
-.fiche { position: absolute; top: 92px; left: 16px; bottom: 16px; width: 420px; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; z-index: 15; }
+.fiche { position: absolute; top: var(--fiche-top, 129px); left: 16px; bottom: 16px; width: 420px; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; z-index: 15; }
 .fiche-scroll { flex: 1; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; overscroll-behavior: contain; }
 .fiche-foot { padding: 12px 20px; border-top: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.18); font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 10px; }
 .fiche-close { position: absolute; top: 12px; right: 12px; }
@@ -162,7 +166,7 @@ a:hover { color: var(--action-dark); }
 
 /* Bandeaux sur la carte */
 .floating { position: absolute; left: 50%; transform: translateX(-50%); z-index: 22; border-radius: 18px; }
-.measure-panel { top: 92px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 360px; }
+.measure-panel { top: 152px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 360px; }
 .measure-values { display: flex; gap: 10px; }
 .measure-values > div { flex: 1; padding: 10px 12px; border-radius: 12px; }
 .measure-values strong { display: block; font-size: 24px; font-weight: 800; }
@@ -198,7 +202,7 @@ a:hover { color: var(--action-dark); }
 
 /* ── Mobile ── */
 .mobile .topbar { top: 12px; left: 12px; right: 12px; }
-.mobile .searchbox { width: 100%; padding: 6px 6px 6px 14px; gap: 10px; }
+.mobile .searchbox { width: 100%; padding: 10px 8px 8px; gap: 8px; }
 .mobile .search-field input { font-size: 16px; } /* évite le zoom automatique d'iOS */
 .sheet { position: absolute; left: 0; right: 0; bottom: 76px; border-radius: 24px 24px 0 0; z-index: 18; display: flex; flex-direction: column; transition: height .25s ease; touch-action: none; }
 .sheet.dragging { transition: none; }
@@ -210,10 +214,10 @@ a:hover { color: var(--action-dark); }
 .bottomnav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; }
 .bottomnav button[aria-pressed="true"] { color: var(--action); font-weight: 700; }
 .mobile .dropdown { left: 12px; right: 12px; width: auto; top: auto; bottom: 88px; max-height: 70%; }
-.mobile .measure-panel { top: 76px; left: 12px; right: 12px; transform: none; min-width: 0; }
+.mobile .measure-panel { top: var(--top-h, 130px); left: 12px; right: 12px; transform: none; min-width: 0; }
 .mobile .historic { bottom: 92px; }
 .mobile .toast { bottom: 160px; }
-.mobile .mapctrl { top: 80px; bottom: auto; right: 12px; }
+.mobile .mapctrl { top: calc(var(--top-h, 130px) + 8px); bottom: auto; right: 12px; }
 .mobile .legend { display: none; }
 .mobile .streetview { left: 0; right: 0; top: 0; bottom: 76px; width: auto; height: auto; border-radius: 0; z-index: 30; }
 .mobile .welcome { top: auto; left: 12px; right: 12px; bottom: 120px; width: auto; padding: 18px; }

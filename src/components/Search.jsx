@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon.jsx';
 import { searchAddress } from '../lib/data.js';
 
-export default function Search({ value, onValue, onSelect, getCenter, mobile }) {
+export default function Search({ value, onValue, onSelect, getCenter, mobile, tagline }) {
   const [list, setList] = useState([]);
   const [active, setActive] = useState(-1);
   const [open, setOpen] = useState(false);
@@ -50,7 +50,15 @@ export default function Search({ value, onValue, onSelect, getCenter, mobile }) 
 
   return (
     <div className="searchbox glass" ref={box}>
-      <span className="wordmark" style={{ fontSize: mobile ? 19 : 22 }}>Scope<i /></span>
+      <div className="brand">
+        <span className="wordmark" style={{ fontSize: mobile ? 19 : 22 }}>Scope<i /></span>
+        {tagline && (
+          <div className="tagline">
+            <span>Une adresse, toutes les infos.</span>
+            <span className="tagline-keys" aria-label="DPE, Data, Cadastre, Cartes">DPE · Data · Cadastre · Cartes</span>
+          </div>
+        )}
+      </div>
       <div className="search-field">
         <Icon name="search" size={18} />
         <label htmlFor="q" className="sr-only">Rechercher une adresse</label>

@@ -169,11 +169,11 @@ export default function App() {
   );
 
   return (
-    <div className={`app${mobile ? ' mobile' : ''}`}>
+    <div className={`app${mobile ? ' mobile' : ''}`} style={mobile ? { '--top-h': place ? '120px' : '146px' } : undefined}>
       <div ref={mapEl} className="map" aria-label="Carte" role="region" />
 
       <div className="topbar">
-        <Search value={query} onValue={setQuery} onSelect={f => selectPlace(f)} getCenter={() => api.current?.map.getCenter()} mobile={mobile} />
+        <Search value={query} onValue={setQuery} onSelect={f => selectPlace(f)} getCenter={() => api.current?.map.getCenter()} mobile={mobile} tagline={!mobile || !place} />
         {!mobile && (
           <>
             <div className="spacer" />
@@ -246,22 +246,10 @@ export default function App() {
       )}
 
       {/* Fiche ou accueil */}
-      {!mobile && (place ? (
+      {!mobile && place && (
         <section className="fiche glass" aria-label="Fiche du bien"><div className="fiche-scroll">{fiche}</div></section>
-      ) : (
-        <section className="welcome glass" aria-label="Bienvenue">
-          <h1>Une adresse, toutes les infos.</h1>
-          <div className="chips"><span>DPE</span><span>Data</span><span>Cadastre</span><span>Cartes</span></div>
-          <p className="muted" style={{ margin: 0 }}>Tapez une adresse ou cliquez sur un bâtiment de la carte.</p>
-        </section>
-      ))}
-      {mobile && place && <Sheet state={sheet} setState={setSheet}>{fiche}</Sheet>}
-      {mobile && !place && !measure && !panel && (
-        <section className="welcome glass" aria-label="Bienvenue">
-          <h1>Une adresse, toutes les infos.</h1>
-          <div className="chips"><span>DPE</span><span>Data</span><span>Cadastre</span><span>Cartes</span></div>
-        </section>
       )}
+      {mobile && place && <Sheet state={sheet} setState={setSheet}>{fiche}</Sheet>}
 
       {/* Mesure */}
       {measure && (

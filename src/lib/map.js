@@ -6,7 +6,7 @@ import centroid from '@turf/centroid';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import {
-  BASEMAPS, FRANCE_BOUNDS, MAX_BOUNDS, START, CADASTRE_TILES, IGN_WMS_V, R2_BASE,
+  BASEMAPS, FRANCE_BOUNDS, MAX_BOUNDS, CADASTRE_TILES, IGN_WMS_V, R2_BASE,
   DPE_TILES_FALLBACK, DPE_HEX, historicTiles,
 } from './config.js';
 import { r2Meta, fetchPLUBounds } from './data.js';
@@ -29,7 +29,9 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       sources: { base: { type: 'raster', tiles: [BASEMAPS.plan.tiles], tileSize: 256, maxzoom: 19, bounds: FRANCE_BOUNDS, attribution: BASEMAPS.plan.attribution } },
       layers: [{ id: 'base-layer', type: 'raster', source: 'base' }],
     },
-    center: START.center, zoom: START.zoom, minZoom: 5, maxBounds: MAX_BOUNDS,
+    // Démarrage sur la France métropolitaine entière
+    bounds: FRANCE_BOUNDS, fitBoundsOptions: { padding: mobile ? { top: 150, bottom: 90, left: 10, right: 10 } : { top: 40, bottom: 40, left: 40, right: 40 } },
+    minZoom: 3.5, maxBounds: MAX_BOUNDS,
     attributionControl: false,
   });
   // Mobile : en haut, pour ne pas passer sous la fiche glissante
