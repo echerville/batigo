@@ -7,7 +7,7 @@ import Search from './components/Search.jsx';
 import Fiche from './components/Fiche.jsx';
 import { Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
-import { fetchDPE, panoramaxUrl, resolveBuilding, reverseAddress } from './lib/data.js';
+import { fetchDPE, googleStreetViewUrl, hasGoogleStreetView, panoramaxUrl, resolveBuilding, reverseAddress } from './lib/data.js';
 import { BASEMAPS, HISTORIC, OVERLAYS } from './lib/config.js';
 
 const mobile = !!window.SCOPE_MOBILE;
@@ -131,14 +131,19 @@ export default function App() {
     if ((measure?.points.length || 0) >= 2) api.current.stopMeasure(true);
     else { api.current.stopMeasure(false); setMeasure(null); }
   }
-  async function openStreet() {
+  // Vue de rue : Google Street View, sinon Panoramax
+  async function openStreet(source) {
     const at = place?.lngLat || api.current.map.getCenter().toArray();
-    say('Recherche de photos de rue…');
+    say('Recherche de la vue de rue…');
     try {
+      if (source !== 'panoramax' && hasGoogleStreetView()) {
+        const g = await googleStreetViewUrl(at[0], at[1]);
+        if (g.found) { say(null); setStreet({ url: g.url, source: 'google' }); return; }
+      }
       const r = await panoramaxUrl(at[0], at[1]);
-      say(r.found ? null : 'Aucune photo Panoramax à proximité', r.found ? 0 : 3000);
-      setStreet(r.url);
-    } catch { say('Panoramax indisponible pour le moment', 3000); }
+      say(r.found ? null : 'Aucune photo de rue à proximité', r.found ? 0 : 3000);
+      setStreet({ url: r.url, source: 'panoramax' });
+    } catch { say('Vue de rue indisponible pour le moment', 3000); }
   }
   function locate() {
     const m = api.current.map;
@@ -307,12 +312,15 @@ export default function App() {
 
       {/* Vue de rue */}
       {street && (
-        <div className="streetview glass" role="dialog" aria-label="Vue de rue Panoramax">
-          <header>Vue de rue · Panoramax<span className="spacer" />
-            <a className="icon-btn" href={street} target="_blank" rel="noopener noreferrer" aria-label="Ouvrir dans un nouvel onglet"><Icon name="expand" size={18} /></a>
+        <div className="streetview glass" role="dialog" aria-label="Vue de rue">
+          <header>Vue de rue · {street.source === 'google' ? 'Google Street View' : 'Panoramax'}<span className="spacer" />
+            {street.source === 'google'
+              ? <button className="btn ghost" style={{ minHeight: 32, padding: '4px 10px', fontSize: 13 }} onClick={() => openStreet('panoramax')}>Photos Panoramax</button>
+              : hasGoogleStreetView() && <button className="btn ghost" style={{ minHeight: 32, padding: '4px 10px', fontSize: 13 }} onClick={() => openStreet('google')}>Google</button>}
+            {street.source === 'panoramax' && <a className="icon-btn" href={street.url} target="_blank" rel="noopener noreferrer" aria-label="Ouvrir dans un nouvel onglet"><Icon name="expand" size={18} /></a>}
             <button className="icon-btn" aria-label="Fermer la vue de rue" onClick={() => setStreet(null)}><Icon name="x" size={18} /></button>
           </header>
-          <iframe title="Vue de rue Panoramax" src={street} allow="fullscreen; xr-spatial-tracking; geolocation" allowFullScreen referrerPolicy="no-referrer-when-downgrade" />
+          <iframe key={street.url} title="Vue de rue" src={street.url} allow="fullscreen; accelerometer; gyroscope" allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
         </div>
       )}
 
@@ -394,7 +402,8 @@ function Sources({ onClose, meta }) {
     ['GRDF', 'Réseau de gaz', 'Mensuelle'],
     ['RNIC', 'Registre des copropriétés', 'Temps réel'],
     ['DVF (DGFiP)', 'Ventes immobilières', 'Semestrielle'],
-    ['Panoramax', 'Photos de rue', 'Temps réel'],
+    ['Google Street View', 'Photos de rue', 'Temps réel'],
+    ['Panoramax', 'Photos de rue (complément)', 'Temps réel'],
   ];
   return (
     <div className="modal-back" onClick={onClose}>

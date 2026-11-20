@@ -214,6 +214,29 @@ export async function fetchDVF(idu) {
   return r.ok ? r.json() : null;
 }
 
+// ── Vue de rue Google (API Maps Embed officielle, clé limitée au domaine de Scope) ──
+const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || '';
+export const hasGoogleStreetView = () => !!GMAPS_KEY;
+const bearing = ([lng1, lat1], [lng2, lat2]) => {
+  const r = Math.PI / 180, y = Math.sin((lng2 - lng1) * r) * Math.cos(lat2 * r);
+  const x = Math.cos(lat1 * r) * Math.sin(lat2 * r) - Math.sin(lat1 * r) * Math.cos(lat2 * r) * Math.cos((lng2 - lng1) * r);
+  return Math.round(((Math.atan2(y, x) / r) + 360) % 360);
+};
+// Cherche la photo Google la plus proche (métadonnées gratuites) et oriente la vue vers le bien
+export async function googleStreetViewUrl(lng, lat) {
+  if (!GMAPS_KEY) return { found: false };
+  const base = `https://www.google.com/maps/embed/v1/streetview?key=${encodeURIComponent(GMAPS_KEY)}&language=fr&fov=80`;
+  try {
+    const m = await json(`https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&radius=80&source=outdoor&key=${encodeURIComponent(GMAPS_KEY)}`);
+    if (m.status === 'ZERO_RESULTS') return { found: false };
+    if (m.status === 'OK' && m.pano_id) {
+      const h = bearing([m.location.lng, m.location.lat], [lng, lat]);
+      return { found: true, url: `${base}&pano=${encodeURIComponent(m.pano_id)}&heading=${h}&pitch=5` };
+    }
+  } catch { /* métadonnées inaccessibles : on laisse Google choisir la photo */ }
+  return { found: true, url: `${base}&location=${lat},${lng}` };
+}
+
 // ── Vue de rue (Panoramax) ──
 export async function panoramaxUrl(lng, lat) {
   const d = 0.005;
