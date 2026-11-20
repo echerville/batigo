@@ -23,18 +23,17 @@ function Fact({ label, value, note }) {
 const Loading = ({ text }) => <div className="empty glass-in"><span className="spin" />{text}</div>;
 const energy = (e, t) => (e ? (t ? `${e} · ${t}` : e) : null);
 
-// Charge une donnée quand l'onglet s'ouvre (une seule fois par bien)
+// Charge une donnée quand l'onglet s'ouvre (une fois par bien)
 function useLazy(enabled, key, loader) {
-  const [s, set] = useState({ status: 'idle' });
-  useEffect(() => { set({ status: 'idle' }); }, [key]);
+  const [s, set] = useState({ status: 'idle', key: null });
   useEffect(() => {
-    if (!enabled || s.status !== 'idle') return;
+    if (!enabled) return;
     let alive = true;
-    set({ status: 'loading' });
-    loader().then(data => alive && set({ status: 'ok', data })).catch(() => alive && set({ status: 'error' }));
+    set({ status: 'loading', key });
+    loader().then(data => alive && set({ status: 'ok', data, key })).catch(() => alive && set({ status: 'error', key }));
     return () => { alive = false; };
-  }, [enabled, key, s.status]); // eslint-disable-line react-hooks/exhaustive-deps
-  return s;
+  }, [enabled, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return s.key === key ? s : { status: enabled ? 'loading' : 'idle' };
 }
 
 export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile }) {
