@@ -10,10 +10,13 @@ export const DPE_TILES_FALLBACK = '/public/dpe-44.pmtiles';
 const WMTS = (layer, fmt = 'image/png', style = 'normal', matrix = 'PM') =>
   `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=${style}&FORMAT=${encodeURIComponent(fmt)}&TILEMATRIXSET=${matrix}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
 
+// Fonds de carte : photos aériennes IGN, et plan vectoriel Protomaps (OpenStreetMap) hébergé sur R2
 export const BASEMAPS = {
   ortho: { label: 'Satellite', tiles: WMTS('ORTHOIMAGERY.ORTHOPHOTOS', 'image/jpeg'), attribution: '© IGN Géoplateforme' },
-  osm:   { label: 'OSM',       tiles: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
+  plan:  { label: 'Plan', vector: true },
 };
+export const PLAN_ATTRIBUTION = '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a>';
+export const PLAN_ASSETS = 'https://protomaps.github.io/basemaps-assets';
 
 // Photos aériennes anciennes (IGN)
 export const HISTORIC = [

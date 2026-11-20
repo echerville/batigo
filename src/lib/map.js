@@ -2,12 +2,13 @@
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
+import { layers as pmLayers, namedFlavor } from '@protomaps/basemaps';
 import centroid from '@turf/centroid';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import {
   BASEMAPS, FRANCE_BOUNDS, MAX_BOUNDS, CADASTRE_TILES, IGN_WMS_V, R2_BASE,
-  DPE_TILES_FALLBACK, DPE_HEX, historicTiles,
+  DPE_TILES_FALLBACK, DPE_HEX, historicTiles, PLAN_ATTRIBUTION, PLAN_ASSETS,
 } from './config.js';
 import { r2Meta, fetchPLUBounds } from './data.js';
 import { bestGrade } from './dpe.js';
@@ -36,6 +37,8 @@ export function createMap(container, { onPick, onStatus, mobile }) {
     container,
     style: {
       version: 8,
+      glyphs: `${PLAN_ASSETS}/fonts/{fontstack}/{range}.pbf`,
+      sprite: `${PLAN_ASSETS}/sprites/v4/light`,
       sources: { base: { type: 'raster', tiles: [BASEMAPS.ortho.tiles], tileSize: 256, maxzoom: 19, attribution: BASEMAPS.ortho.attribution } },
       layers: [{ id: 'base-layer', type: 'raster', source: 'base' }],
     },
@@ -196,6 +199,24 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       paint: { 'line-color': ['match', ['downcase', ['to-string', ['get', 'propane']]], ['oui', 'true', '1', 'o'], '#8B5CF6', '#D4A000'],
         'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.5, 16, 3.5], 'line-opacity': 0.9 } }, 'measure-fill');
   }
+  // Fond « Plan » : tuiles vectorielles Protomaps (extrait France sur R2), style clair
+  let planIds = [];
+  async function loadPlan() {
+    if (planIds.length) return;
+    const m = await r2Meta('fond');
+    map.addSource('fond', { type: 'vector', url: `pmtiles://${R2_BASE}/${m.fichier}`, attribution: PLAN_ATTRIBUTION });
+    const below = map.getLayer('cadastre-layer') ? 'cadastre-layer' : undefined;
+    for (const l of pmLayers('fond', namedFlavor('light'), { lang: 'fr' })) {
+      const id = `pm-${l.id}`;
+      map.addLayer({ ...l, id, layout: { ...(l.layout || {}), visibility: 'none' } }, below);
+      planIds.push(id);
+    }
+  }
+  function showPlan(on) {
+    for (const id of planIds) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+    map.setLayoutProperty('base-layer', 'visibility', on ? 'none' : 'visible');
+  }
+
   const LAYERS = {
     dpe: ['dpe-fill', 'dpe-line', 'dpe-neuf-hatch'], cadastre: ['cadastre-layer'], rcu: ['rcu-layer', 'rcu-points'],
     gaz: ['gaz-layer'], plu: ['plu-fill', 'plu-line'], ac1: ['ac1-layer'], ac4: ['ac4-layer'], ac2: ['ac2-layer'],
@@ -232,13 +253,23 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       return true;
     },
 
-    setBasemap(key) {
-      state.basemap = key; state.historic = null;
-      map.getSource('base')?.setTiles([BASEMAPS[key].tiles]);
+    async setBasemap(key) {
+      await ready;
+      state.historic = null;
+      if (BASEMAPS[key].vector) {
+        try { await loadPlan(); } catch { onStatus?.('Fond Plan indisponible pour le moment', 3000); return false; }
+        state.basemap = key; showPlan(true);
+      } else {
+        state.basemap = key; showPlan(false);
+        map.getSource('base')?.setTiles([BASEMAPS[key].tiles]);
+      }
+      return true;
     },
     setHistoric(id) {
       state.historic = id;
-      map.getSource('base')?.setTiles([id ? historicTiles(id) : BASEMAPS[state.basemap].tiles]);
+      if (id) { showPlan(false); map.getSource('base')?.setTiles([historicTiles(id)]); }
+      else if (BASEMAPS[state.basemap].vector) showPlan(true);
+      else map.getSource('base')?.setTiles([BASEMAPS[state.basemap].tiles]);
     },
 
     // Centre le bien dans la partie visible de la carte (à côté de la fiche, ou au-dessus sur mobile)

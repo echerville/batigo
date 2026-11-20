@@ -1,0 +1,54 @@
+name: Generate fond de carte Plan (Protomaps, R2)
+
+# Fond de carte « Plan » : extrait France du fond Protomaps (données OpenStreetMap, licence ODbL),
+# déposé sur Cloudflare R2 comme les autres couches de Scope.
+# Secrets requis : R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 3 5 * *'   # le 5 de chaque mois
+
+env:
+  R2_BUCKET: scope-tuiles-eu
+  # France métropolitaine + Corse (aux petits zooms, les tuiles couvrent aussi les pays voisins)
+  BBOX: '-5.8,41.2,10.0,51.3'
+  MAXZOOM: '15'
+
+jobs:
+  fond:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Outil pmtiles
+        run: |
+          URL=$(curl -sf https://api.github.com/repos/protomaps/go-pmtiles/releases/latest \
+            | python3 -c "import sys,json; a=json.load(sys.stdin)['assets']; print([x['browser_download_url'] for x in a if x['name'].endswith('Linux_x86_64.tar.gz')][0])")
+          curl -sfL "$URL" | tar xz -C /tmp pmtiles
+          /tmp/pmtiles version
+
+      - name: Extraction France depuis la dernière version Protomaps
+        run: |
+          KEY=$(curl -sf https://build-metadata.protomaps.dev/builds.json \
+            | python3 -c "import sys,json; b=json.load(sys.stdin); print(sorted(x['key'] for x in b)[-1])")
+          echo "Version Protomaps : $KEY"
+          /tmp/pmtiles extract "https://build.protomaps.com/$KEY" fond.pmtiles --bbox="$BBOX" --maxzoom="$MAXZOOM" --download-threads=8
+          STAMP=$(date +%Y%m%d-%H%M)
+          mv fond.pmtiles "fond-$STAMP.pmtiles"
+          printf '{"fichier":"%s","source":"Protomaps %s (OpenStreetMap, ODbL)","genere_le":"%s"}\n' "fond-$STAMP.pmtiles" "$KEY" "$(date +%Y-%m-%d)" > fond-meta.json
+          ls -la fond-*; cat fond-meta.json
+
+      - name: Dépôt sur Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          EP="https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+          F=$(ls fond-2*.pmtiles)
+          aws s3 cp "$F" "s3://$R2_BUCKET/$F" --endpoint-url "$EP" --cache-control "public, max-age=31536000, immutable"
+          aws s3 cp fond-meta.json "s3://$R2_BUCKET/fond-meta.json" --endpoint-url "$EP" --content-type application/json --cache-control "no-cache"
+          # Ne garder que la dernière version (fichier volumineux ; fond-meta.json pointe dessus sans cache)
+          aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$EP" | awk '{print $4}' | grep -E '^fond-2.*\.pmtiles$' | sort | head -n -1 \
+            | while read f; do aws s3 rm "s3://$R2_BUCKET/$f" --endpoint-url "$EP"; done
+          aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$EP"

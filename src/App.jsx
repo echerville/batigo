@@ -109,7 +109,11 @@ export default function App() {
     const ok = await api.current.setOverlay(id, on);
     if (!ok) setOverlays(o => ({ ...o, [id]: false }));
   }
-  function chooseBasemap(k) { setBasemap(k); setHistoric(null); api.current.setBasemap(k); }
+  async function chooseBasemap(k) {
+    const prev = basemap;
+    setBasemap(k); setHistoric(null);
+    if (!(await api.current.setBasemap(k))) setBasemap(prev);
+  }
   function chooseHistoric(id) {
     const next = historic === id ? '' : id;
     setHistoric(next); api.current.setHistoric(next || null);
