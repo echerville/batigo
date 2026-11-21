@@ -346,7 +346,7 @@ export default function App() {
             <h3>Mes cartes</h3>
             <div className="layer-grid">
               {[
-                { id: 'reperes', label: 'Mes repères', n: reperes.length, on: repShow, set: setRepShow, sw: <Icon name="pin" size={24} stroke={2} /> },
+                { id: 'reperes', label: 'Mes repères', n: reperes.length, on: repShow, set: setRepShow, sw: <Icon name="pin" size={20} stroke={2} /> },
                 { id: 'mesdpe', label: 'Mes DPE', n: mesDpe.length, on: dpeShow, set: setDpeShow, sw: <Grade g="B" size="lg" /> },
               ].map(c => (
                 <div key={c.id} className="layer-tile-wrap">
@@ -355,7 +355,7 @@ export default function App() {
                     <span>{c.label}{c.n ? ` (${c.n})` : ''}</span>
                     {c.on && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
                   </button>
-                  <button className="layer-edit" aria-label={`Gérer ${c.label.toLowerCase()}`} onClick={() => setPanel(c.id)}><Icon name="edit" size={18} /></button>
+                  <button className="layer-edit" aria-label={`Gérer ${c.label.toLowerCase()}`} onClick={() => setPanel(c.id)}><Icon name="edit" size={15} /></button>
                 </div>
               ))}
             </div>
