@@ -1,5 +1,5 @@
 // Logos des couches : symbologie réglementaire (étiquette DPE, plan cadastral, zonage CNIG…)
-const S = { width: 30, height: 30, viewBox: '0 0 30 30', 'aria-hidden': true };
+const S = { width: 30, height: 30, viewBox: '1 1 28 28', 'aria-hidden': true };
 
 const ICONS = {
   // DPE : une maison remplie des 7 couleurs de l'étiquette, du A (vert) au G (rouge)
