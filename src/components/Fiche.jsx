@@ -218,7 +218,7 @@ function DpeTab({ dpe }) {
   }
   const shown = all ? logs : logs.slice(0, 10);
   const counts = {};
-  logs.forEach(r => { counts[r.etiquette_dpe] = (counts[r.etiquette_dpe] || 0) + 1; });
+  logs.forEach(r => { const o = preCoeffGrade(r); const k = `${o || ''}>${r.etiquette_dpe}`; counts[k] = (counts[k] || 0) + 1; });
   return (
     <>
       {imm[0] && (
@@ -239,7 +239,7 @@ function DpeTab({ dpe }) {
       {logs.length > 0 && (
         <>
           <div className="section-title">Logements · {logs.length} DPE</div>
-          <div className="row" style={{ gap: 12 }}>{Object.keys(counts).sort().map(g => <Grade key={g} g={g} count={counts[g]} />)}</div>
+          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>{Object.keys(counts).sort((a, b) => a.split('>')[1].localeCompare(b.split('>')[1]) || a.localeCompare(b)).map(k => { const [o, g] = k.split('>'); return <Grade key={k} g={g} from={o || undefined} size="mini" count={counts[k]} />; })}</div>
           <div className="list">{shown.map(r => <DpeRow key={r.numero_dpe} r={r} />)}</div>
           {logs.length > 10 && !all && <button className="btn ghost" onClick={() => setAll(true)}>Afficher les {logs.length - 10} autres</button>}
         </>
