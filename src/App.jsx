@@ -202,17 +202,16 @@ export default function App() {
         {!mobile && (
           <>
             <div className="spacer" />
-            <div className="seg glass" role="group" aria-label="Fond de carte">
-              {Object.entries(BASEMAPS).map(([k, b]) => (
-                <button key={k} aria-pressed={basemap === k} onClick={() => chooseBasemap(k)}>{b.label}</button>
-              ))}
-            </div>
             <button className="pill-btn glass" aria-label="Mesurer" title="Mesurer" aria-pressed={!!measure} onClick={toggleMeasure}><Icon name="ruler" size={20} /></button>
             <button className="pill-btn glass" aria-label="Vue de rue" title="Vue de rue" aria-pressed={!!street} onClick={() => (street ? setStreet(null) : openStreet())}><Icon name="camera" size={20} /></button>
             <button className="pill-btn glass" aria-label="Couches" title="Couches" aria-expanded={panel === 'layers'} onClick={() => togglePanel('layers')}>
               <Icon name="layers" size={20} />{nbOverlays > 0 && <span className="count">{nbOverlays}</span>}
             </button>
-            <button className="pill-btn glass" aria-label="Sources des données" onClick={() => togglePanel('sources')}><Icon name="sources" size={18} /></button>
+            <div className="seg glass" role="group" aria-label="Fond de carte">
+              {Object.entries(BASEMAPS).map(([k, b]) => (
+                <button key={k} aria-pressed={basemap === k} onClick={() => chooseBasemap(k)}>{b.label}</button>
+              ))}
+            </div>
           </>
         )}
       </div>
