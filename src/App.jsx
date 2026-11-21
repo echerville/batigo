@@ -42,6 +42,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [locating, setLocating] = useState(false);
   const [sheet, setSheet] = useState('half');
+  const sheetBefore = useRef(null);
   const toastTimer = useRef(null);
   const meMarker = useRef(null);
   const watchId = useRef(null);
@@ -62,7 +63,7 @@ export default function App() {
     setBuilding({ status: 'loading' }); setDpe({ status: 'loading' }); setTileGrade(opts.tileGrade || null);
     setPanel(null); setSheet('half');
     const m = api.current;
-    m.flyTo([lng, lat]); m.placeMarker([lng, lat]); m.select(null);
+    m.flyTo([lng, lat], 18, mobile ? sheetHeights().half + NAV_H : undefined); m.placeMarker([lng, lat]); m.select(null);
 
     const data = await resolveBuilding({ lat, lng, feature, bldGroupId: opts.bldGroupId, isClick });
     if (id !== seq.current) return;
@@ -128,7 +129,7 @@ export default function App() {
     if (measure && !measure.done) { m.stopMeasure(false); setMeasure(null); return; }
     if (measure?.done) { m.clearMeasure(); setMeasure(null); return; }
     setPanel(null);
-    if (mobile) setSheet('peek');
+    if (mobile) { sheetBefore.current = sheet; setSheet('closed'); }
     setMeasure({ points: [], done: false });
     m.startMeasure((points, done) => setMeasure({ points, done: !!done }));
   }
@@ -178,6 +179,17 @@ export default function App() {
   }
 
   const nbOverlays = Object.values(overlays).filter(Boolean).length;
+  // Mobile : la carte se recentre sur la partie visible quand la fiche change de hauteur
+  const placeRef = useRef(null); placeRef.current = place;
+  useEffect(() => {
+    if (!mobile || !placeRef.current || !api.current || measure) return;
+    api.current.recenter(placeRef.current.lngLat, sheetHeights()[sheet] + NAV_H);
+  }, [sheet, mobile]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Fin de mesure : la fiche revient comme avant
+  useEffect(() => {
+    if (!measure && sheetBefore.current) { setSheet(sheetBefore.current); sheetBefore.current = null; }
+  }, [measure]);
+
   const mres = measure ? formatMeasure(measure.points) : null;
   const togglePanel = p => setPanel(cur => (cur === p ? null : p));
 
@@ -333,7 +345,8 @@ export default function App() {
       {/* Navigation du bas (mobile) */}
       {mobile && (
         <nav className="bottomnav glass" aria-label="Navigation">
-          <button aria-pressed={!panel && !!place} onClick={() => { setPanel(null); if (place) setSheet(s => (s === 'peek' ? 'half' : s)); }}><Icon name="building" size={22} />Fiche</button>
+          <button aria-pressed={!panel && !!place && sheet !== 'closed'} aria-label={sheet === 'closed' ? 'Afficher la fiche' : 'Replier la fiche'}
+            onClick={() => { if (panel) { setPanel(null); return; } if (place) setSheet(s => (s === 'closed' ? 'half' : 'closed')); }}><Icon name="building" size={22} />Fiche</button>
           <button aria-pressed={panel === 'layers'} onClick={() => togglePanel('layers')}><Icon name="layers" size={22} />Couches{nbOverlays ? ` (${nbOverlays})` : ''}</button>
           <button aria-pressed={panel === 'basemap' || historic !== null} onClick={() => togglePanel('basemap')}><Icon name="map" size={22} />Fonds</button>
           <button aria-pressed={panel === 'tools' || !!measure} onClick={() => togglePanel('tools')}><Icon name="ruler" size={22} />Outils</button>
@@ -343,14 +356,18 @@ export default function App() {
   );
 }
 
-// Panneau glissant (mobile) : trois hauteurs, on le tire par la poignée ou par le contenu quand il est en haut
+// Hauteurs de la fiche mobile : repliée (cachée), aperçu, mi-hauteur, plein écran
+const NAV_H = 76;
+function sheetHeights() {
+  const H = window.innerHeight - NAV_H;
+  return { closed: 0, peek: 128, half: Math.round(H * 0.52), full: H - 72 };
+}
+
+// Panneau glissant (mobile) : on le tire par la poignée ou par le contenu quand il est en haut
 function Sheet({ state, setState, children }) {
   const ref = useRef(null), scroll = useRef(null), drag = useRef(null);
   const [h, setH] = useState(null);
-  const heights = () => {
-    const H = window.innerHeight - 76;
-    return { peek: 128, half: Math.round(H * 0.52), full: H - 72 };
-  };
+  const heights = sheetHeights;
   const target = heights()[state];
   function start(e, fromHandle) {
     if (!fromHandle && scroll.current.scrollTop > 0) return;
@@ -371,12 +388,13 @@ function Sheet({ state, setState, children }) {
     const d = drag.current; drag.current = null;
     if (!d?.moved || h == null) { setH(null); return; }
     const hs = heights();
-    const best = Object.entries(hs).sort((a, b) => Math.abs(a[1] - h) - Math.abs(b[1] - h))[0][0];
+    const { closed, ...open } = hs;
+    const best = Object.entries(open).sort((a, b) => Math.abs(a[1] - h) - Math.abs(b[1] - h))[0][0];
     setState(best); setH(null);
   }
   const cycle = () => setState(state === 'peek' ? 'half' : state === 'half' ? 'full' : 'peek');
   return (
-    <section ref={ref} className={`sheet glass${h != null ? ' dragging' : ''}`} style={{ height: h ?? target }} aria-label="Fiche du bien"
+    <section ref={ref} className={`sheet glass${h != null ? ' dragging' : ''}${state === 'closed' ? ' closed' : ''}`} style={{ height: h ?? target }} aria-label="Fiche du bien"
       onTouchMove={move} onTouchEnd={end} onTouchCancel={end}>
       <button className="sheet-handle" onTouchStart={e => start(e, true)} onClick={cycle}
         aria-label={state === 'full' ? 'Réduire la fiche' : 'Agrandir la fiche'}><span /></button>

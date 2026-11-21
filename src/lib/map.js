@@ -248,6 +248,12 @@ export function createMap(container, { onPick, onStatus, mobile }) {
   }
   map.on('moveend', refreshPLU);
 
+  const padFor = (bottomPx) => {
+    if (!mobile) return { left: 436, top: 0, right: 0, bottom: 0 };
+    const top = Math.round(document.querySelector('.topbar')?.getBoundingClientRect().bottom || 70) + 6;
+    return { top, bottom: Math.round(bottomPx ?? window.innerHeight * 0.5), left: 0, right: 0 };
+  };
+
   const api = {
     map,
     ready,
@@ -293,10 +299,13 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       else map.getSource('base')?.setTiles([BASEMAPS[state.basemap].tiles]);
     },
 
-    // Centre le bien dans la partie visible de la carte (à côté de la fiche, ou au-dessus sur mobile)
-    flyTo(lngLat, zoom = 18) {
-      const padding = mobile ? { top: 70, bottom: Math.round(window.innerHeight * 0.5), left: 0, right: 0 } : { left: 436, top: 0, right: 0, bottom: 0 };
-      map.flyTo({ center: lngLat, zoom, speed: 1.4, padding });
+    // Centre le bien dans la partie visible de la carte (à côté de la fiche, ou entre la barre du haut et la fiche sur mobile)
+    // bottomPx : hauteur occupée en bas de l'écran (fiche + navigation) sur mobile
+    flyTo(lngLat, zoom = 18, bottomPx) {
+      map.flyTo({ center: lngLat, zoom, speed: 1.4, padding: padFor(bottomPx) });
+    },
+    recenter(lngLat, bottomPx) {
+      map.easeTo({ center: lngLat, padding: padFor(bottomPx), duration: 350 });
     },
 
     placeMarker(lngLat) {
