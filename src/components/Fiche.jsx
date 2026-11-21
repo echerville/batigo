@@ -11,6 +11,17 @@ import {
 const TABS = [['batiment', 'Bâtiment'], ['dpe', 'DPE'], ['urbanisme', 'Urbanisme'], ['parcelle', 'Parcelle']];
 const today = new Date().toLocaleDateString('fr-FR');
 
+// Icône ⓘ : le texte d'information n'apparaît qu'au clic
+function InfoTip({ label, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="info-tip">
+      <button type="button" className="info-btn" aria-label={label} aria-expanded={open} onClick={() => setOpen(o => !o)}><Icon name="info" size={16} /></button>
+      {open && <div className="info-note small muted">{children}</div>}
+    </div>
+  );
+}
+
 function Fact({ label, value, note }) {
   return (
     <div className="fact glass-in">
@@ -93,7 +104,7 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
         {tab === 'parcelle' && <ParcelleTab place={place} building={building} />}
       </div>
 
-      <div className="small muted">Sources : ADEME, BDNB (CSTB), IGN, DGFiP · consulté le {today}</div>
+      <InfoTip label="Sources des données">Sources : ADEME, BDNB (CSTB), IGN, DGFiP · consulté le {today}</InfoTip>
     </>
   );
 }
@@ -124,7 +135,7 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
   return (
     <>
       <div className="card glass-in">
-        <div className="card-title">Étiquette énergie {ref && <span>DPE du {frDate(ref.date_reception_dpe)}</span>}</div>
+        {ref && <div className="card-title"><span>DPE du {frDate(ref.date_reception_dpe)}</span></div>}
         {dpe.status === 'loading' && <div className="skeleton" style={{ height: 40 }} />}
         {dpeOk && grade && (
           <div className="dpe-line">
@@ -239,7 +250,7 @@ function DpeTab({ dpe }) {
           <div className="list">{neufs.slice(0, 20).map(r => <DpeRow key={r.numero_dpe} r={r} neuf />)}</div>
         </>
       )}
-      <div className="small muted">« F→E » : étiquette avant le changement du coefficient de l’électricité au 1er janvier 2026.</div>
+      <InfoTip label="Information sur « F→E »">« F→E » : étiquette avant le changement du coefficient de l’électricité au 1er janvier 2026.</InfoTip>
     </>
   );
 }

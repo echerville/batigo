@@ -265,7 +265,7 @@ a:hover { color: var(--action-dark); }
 .fiche-scroll .grade.lg { width: 34px; height: 34px; font-size: 19px; }
 .fiche-scroll .grade.xs { min-width: 22px; height: 22px; font-size: 11px; }
 .fiche-scroll .fact { padding: 8px 0; }
-.fiche-scroll .fact-label { font-size: 11px; }
+.fiche-scroll .fact-label { font-size: 10px; font-weight: 500; }
 .fiche-scroll .fact-value { font-size: 15px; margin-top: 2px; }
 .fiche-scroll .fact-note { font-size: 11px; margin-top: 0; }
 .fiche-scroll .small { font-size: 12px; }
@@ -288,3 +288,9 @@ a:hover { color: var(--action-dark); }
 .dpe-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .dpe-line > .scale { flex: 1; min-width: 0; }
 .dpe-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; font-size: 12px; }
+
+/* Icône d'information : texte masqué par défaut */
+.info-tip { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.info-btn { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--muted); background: transparent; border: 0; padding: 0; }
+.info-btn:hover, .info-btn[aria-expanded="true"] { color: var(--ink); background: rgba(255,255,255,.6); }
+.info-note { align-self: stretch; }
