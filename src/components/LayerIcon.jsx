@@ -16,10 +16,9 @@ const ICONS = {
   // Plan cadastral : limites de parcelles et bâti hachuré
   cadastre: (
     <svg {...S}>
-      <defs><pattern id="li-hach" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V3" stroke="#C0504D" strokeWidth="1.2" /></pattern></defs>
-      <rect x="1" y="1" width="28" height="28" rx="3" fill="#FBFAF6" />
-      <path d="M1 12L29 10M1 21L29 22M12 1L11 29M21 1L22 29" stroke="#1F2430" strokeWidth="1.1" fill="none" />
-      <rect x="13.5" y="13" width="6" height="7" fill="url(#li-hach)" stroke="#C0504D" strokeWidth="1" />
+      <rect x="1" y="1" width="28" height="28" rx="3" fill="#FFFFFF" />
+      <path d="M12 10.5L21.5 11.5L22 20.5L11.5 20Z" fill="#F7A823" />
+      <path d="M1 12L29 10M1 21L29 22M12 1L11 29M21 1L22 29" stroke="#111" strokeWidth="0.8" fill="none" />
     </svg>
   ),
   // Réseau de chaleur : conduite et sous-stations
