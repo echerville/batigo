@@ -207,7 +207,7 @@ export default function App() {
             <button className="pill-btn glass" aria-label="Couches" title="Couches" aria-expanded={panel === 'layers'} onClick={() => togglePanel('layers')}>
               <Icon name="layers" size={20} />{nbOverlays > 0 && <span className="count">{nbOverlays}</span>}
             </button>
-            <div className="seg glass" role="group" aria-label="Fond de carte">
+            <div className="seg glass" role="group" aria-label="Fond de carte" style={{ '--n': Object.keys(BASEMAPS).length, '--i': Math.max(0, Object.keys(BASEMAPS).indexOf(basemap)) }}>
               {Object.entries(BASEMAPS).map(([k, b]) => (
                 <button key={k} aria-pressed={basemap === k} onClick={() => chooseBasemap(k)}>{b.label}</button>
               ))}
