@@ -7,9 +7,10 @@ import Search from './components/Search.jsx';
 import LayerIcon from './components/LayerIcon.jsx';
 import Fiche from './components/Fiche.jsx';
 import Reperes from './components/Reperes.jsx';
+import MesDpe from './components/MesDpe.jsx';
 import { enrich, loadMesDpe, merge, readFile, saveMesDpe } from './lib/mesdpe.js';
 import { DEFAULT_COLOR, exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
-import { Scale } from './components/Grade.jsx';
+import { Grade, Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
 import { fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
 import { BASEMAPS, OVERLAYS } from './lib/config.js';
@@ -47,7 +48,7 @@ export default function App() {
   const [mesDpe, setMesDpe] = useState(loadMesDpe);   // mes DPE (importés, stockés sur l'appareil)
   const [dpeShow, setDpeShow] = useState(() => localStorage.getItem('scope.mesdpe.show') !== '0');
   const [dpeBusy, setDpeBusy] = useState(null);
-  const [carteTab, setCarteTab] = useState('reperes');
+  const [repShow, setRepShow] = useState(() => localStorage.getItem('scope.reperes.show') !== '0');
   const mesDpeRef = useRef(mesDpe); mesDpeRef.current = mesDpe;
   const zoneMode = useRef(false);
   const reperesRef = useRef(reperes); reperesRef.current = reperes;
@@ -123,8 +124,9 @@ export default function App() {
 
   useEffect(() => {
     if (!saveReperes(reperes)) say('Impossible d’enregistrer les repères sur cet appareil', 3000);
-    api.current?.setReperes(reperes);
-  }, [reperes, say]);
+    try { localStorage.setItem('scope.reperes.show', repShow ? '1' : '0'); } catch { /* silencieux */ }
+    api.current?.setReperes(repShow ? reperes : []);
+  }, [reperes, repShow, say]);
 
   useEffect(() => {
     if (!saveMesDpe(mesDpe)) say('Impossible d’enregistrer vos DPE sur cet appareil', 3000);
@@ -148,6 +150,7 @@ export default function App() {
     let items;
     try { items = await readFile(file); } catch { setDpeBusy(null); say('Fichier illisible', 3000); return; }
     if (!items.length) { setDpeBusy(null); say('Aucun numéro de DPE trouvé dans ce fichier', 3500); return; }
+    setDpeShow(true);
     await runEnrich(items);
   }
   const refreshDpe = () => runEnrich(mesDpe.filter(x => x.etat === 'attente' || x.etat === 'erreur').map(x => ({ n: x.n, statut: x.statut, date: x.date, commune: x.commune })));
@@ -179,6 +182,7 @@ export default function App() {
     say('Touchez la carte pour tracer la zone, puis Terminer', 4000);
   }
   function saveRepere(r) {
+    setRepShow(true);
     setReperes(list => (r.id ? list.map(x => (x.id === r.id ? r : x)) : [...list, { ...r, id: newId(), createdAt: new Date().toISOString() }]));
     setEditing(null);
   }
@@ -339,22 +343,40 @@ export default function App() {
             </div>
           ))}
           <div>
-            <h3>Ma carte</h3>
+            <h3>Mes cartes</h3>
             <div className="layer-grid">
-              <button className="layer-tile" onClick={() => setPanel('reperes')}>
-                <span className="layer-sw layer-sw-perso"><Icon name="pin" size={18} stroke={2} /></span>
-                <span>Ma carte{reperes.length + mesDpe.length ? ` (${reperes.length + mesDpe.length})` : ''}</span>
-              </button>
+              {[
+                { id: 'reperes', label: 'Mes repères', n: reperes.length, on: repShow, set: setRepShow, sw: <Icon name="pin" size={18} stroke={2} /> },
+                { id: 'mesdpe', label: 'Mes DPE', n: mesDpe.length, on: dpeShow, set: setDpeShow, sw: <Grade g="B" size={20} /> },
+              ].map(c => (
+                <div key={c.id} className="layer-tile-wrap">
+                  <button className="layer-tile" aria-pressed={c.on} onClick={() => { c.set(!c.on); setPanel(null); }}>
+                    <span className="layer-sw layer-sw-perso">{c.sw}</span>
+                    <span>{c.label}{c.n ? ` (${c.n})` : ''}</span>
+                    {c.on && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
+                  </button>
+                  <button className="layer-edit" aria-label={`Gérer ${c.label.toLowerCase()}`} onClick={() => setPanel(c.id)}><Icon name="edit" size={13} /></button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
-      {/* Carte privée */}
+      {/* Mes repères */}
       {panel === 'reperes' && (
         <Reperes list={reperes} editing={editing} onEdit={setEditing} onSave={saveRepere} onDelete={deleteRepere}
           onClose={() => { setPanel(null); setEditing(null); }} onPoint={startPoint} onZone={startZone} onGo={goRepere} onExport={() => exportReperes(reperes)}
-          tab={carteTab} onTab={setCarteTab}
-          dpe={{ list: mesDpe, busy: dpeBusy, show: dpeShow, onShow: setDpeShow, onImport: importDpe, onRefresh: refreshDpe, onGo: x => goDpeRef.current(x), onClear: clearDpe }} />
+          show={repShow} onShow={setRepShow} />
+      )}
+      {/* Mes DPE */}
+      {panel === 'mesdpe' && (
+        <div className="dropdown glass" role="dialog" aria-label="Mes DPE">
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+            <h2 style={{ margin: 0 }}>Mes DPE</h2>
+            <button className="icon-btn" aria-label="Fermer" onClick={() => setPanel(null)}><Icon name="x" size={18} /></button>
+          </div>
+          <MesDpe list={mesDpe} busy={dpeBusy} show={dpeShow} onShow={setDpeShow} onImport={importDpe} onRefresh={refreshDpe} onGo={x => goDpeRef.current(x)} onClear={clearDpe} />
+        </div>
       )}
       {/* Fonds de carte (mobile) */}
       {panel === 'basemap' && (

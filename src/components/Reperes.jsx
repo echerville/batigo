@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Icon from './Icon.jsx';
-import MesDpe from './MesDpe.jsx';
 import { DEFAULT_COLOR, REPERE_COLORS, REPERE_ICONS, checkText, iconSvg, loadModeles, newId, saveModeles } from '../lib/reperes.js';
 
 const MAX = 280, MAX_NAME = 40;
@@ -92,22 +91,18 @@ function Editor({ value, onSave, onDelete, onCancel }) {
   );
 }
 
-export default function Reperes({ list, editing, onEdit, onSave, onDelete, onClose, onPoint, onZone, onGo, onExport, tab, onTab, dpe }) {
+export default function Reperes({ list, editing, onEdit, onSave, onDelete, onClose, onPoint, onZone, onGo, onExport, show, onShow }) {
   return (
-    <div className="dropdown glass" role="dialog" aria-label="Ma carte">
+    <div className="dropdown glass" role="dialog" aria-label="Mes repères">
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-        <h2 style={{ margin: 0 }}>Ma carte</h2>
+        <h2 style={{ margin: 0 }}>Mes repères</h2>
         <button className="icon-btn" aria-label="Fermer" onClick={onClose}><Icon name="x" size={18} /></button>
       </div>
       {editing ? (
         <Editor key={editing.id || 'new'} value={editing} onSave={onSave} onDelete={onDelete} onCancel={() => onEdit(null)} />
       ) : (
         <>
-          <div className="rep-tabs" role="group" aria-label="Contenu de Ma carte">
-            <button type="button" aria-pressed={tab === 'reperes'} onClick={() => onTab('reperes')}>Repères</button>
-            <button type="button" aria-pressed={tab === 'dpe'} onClick={() => onTab('dpe')}>Mes DPE{dpe.list.length ? ` (${dpe.list.length})` : ''}</button>
-          </div>
-          {tab === 'dpe' ? <MesDpe {...dpe} /> : <>
+          <label className="dpe-show small"><input type="checkbox" checked={show} onChange={e => onShow(e.target.checked)} /> Afficher mes repères sur la carte</label>
           <div className="rep-add">
             <button type="button" className="btn ghost" onClick={onPoint}><Icon name="pin" size={18} /> Poser un point</button>
             <button type="button" className="btn ghost" onClick={onZone}><Icon name="polygon" size={18} /> Dessiner une zone</button>
@@ -129,7 +124,6 @@ export default function Reperes({ list, editing, onEdit, onSave, onDelete, onClo
           )}
           <div className="small muted rep-foot">Privés : enregistrés sur cet appareil, jamais partagés. Pas de nom de client ni de coordonnées dans les notes.</div>
           {list.length > 0 && <button type="button" className="btn ghost rep-export" onClick={onExport}><Icon name="download" size={16} /> Sauvegarder dans un fichier</button>}
-          </>}
         </>
       )}
     </div>
