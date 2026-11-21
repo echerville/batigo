@@ -166,10 +166,14 @@ a:hover { color: var(--action-dark); }
 
 /* Bandeaux sur la carte */
 .floating { position: absolute; left: 50%; transform: translateX(-50%); z-index: 22; border-radius: 18px; }
-.measure-panel { top: 152px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 360px; }
-.measure-values { display: flex; gap: 10px; }
-.measure-values > div { flex: 1; padding: 10px 12px; border-radius: 12px; }
-.measure-values strong { display: block; font-size: 24px; font-weight: 800; }
+.measure-panel { top: 12px; left: auto; right: 12px; transform: none; padding: 8px 10px; display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.measure-values > div span { display: block; font-size: 11px; line-height: 1.2; color: var(--muted, #5b6472); }
+.measure-values { display: flex; gap: 6px; }
+.measure-values > div { flex: 1; min-width: 92px; padding: 4px 10px; border-radius: 10px; }
+.measure-values strong { display: block; font-size: 16px; font-weight: 800; line-height: 1.2; }
+.measure-panel .btn { padding: 0 12px; min-height: 36px; font-size: 14px; }
+.mobile .topbar.hidden-measure { display: none; }
+@media (max-width: 1100px) { .topbar.hidden-measure { display: none; } }
 .hint { font-size: 13px; color: var(--muted); }
 .historic { bottom: 100px; padding: 8px; display: flex; gap: 6px; align-items: center; }
 .historic button { border: 0; border-radius: 10px; padding: 10px 12px; background: transparent; font-weight: 700; font-size: 14px; }
@@ -215,12 +219,10 @@ a:hover { color: var(--action-dark); }
 .bottomnav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; }
 .bottomnav button[aria-pressed="true"] { color: var(--action); font-weight: 700; }
 .mobile .dropdown { left: 12px; right: 12px; width: auto; top: auto; bottom: 88px; max-height: 70%; }
-.mobile .measure-panel { top: auto; bottom: calc(76px + env(safe-area-inset-bottom) + 8px); left: 12px; right: 12px; transform: none; min-width: 0; padding: 10px 12px; gap: 8px; }
-.mobile .measure-values { gap: 8px; }
-.mobile .measure-values > div { padding: 6px 10px; }
-.mobile .measure-values strong { font-size: 18px; }
-.mobile .measure-panel .hint { font-size: 12px; }
-.mobile .measure-panel .btn { padding: 8px 10px; font-size: 14px; min-height: 40px; }
+.mobile .measure-panel { top: calc(8px + env(safe-area-inset-top)); bottom: auto; left: 8px; right: 8px; padding: 6px 8px; gap: 6px; }
+.mobile .measure-values { flex: 1; min-width: 0; gap: 6px; }
+.mobile .measure-values > div { min-width: 0; padding: 4px 8px; }
+.mobile .measure-values strong { font-size: 15px; }
 .mobile .historic { bottom: 92px; }
 .mobile .toast { bottom: 160px; }
 .mobile .mapctrl { top: calc(var(--top-h, 130px) + 8px); bottom: auto; right: 12px; }

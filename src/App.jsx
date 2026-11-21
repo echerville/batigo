@@ -206,7 +206,7 @@ export default function App() {
     <div className={`app${mobile ? ' mobile' : ''}`} style={mobile ? { '--top-h': '120px' } : undefined}>
       <div ref={mapEl} className="map" aria-label="Carte" role="region" />
 
-      <div className="topbar">
+      <div className={`topbar${measure ? ' hidden-measure' : ''}`}>
         <Search value={query} onValue={setQuery} onSelect={f => selectPlace(f)} getCenter={() => api.current?.map.getCenter()} mobile={mobile} />
         {!mobile && (
           <>
@@ -281,24 +281,19 @@ export default function App() {
       {/* Mesure */}
       {measure && (
         <div className="floating measure-panel glass" role="status" aria-live="polite">
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <span className="fact-label">{measure.done ? 'Mesure' : `Mesure en cours · ${measure.points.length} point${measure.points.length > 1 ? 's' : ''}`}</span>
-            <button className="icon-btn" aria-label="Fermer la mesure" onClick={() => { api.current.clearMeasure(); setMeasure(null); }}><Icon name="x" size={18} /></button>
-          </div>
           <div className="measure-values">
-            <div className="glass-in"><span className="small muted">Surface au sol</span><strong>{mres?.surface || '—'}</strong></div>
-            <div className="glass-in"><span className="small muted">{mres?.label || 'Périmètre'}</span><strong>{mres?.perimetre || '—'}</strong></div>
+            <div className="glass-in"><span>Surface au sol</span><strong>{mres?.surface || '—'}</strong></div>
+            <div className="glass-in"><span>{mres?.label || 'Périmètre'}</span><strong>{mres?.perimetre || '—'}</strong></div>
           </div>
-          {!measure.done && (
+          {!measure.done ? (
             <>
-              <div className="hint">{mobile ? 'Touchez' : 'Cliquez sur'} la carte pour ajouter des points{mobile ? '.' : ', double-cliquez pour terminer.'}</div>
-              <div className="btn-row">
-                <button className="btn ghost" onClick={() => api.current.undoMeasurePoint()} disabled={!measure.points.length}><Icon name="undo" size={18} /> Annuler le point</button>
-                <button className="btn primary" onClick={finishMeasure}><Icon name="check" size={18} stroke={2.2} /> Terminer</button>
-              </div>
+              <button className="icon-btn" aria-label="Annuler le dernier point" title="Annuler le dernier point" onClick={() => api.current.undoMeasurePoint()} disabled={!measure.points.length}><Icon name="undo" size={18} /></button>
+              <button className="btn primary" onClick={finishMeasure}><Icon name="check" size={18} stroke={2.2} /> Terminer</button>
             </>
+          ) : (
+            <button className="btn ghost" onClick={toggleMeasure}>Effacer</button>
           )}
-          {measure.done && <button className="btn ghost" onClick={toggleMeasure}>Effacer la mesure</button>}
+          <button className="icon-btn" aria-label="Fermer la mesure" onClick={() => { api.current.clearMeasure(); setMeasure(null); }}><Icon name="x" size={18} /></button>
         </div>
       )}
 
