@@ -13,7 +13,7 @@ import {
 } from './config.js';
 import { r2Meta, fetchPLUBounds } from './data.js';
 import { bestGrade } from './dpe.js';
-import { iconColor, iconSvg } from './reperes.js';
+import { DEFAULT_COLOR, iconSvg } from './reperes.js';
 
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile.bind(protocol));
@@ -396,7 +396,7 @@ export function createMap(container, { onPick, onStatus, onRepere, mobile }) {
       state.repMarkers.forEach(m => m.remove()); state.repMarkers = [];
       const feats = [];
       for (const r of list) {
-        const color = iconColor(r.icon);
+        const color = r.color || DEFAULT_COLOR;
         let at = r.coords;
         if (r.type === 'zone') {
           const ring = [...r.coords, r.coords[0]];
@@ -407,8 +407,8 @@ export function createMap(container, { onPick, onStatus, onRepere, mobile }) {
         el.type = 'button'; el.className = 'rep-pin';
         el.style.background = color;
         el.innerHTML = iconSvg(r.icon, 18, '#fff');
-        el.setAttribute('aria-label', r.text ? `Repère : ${r.text.slice(0, 60)}` : 'Repère');
-        if (r.text) el.title = r.text.slice(0, 120);
+        const label = [r.name || 'Repère', r.text].filter(Boolean).join(' — ').slice(0, 140);
+        el.setAttribute('aria-label', label); el.title = label;
         el.addEventListener('click', ev => { ev.stopPropagation(); onRepere?.(r.id); });
         state.repMarkers.push(new maplibregl.Marker({ element: el }).setLngLat(at).addTo(map));
       }

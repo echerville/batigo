@@ -20,16 +20,20 @@ const P = {
   termite: '<ellipse cx="12" cy="14" rx="4" ry="5.5"/><path d="M12 8.5V4M9 4l3 2 3-2M8 12H4M8 16l-4 2M16 12h4M16 16l4 2"/>',
   insect: '<ellipse cx="12" cy="13" rx="3" ry="6"/><path d="M9.5 9C6 4 3 5 3 8s3 4 6.5 2.5M14.5 9C18 4 21 5 21 8s-3 4-6.5 2.5M9 14h6M9.5 17h5"/>',
   mushroom: '<path d="M3 12a9 8 0 0 1 18 0H3Z"/><path d="M9 12v7a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-7"/>',
-  amiante: '<path d="M12 3 2 20h20L12 3Z"/><path d="m9.2 17 2.8-7 2.8 7M10.2 14.8h3.6"/>',
+  plaque: '<path d="M7 5h14l-4 14H3L7 5Z"/><path d="M10.5 5 6.5 19M14 5l-4 14M17.5 5l-4 14"/>',
+  digicode: '<rect x="5" y="2.5" width="14" height="19" rx="2"/><path d="M9 7h.01M12 7h.01M15 7h.01M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01M12 18.5h.01"/>',
+  door: '<path d="M6 21V4h12v17M4 21h16"/><path d="M15 12.5h.01"/>',
+  star: '<path d="m12 3 2.8 5.8 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 3 1.1-6.2L3 9.7l6.2-.9L12 3Z"/>',
 };
-export const REPERE_GROUPS = [
-  { id: 'standard', label: 'Standard', color: '#17804D', icons: [['pin', 'Repère'], ['flag', 'Important'], ['alert', 'Attention'], ['note', 'Note'], ['camera', 'Photo'], ['key', 'Accès']] },
-  { id: 'batiment', label: 'Éléments du bâtiment', color: '#2B5BA8', icons: [['flame', 'Chaudière'], ['bolt', 'Électricité'], ['drop', 'Eau'], ['house', 'Toiture'], ['window', 'Ouvrant'], ['stairs', 'Escalier']] },
-  { id: 'diag', label: 'Termites, insectes, champignons, amiante', color: '#C0392B', icons: [['termite', 'Termites'], ['insect', 'Insectes'], ['mushroom', 'Champignons'], ['amiante', 'Amiante']] },
+// Bibliothèque à plat : l'utilisateur choisit lui-même le logo, la couleur et le nom
+export const REPERE_ICONS = [
+  ['pin', 'Repère'], ['flag', 'Drapeau'], ['star', 'Étoile'], ['alert', 'Attention'], ['note', 'Note'], ['camera', 'Photo'],
+  ['key', 'Clé'], ['digicode', 'Digicode'], ['door', 'Porte'], ['stairs', 'Escalier'], ['window', 'Fenêtre'], ['house', 'Toiture'],
+  ['flame', 'Chaudière'], ['bolt', 'Électricité'], ['drop', 'Eau'], ['plaque', 'Plaque ondulée'],
+  ['termite', 'Termites'], ['insect', 'Insectes'], ['mushroom', 'Champignons'],
 ];
-const ICON_GROUP = Object.fromEntries(REPERE_GROUPS.flatMap(g => g.icons.map(([id]) => [id, g])));
-export const iconColor = id => (ICON_GROUP[id] || REPERE_GROUPS[0]).color;
-export const iconLabel = id => REPERE_GROUPS.flatMap(g => g.icons).find(([i]) => i === id)?.[1] || 'Repère';
+export const REPERE_COLORS = ['#17804D', '#2B5BA8', '#C0392B', '#E05C00', '#F0B50F', '#7B2FBE', '#0E7C86', '#D6336C', '#5C6370', '#1F2430'];
+export const DEFAULT_COLOR = REPERE_COLORS[0];
 export const iconSvg = (id, size = 20, stroke = 'currentColor') =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[id] || P.pin}</svg>`;
 
@@ -57,3 +61,10 @@ export function exportReperes(list) {
   a.href = URL.createObjectURL(blob); a.download = `scope-reperes-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+
+// Modèles : combinaisons nom + logo + couleur que l'utilisateur veut reposer souvent
+const KEY_M = 'scope.repmodeles.v1';
+export function loadModeles() {
+  try { const l = JSON.parse(localStorage.getItem(KEY_M) || '[]'); return Array.isArray(l) ? l.filter(m => m && m.id) : []; } catch { return []; }
+}
+export function saveModeles(list) { try { localStorage.setItem(KEY_M, JSON.stringify(list)); } catch { /* silencieux */ } }

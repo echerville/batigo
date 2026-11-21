@@ -7,7 +7,7 @@ import Search from './components/Search.jsx';
 import LayerIcon from './components/LayerIcon.jsx';
 import Fiche from './components/Fiche.jsx';
 import Reperes from './components/Reperes.jsx';
-import { exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
+import { DEFAULT_COLOR, exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
 import { Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
 import { fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
@@ -121,7 +121,7 @@ export default function App() {
   function startPoint() {
     setPanel(null); setEditing(null);
     say('Touchez la carte pour poser le repère');
-    api.current.pickPoint(ll => { say(null); setEditing({ type: 'point', coords: ll, icon: 'pin', text: '' }); setPanel('reperes'); });
+    api.current.pickPoint(ll => { say(null); setEditing({ type: 'point', coords: ll, name: '', icon: 'pin', color: DEFAULT_COLOR, text: '' }); setPanel('reperes'); });
   }
   function startZone() {
     setPanel(null); setEditing(null);
@@ -233,7 +233,7 @@ export default function App() {
       const pts = measure.points;
       zoneMode.current = false;
       api.current.clearMeasure(); setMeasure(null);
-      setEditing({ type: 'zone', coords: pts, icon: 'alert', text: '' }); setPanel('reperes');
+      setEditing({ type: 'zone', coords: pts, name: '', icon: 'alert', color: DEFAULT_COLOR, text: '' }); setPanel('reperes');
     }
   }, [measure]);
 
