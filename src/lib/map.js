@@ -41,7 +41,11 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       glyphs: `${PLAN_ASSETS}/fonts/{fontstack}/{range}.pbf`,
       sprite: `${PLAN_ASSETS}/sprites/v4/light`,
       sources: { base: { type: 'raster', tiles: [BASEMAPS.ortho.tiles], tileSize: 256, maxzoom: 19, attribution: BASEMAPS.ortho.attribution } },
-      layers: [{ id: 'base-layer', type: 'raster', source: 'base' }],
+      // Le Plan s'affiche dès l'arrivée : le satellite reste masqué (pas de flash) jusqu'à ce qu'on le choisisse
+      layers: [
+        { id: 'bg-sol', type: 'background', paint: { 'background-color': '#e2dfda' } },
+        { id: 'base-layer', type: 'raster', source: 'base', layout: { visibility: 'none' } },
+      ],
     },
     // Démarrage sur la France entière (le fond IGN couvre aussi les pays voisins aux petits zooms : pas de bord blanc)
     ...franceView(container, mobile), minZoom: 4, maxBounds: MAX_BOUNDS,

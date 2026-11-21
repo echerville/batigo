@@ -99,7 +99,7 @@ export default function App() {
     });
     window._map = api.current.map; // pratique pour les tests
     // Le Plan est le fond affiché à l'arrivée ; repli sur le satellite s'il est indisponible
-    api.current.setBasemap('plan').then(ok => { if (!ok) setBasemap('ortho'); });
+    api.current.setBasemap('plan').then(ok => { if (!ok) { setBasemap('ortho'); api.current.setBasemap('ortho'); } });
     return () => api.current.map.remove();
   }, [say, selectPlace]);
 
