@@ -1,7 +1,14 @@
 import { DPE_HEX, DPE_TEXT, GRADES } from '../lib/config.js';
 
 // Étiquette DPE pleine. `from` : ancienne étiquette (affichée « F→E »).
-export function Grade({ g, size = 'sm', from, hatch, label }) {
+export function Grade({ g, size = 'sm', from, hatch, label, count }) {
+  const el = <GradeBox {...{ g, size, from, hatch, label }} />;
+  if (!(count > 1)) return el;
+  // Plusieurs DPE de la même étiquette : pastille carrée blanche avec le nombre, en bas à droite
+  return <span className="grade-wrap">{el}<span className="grade-count" aria-label={`${count} DPE`}>{count}</span></span>;
+}
+
+function GradeBox({ g, size, from, hatch, label }) {
   if (!DPE_HEX[g]) {
     return <span className={`grade ${size} none`} aria-label={label || 'Étiquette non disponible'}>–</span>;
   }

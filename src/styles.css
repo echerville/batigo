@@ -350,3 +350,7 @@ a:hover { color: var(--action-dark); }
 .dpe-progress { height: 6px; border-radius: 3px; background: rgba(255,255,255,.6); overflow: hidden; margin-top: 6px; }
 .dpe-progress > span { display: block; height: 100%; background: var(--action); transition: width .2s; }
 .dpe-show { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
+
+/* Nombre de DPE de même étiquette : pastille carrée blanche à cheval sur le coin bas droit */
+.grade-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.grade-count { position: absolute; right: -7px; bottom: -7px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; background: #F3F4F6; color: #1F2430; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(18,24,38,.35), 0 1px 3px rgba(18,24,38,.25); font: 700 11px/1 inherit; }

@@ -239,7 +239,7 @@ function DpeTab({ dpe }) {
       {logs.length > 0 && (
         <>
           <div className="section-title">Logements · {logs.length} DPE</div>
-          <div className="row">{Object.keys(counts).sort().map(g => <span key={g} className="row" style={{ gap: 4 }}><Grade g={g} /><span className="small">{counts[g]}</span></span>)}</div>
+          <div className="row" style={{ gap: 12 }}>{Object.keys(counts).sort().map(g => <Grade key={g} g={g} count={counts[g]} />)}</div>
           <div className="list">{shown.map(r => <DpeRow key={r.numero_dpe} r={r} />)}</div>
           {logs.length > 10 && !all && <button className="btn ghost" onClick={() => setAll(true)}>Afficher les {logs.length - 10} autres</button>}
         </>
