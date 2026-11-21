@@ -5,7 +5,7 @@ import { ADEME_DPE_URL } from '../lib/config.js';
 import { fetchAltitude, fetchDVF, fetchPLUZone, fetchRNC } from '../lib/data.js';
 import {
   IMMEUBLE, bdnbEnergie, bestGrade, frDate, installType, preCoeffGrade, referenceDPE, shortEnergie,
-  splitAddress, summary, usageLabel, zoneClimatique, classeAltitude,
+  splitAddress, summary, usageLabel, zoneClimatique,
 } from '../lib/dpe.js';
 
 const TABS = [['batiment', 'Bâtiment'], ['dpe', 'DPE'], ['urbanisme', 'Urbanisme'], ['parcelle', 'Parcelle']];
@@ -15,7 +15,7 @@ function Fact({ label, value, note }) {
   return (
     <div className="fact glass-in">
       <div className="fact-label">{label}</div>
-      <div className="fact-value">{value ?? <span className="na">Non renseigné</span>}</div>
+      <div className="fact-value">{value ?? <span className="na">-</span>}</div>
       {note && <div className="fact-note">{note}</div>}
     </div>
   );
@@ -106,11 +106,10 @@ function StreetPreview({ sv, onOpen }) {
   if (!sv || sv.status === 'idle' || sv.status === 'error') return null;
   if (sv.status === 'loading') return <div className="sv-thumb skeleton" aria-hidden="true" />;
   if (sv.status === 'none' || failed) return <div className="sv-none small muted">Pas de photo de rue Google à proximité.</div>;
-  const d = sv.date ? sv.date.split('-').reverse().join('/') : null;
   return (
     <button className="sv-thumb" onClick={onOpen} aria-label="Ouvrir la vue de rue">
       <img src={sv.preview} alt="Vue de rue du bâtiment (Google Street View)" onError={() => setFailed(true)} />
-      <span className="sv-label"><Icon name="camera" size={14} /> Vue de rue{d ? ` · ${d}` : ''}</span>
+      <span className="sv-label"><Icon name="camera" size={14} /> Vue de rue</span>
     </button>
   );
 }
@@ -118,9 +117,9 @@ function StreetPreview({ sv, onOpen }) {
 function SiteFacts({ site }) {
   return (
     <div className="facts">
-      <Fact label="Zone climatique" value={site.zone} note={site.zone ? 'Méthode DPE (3CL)' : null} />
+      <Fact label="Zone climatique" value={site.zone} />
       <Fact label="Altitude" value={site.alt === undefined ? '…' : site.alt != null ? `${Math.round(site.alt)} m` : null}
-        note={site.alt != null ? `Classe ${classeAltitude(site.alt)}` : null} />
+        />
     </div>
   );
 }
@@ -174,9 +173,9 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
             />
           {sum?.surface && <Fact label="Surface (DPE)" value={sum.surface} />}
           {bdnb?.nb_log > 0 && <Fact label="Logements" value={bdnb.nb_log} />}
-          <Fact label="Zone climatique" value={site.zone} note={site.zone ? 'Méthode DPE (3CL)' : null} />
+          <Fact label="Zone climatique" value={site.zone} />
           <Fact label="Altitude" value={site.alt === undefined ? '…' : site.alt != null ? `${Math.round(site.alt)} m` : null}
-            note={site.alt != null ? `Classe ${classeAltitude(site.alt)}` : null} />
+            />
         </div>
       )}
 
