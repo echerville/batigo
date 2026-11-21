@@ -230,7 +230,7 @@ a:hover { color: var(--action-dark); }
 /* Menu Couches : tuiles à repérer d'un coup d'œil */
 .layer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .layer-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; min-height: 84px; padding: 10px 6px 8px; border-radius: 12px;
-  border: 1.5px solid rgba(255,255,255,.75); background: rgba(255,255,255,.5); text-align: center; font-size: 11.5px; font-weight: 700; line-height: 1.2; color: var(--ink); }
+  border: 1.5px solid rgba(255,255,255,.75); background: rgba(255,255,255,.5); text-align: center; font-size: 12px; font-weight: 500; line-height: 1.2; color: var(--ink); }
 .layer-tile:hover { background: rgba(255,255,255,.75); }
 .layer-tile[aria-pressed="true"] { border-color: var(--action); background: rgba(255,255,255,.9); box-shadow: 0 0 0 1px var(--action); }
 .layer-tile > span:nth-child(2) { line-height: 1.2; hyphens: auto; overflow-wrap: anywhere; }

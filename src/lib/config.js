@@ -23,13 +23,13 @@ export const IGN_WMS_V = 'https://data.geopf.fr/wms-v/ows?SERVICE=WMS&VERSION=1.
 
 // Couches proposées dans le menu « Couches » (logos : src/components/LayerIcon.jsx)
 export const OVERLAYS = [
-  { id: 'dpe',      label: 'Étiquettes DPE',                    group: 'Bâtiment' },
-  { id: 'cadastre', label: 'Parcelles cadastrales',             group: 'Bâtiment' },
+  { id: 'dpe',      label: 'DPE',                    group: 'Bâtiment' },
+  { id: 'cadastre', label: 'Cadastre',             group: 'Bâtiment' },
   { id: 'rcu',      label: 'Réseaux de chaleur',                group: 'Réseaux' },
-  { id: 'gaz',      label: 'Réseau de gaz GRDF',                group: 'Réseaux' },
-  { id: 'plu',      label: 'Zonage du PLU',                     group: 'Urbanisme et patrimoine' },
-  { id: 'ac1',      label: 'Abords de monuments historiques',   group: 'Urbanisme et patrimoine' },
-  { id: 'ac2',      label: 'Sites classés et inscrits',         group: 'Urbanisme et patrimoine' },
+  { id: 'gaz',      label: 'Réseau de gaz',                group: 'Réseaux' },
+  { id: 'plu',      label: 'PLU',                     group: 'Urbanisme et patrimoine' },
+  { id: 'ac1',      label: 'Monuments historiques',   group: 'Urbanisme et patrimoine' },
+  { id: 'ac2',      label: 'Sites classés',         group: 'Urbanisme et patrimoine' },
 ];
 
 // Couleurs officielles des étiquettes DPE (pleines, jamais translucides dans l'interface)
