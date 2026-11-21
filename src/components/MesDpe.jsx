@@ -21,6 +21,7 @@ export default function MesDpe({ list, busy, show, onShow, onImport, onRefresh, 
   const shown = list.filter(x => (!commune || key(x.commune) === commune) && (!year || (x.date || '').startsWith(year)) && !(hideOld && isReplaced(x)));
   const pending = list.filter(x => x.etat === 'attente' || x.etat === 'erreur').length;
   const nOld = list.filter(isReplaced).length;
+  const nTert = list.filter(x => x.etat === 'tertiaire').length;
 
   return (
     <div>
@@ -52,7 +53,7 @@ export default function MesDpe({ list, busy, show, onShow, onImport, onRefresh, 
             </select>
           </div>
           {nOld > 0 && <label className="dpe-show small"><input type="checkbox" checked={hideOld} onChange={e => setHideOld(e.target.checked)} /> Masquer les DPE remplacés ({nOld})</label>}
-          <div className="small muted" style={{ marginBottom: 4 }}>{shown.length} DPE</div>
+          <div className="small muted" style={{ marginBottom: 4 }}>{shown.length} DPE{pending > 0 ? ` · ${pending} en attente de publication (environ 10 jours)` : ''}{nTert > 0 ? ` · ${nTert} tertiaires` : ''}</div>
           <div className="rep-list">
             {shown.map(x => {
               const can = x.etat === 'ok' && x.lat != null;
@@ -69,6 +70,7 @@ export default function MesDpe({ list, busy, show, onShow, onImport, onRefresh, 
                     </div>
                     <div>
                       {x.etat === 'attente' && <span className="dpe-flag">En attente de publication</span>}
+                      {x.etat === 'absent' && <span className="dpe-flag">Non publié par l’ADEME</span>}
                       {x.etat === 'erreur' && <span className="dpe-flag warn">Service ADEME indisponible</span>}
                       {x.etat === 'tertiaire' && <span className="dpe-flag">Tertiaire : à part</span>}
                       {isReplaced(x) && <span className="dpe-flag">Remplacé</span>}

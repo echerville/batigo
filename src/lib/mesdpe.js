@@ -8,10 +8,18 @@ export const SCORE_BAS = 0.8; // en dessous, l'adresse géocodée est à vérifi
 
 // n° DPE : 4 chiffres, 1 lettre, 7 chiffres, 1 lettre (tertiaire : préfixe T, traité à part)
 const RE_NUM = /\b(T?\d{4}[A-Z]\d{7}[A-Z])\b/g;
+export const isReplaced = x => /remplac/i.test(x.statut || '');
 const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
+// Corrige les imports faits avant la distinction remplacé / non publié
+function fixEtat(x) {
+  if (x.etat !== 'attente' && x.etat !== 'erreur') return x;
+  if (isReplaced(x)) return { ...x, etat: 'remplace' };
+  const age = x.date ? (Date.now() - new Date(x.date).getTime()) / 864e5 : 0;
+  return age > 30 && x.etat === 'attente' ? { ...x, etat: 'absent' } : x;
+}
 export function loadMesDpe() {
-  try { const l = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(l) ? l.filter(x => x && x.n) : []; } catch { return []; }
+  try { const l = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(l) ? l.filter(x => x && x.n).map(fixEtat) : []; } catch { return []; }
 }
 export function saveMesDpe(list) { try { localStorage.setItem(KEY, JSON.stringify(list)); return true; } catch { return false; } }
 
@@ -110,7 +118,14 @@ export async function enrich(items, onProgress) {
     const r = byNum.get(x.n);
     const base = { n: x.n, statut: x.statut || '', date: x.date || '', commune: x.commune || '' };
     if (x.n.startsWith('T')) return { ...base, etat: 'tertiaire' };
-    if (!r) return { ...base, etat: failed ? 'erreur' : 'attente' };
+    if (!r) {
+      if (failed) return { ...base, etat: 'erreur' };
+      // Un DPE remplacé n'est plus publié en open data : ce n'est pas une attente
+      if (isReplaced(x)) return { ...base, etat: 'remplace' };
+      // L'ADEME publie avec une dizaine de jours de retard ; au-delà, le DPE n'est pas dans l'open data
+      const age = x.date ? (Date.now() - new Date(x.date).getTime()) / 864e5 : 0;
+      return { ...base, etat: age > 30 ? 'absent' : 'attente' };
+    }
     const [lat, lng] = String(r._geopoint || '').split(',').map(Number);
     return {
       ...base,
@@ -135,4 +150,4 @@ export function merge(list, add) {
   return [...m.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
 }
 
-export const isReplaced = x => /remplac/i.test(x.statut || '');
+
