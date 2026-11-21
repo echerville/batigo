@@ -19,7 +19,7 @@ const fs      = require('fs');
 const path    = require('path');
 
 const VectorTile = require('@mapbox/vector-tile').VectorTile;
-const Protobuf   = require('pbf').default;
+const _pbf = require('pbf'); const Protobuf = _pbf.default || _pbf;
 const vtpbf      = require('vt-pbf');
 
 // ─── Configuration ────────────────────────────────────────────────────────────
