@@ -81,7 +81,7 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
 
   const state = {
     overlays: {}, loaded: {}, measure: null, selBatId: null, corrections: new Map(),
-    addrMarker: null, measureMarkers: [], repMarkers: [], dpeMarkers: [], pick: null, basemap: 'ortho', dpeTiles: DPE_TILES_FALLBACK,
+    addrMarker: null, measureMarkers: [], repMarkers: [], pick: null, basemap: 'ortho', dpeTiles: DPE_TILES_FALLBACK,
   };
   const ready = new Promise(res => map.once('load', res));
   let rcuPopup;
@@ -126,6 +126,19 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
     map.addLayer({ id: 'rep-fill', type: 'fill', source: 'rep-src', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 } });
     map.addLayer({ id: 'rep-line', type: 'line', source: 'rep-src', paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-dasharray': [2, 1.5] } });
 
+    // Mes DPE : couche native (plusieurs centaines de DPE possibles), pastille aux couleurs de l'étiquette
+    const dpeColor = ['match', ['get', 'g'], ...Object.entries(DPE_HEX).flat(), '#9AA3B2'];
+    map.addSource('mesdpe-src', { type: 'geojson', data: EMPTY });
+    map.addLayer({ id: 'mesdpe-dot', type: 'circle', source: 'mesdpe-src', minzoom: 11,
+      paint: { 'circle-color': dpeColor, 'circle-stroke-color': '#1F2430', 'circle-stroke-width': 1.5,
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 3, 15, 8, 18, 11] } });
+    map.addLayer({ id: 'mesdpe-letter', type: 'symbol', source: 'mesdpe-src', minzoom: 15,
+      layout: { 'text-field': ['get', 'g'], 'text-font': ['Noto Sans Medium'], 'text-size': 12, 'text-allow-overlap': true, 'text-ignore-placement': true },
+      paint: { 'text-color': ['match', ['get', 'g'], ...Object.entries(DPE_TEXT).flat(), '#1F2430'] } });
+    map.on('click', 'mesdpe-dot', e => { if (state.pick || state.measure) return; onMesDpe?.(e.features[0].properties.n); });
+    map.on('mouseenter', 'mesdpe-dot', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 'mesdpe-dot', () => { map.getCanvas().style.cursor = ''; });
+
     // Mesure
     map.addSource('measure-src', { type: 'geojson', data: EMPTY });
     map.addLayer({ id: 'measure-fill', type: 'fill', source: 'measure-src', paint: { 'fill-color': '#2BB573', 'fill-opacity': 0.2 }, filter: ['==', '$type', 'Polygon'] });
@@ -163,6 +176,7 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
 
   // ── Clic sur la carte : mesure, ou sélection du bâtiment qui contient le point ──
   map.on('click', e => {
+    if (!state.pick && !state.measure && map.getLayer('mesdpe-dot') && map.queryRenderedFeatures(e.point, { layers: ['mesdpe-dot'] }).length) return; // géré par la couche
     if (state.pick) { const cb = state.pick; api.cancelPick(); cb([e.lngLat.lng, e.lngLat.lat]); return; }
     if (state.measure) { addMeasurePoint([e.lngLat.lng, e.lngLat.lat]); return; }
     if (map.queryRenderedFeatures(e.point, { layers: ['rcu-layer', 'rcu-points'].filter(l => map.getLayer(l)) }).length) return;
@@ -417,18 +431,9 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
     // Pastilles « Mes DPE » : point d'adresse de chaque DPE de l'utilisateur
     async setMesDpe(list) {
       await ready;
-      state.dpeMarkers.forEach(m => m.remove()); state.dpeMarkers = [];
-      for (const x of list) {
-        if (x.lat == null || x.lng == null || !DPE_HEX[x.etiquette]) continue;
-        const el = document.createElement('button');
-        el.type = 'button'; el.className = 'mesdpe-pin';
-        el.style.background = DPE_HEX[x.etiquette]; el.style.color = DPE_TEXT[x.etiquette];
-        el.textContent = x.etiquette;
-        const label = `Mon DPE ${x.etiquette} · ${x.adresse || x.brut || x.n}`;
-        el.setAttribute('aria-label', label); el.title = label;
-        el.addEventListener('click', ev => { ev.stopPropagation(); onMesDpe?.(x.n); });
-        state.dpeMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([x.lng, x.lat]).addTo(map));
-      }
+      const feats = list.filter(x => x.lat != null && x.lng != null && DPE_HEX[x.etiquette]).map(x => ({
+        type: 'Feature', geometry: { type: 'Point', coordinates: [x.lng, x.lat] }, properties: { n: x.n, g: x.etiquette } }));
+      map.getSource('mesdpe-src')?.setData({ type: 'FeatureCollection', features: feats });
     },
     pickPoint(cb) {
       api.cancelPick();

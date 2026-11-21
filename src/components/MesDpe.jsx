@@ -3,6 +3,7 @@ import Icon from './Icon.jsx';
 import { Grade } from './Grade.jsx';
 import { SCORE_BAS, isReplaced } from '../lib/mesdpe.js';
 
+const key = c => (c || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[-\s]+/g, ' ').trim();
 const fmt = d => (d ? d.split('-').reverse().join('/') : '');
 
 export default function MesDpe({ list, busy, show, onShow, onImport, onRefresh, onGo, onClear }) {
@@ -11,9 +12,13 @@ export default function MesDpe({ list, busy, show, onShow, onImport, onRefresh, 
   const [year, setYear] = useState('');
   const [hideOld, setHideOld] = useState(true);
 
-  const communes = useMemo(() => [...new Set(list.map(x => x.commune).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr')), [list]);
+  const communes = useMemo(() => {
+    const m = new Map(); // clé sans accents ni majuscules → nom affiché (la graphie non tout en majuscules est préférée)
+    for (const x of list) if (x.commune && (!m.has(key(x.commune)) || m.get(key(x.commune)) === m.get(key(x.commune)).toUpperCase())) m.set(key(x.commune), x.commune);
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'));
+  }, [list]);
   const years = useMemo(() => [...new Set(list.map(x => (x.date || '').slice(0, 4)).filter(Boolean))].sort().reverse(), [list]);
-  const shown = list.filter(x => (!commune || x.commune === commune) && (!year || (x.date || '').startsWith(year)) && !(hideOld && isReplaced(x)));
+  const shown = list.filter(x => (!commune || key(x.commune) === commune) && (!year || (x.date || '').startsWith(year)) && !(hideOld && isReplaced(x)));
   const pending = list.filter(x => x.etat === 'attente' || x.etat === 'erreur').length;
   const nOld = list.filter(isReplaced).length;
 
@@ -39,7 +44,7 @@ export default function MesDpe({ list, busy, show, onShow, onImport, onRefresh, 
           <div className="dpe-filters">
             <select value={commune} onChange={e => setCommune(e.target.value)} aria-label="Commune">
               <option value="">Toutes les communes</option>
-              {communes.map(c => <option key={c} value={c}>{c}</option>)}
+              {communes.map(([k, c]) => <option key={k} value={k}>{c}</option>)}
             </select>
             <select value={year} onChange={e => setYear(e.target.value)} aria-label="Année">
               <option value="">Toutes les années</option>
