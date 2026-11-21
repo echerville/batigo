@@ -96,3 +96,25 @@ export function preCoeffGrade(r) {
   const g = i === -1 ? 'G' : GRADES[i];
   return g !== r.etiquette_dpe ? g : null;
 }
+
+// Zone climatique du DPE (méthode 3CL) selon le département
+const ZONES = {
+  H1a: '02 14 27 59 60 62 75 76 77 78 80 91 92 93 94 95',
+  H1b: '08 10 45 51 52 54 55 57 58 67 68 70 88 89 90',
+  H1c: '01 03 05 15 19 21 23 25 38 39 42 43 63 69 71 73 74 87',
+  H2a: '22 29 35 50 56',
+  H2b: '16 17 18 28 36 37 41 44 49 53 61 72 79 85 86',
+  H2c: '09 12 24 31 32 33 40 46 47 64 65 81 82',
+  H2d: '04 07 26 48 84',
+  H3: '06 11 13 2A 2B 30 34 66 83',
+};
+export function zoneClimatique(codeInsee) {
+  const c = String(codeInsee || '').toUpperCase();
+  if (c.length < 5 || c.startsWith('97')) return null;
+  const dep = c.slice(0, 2);
+  return Object.keys(ZONES).find(z => ZONES[z].split(' ').includes(dep)) || null;
+}
+export function classeAltitude(z) {
+  if (z == null) return null;
+  return z < 400 ? 'inférieure à 400 m' : z <= 800 ? 'de 400 à 800 m' : 'supérieure à 800 m';
+}

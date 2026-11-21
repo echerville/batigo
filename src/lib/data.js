@@ -266,3 +266,12 @@ export async function googleStreetView(lng, lat) {
 export async function r2Meta(couche) {
   return json(`${R2_BASE}/${couche}-meta.json`, { cache: 'no-store' });
 }
+
+// Altitude du terrain (RGE ALTI, IGN), en mètres
+export async function fetchAltitude(lng, lat) {
+  const u = `https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?lon=${lng}&lat=${lat}&resource=ign_rge_alti_wld&zonly=true`;
+  const r = await fetch(u);
+  if (!r.ok) throw new Error('altitude');
+  const z = (await r.json())?.elevations?.[0];
+  return typeof z === 'number' && z > -1000 ? z : null;
+}

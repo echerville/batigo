@@ -58,7 +58,7 @@ export default function App() {
     const [lng, lat] = opts.clickAt || feature.geometry.coordinates;
     const isClick = !!opts.clickAt;
     setQuery(feature.properties.label || '');
-    setPlace({ key: `${id}`, label: feature.properties.label || '', lngLat: [lng, lat], fromClick: isClick });
+    setPlace({ key: `${id}`, label: feature.properties.label || '', lngLat: [lng, lat], citycode: feature.properties.citycode || '', fromClick: isClick });
     setBuilding({ status: 'loading' }); setDpe({ status: 'loading' }); setTileGrade(opts.tileGrade || null);
     setPanel(null); setSheet('half');
     const m = api.current;

@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
 import { Grade, Scale } from './Grade.jsx';
 import { ADEME_DPE_URL } from '../lib/config.js';
-import { fetchDVF, fetchPLUZone, fetchRNC } from '../lib/data.js';
+import { fetchAltitude, fetchDVF, fetchPLUZone, fetchRNC } from '../lib/data.js';
 import {
   IMMEUBLE, bdnbEnergie, bestGrade, frDate, installType, preCoeffGrade, referenceDPE, shortEnergie,
-  splitAddress, summary, usageLabel,
+  splitAddress, summary, usageLabel, zoneClimatique, classeAltitude,
 } from '../lib/dpe.js';
 
 const TABS = [['batiment', 'Bâtiment'], ['dpe', 'DPE'], ['urbanisme', 'Urbanisme'], ['parcelle', 'Parcelle']];
@@ -50,6 +50,16 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
   const grade = dpeOk ? bestGrade(ex, ne) : null;
   const ref = dpeOk ? referenceDPE(ex, ne) : null;
   const nbDpe = ex.length + ne.length;
+  const [alt, setAlt] = useState({ key: null, z: null });
+  useEffect(() => {
+    let off = false;
+    const [lng, lat] = place.lngLat || [];
+    if (lng == null) return;
+    fetchAltitude(lng, lat).then(z => { if (!off) setAlt({ key: place.key, z }); }).catch(() => { if (!off) setAlt({ key: place.key, z: null }); });
+    return () => { off = true; };
+  }, [place.key]);
+  const zone = zoneClimatique(place.citycode || bdnb?.code_commune_insee);
+  const site = { zone, alt: alt.key === place.key ? alt.z : undefined };
 
   return (
     <>
@@ -77,7 +87,7 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
 
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {tab === 'batiment' && (
-          <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe }} />
+          <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
         )}
         {tab === 'dpe' && <DpeTab dpe={dpe} />}
         {tab === 'urbanisme' && <UrbaTab place={place} onShowLayer={onShowLayer} />}
@@ -105,7 +115,17 @@ function StreetPreview({ sv, onOpen }) {
   );
 }
 
-function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe }) {
+function SiteFacts({ site }) {
+  return (
+    <div className="facts">
+      <Fact label="Zone climatique" value={site.zone} note={site.zone ? 'Méthode DPE (3CL)' : null} />
+      <Fact label="Altitude" value={site.alt === undefined ? '…' : site.alt != null ? `${Math.round(site.alt)} m` : null}
+        note={site.alt != null ? `Classe ${classeAltitude(site.alt)} · IGN` : null} />
+    </div>
+  );
+}
+
+function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }) {
   if (building.status === 'ok' && !bdnb) {
     return (
       <>
@@ -113,6 +133,7 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
           <strong>Aucun bâtiment n’est rattaché de façon certaine à cette adresse.</strong>
           Scope n’affiche pas de bâtiment voisin. Cliquez directement sur le bâtiment dans la carte pour l’identifier.
         </div>
+        <SiteFacts site={site} />
       </>
     );
   }
@@ -153,6 +174,9 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
             note={sum?.ecs ? 'Source : DPE' : bdnb?.type_generateur_ecs ? 'Source : BDNB' : null} />
           {sum?.surface && <Fact label="Surface (DPE)" value={sum.surface} />}
           {bdnb?.nb_log > 0 && <Fact label="Logements" value={bdnb.nb_log} note="Source : BDNB" />}
+          <Fact label="Zone climatique" value={site.zone} note={site.zone ? 'Méthode DPE (3CL)' : null} />
+          <Fact label="Altitude" value={site.alt === undefined ? '…' : site.alt != null ? `${Math.round(site.alt)} m` : null}
+            note={site.alt != null ? `Classe ${classeAltitude(site.alt)} · IGN` : null} />
         </div>
       )}
 
