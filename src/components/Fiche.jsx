@@ -75,7 +75,6 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
       </div>
       {onClose && !mobile && <button className="icon-btn fiche-close" onClick={onClose} aria-label="Fermer la fiche"><Icon name="x" /></button>}
 
-      <StreetPreview sv={streetPreview} onOpen={onStreetview} />
 
       <div className="tabs" role="tablist" aria-label="Rubriques de la fiche">
         {TABS.map(([id, name]) => (
@@ -100,20 +99,6 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
 }
 
 // Aperçu Google Street View du bâtiment ; un clic ouvre la vue de rue interactive
-function StreetPreview({ sv, onOpen }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => { setFailed(false); }, [sv?.preview]);
-  if (!sv || sv.status === 'idle' || sv.status === 'error') return null;
-  if (sv.status === 'loading') return <div className="sv-thumb skeleton" aria-hidden="true" />;
-  if (sv.status === 'none' || failed) return <div className="sv-none small muted">Pas de photo de rue Google à proximité.</div>;
-  return (
-    <button className="sv-thumb" onClick={onOpen} aria-label="Ouvrir la vue de rue">
-      <img src={sv.preview} alt="Vue de rue du bâtiment (Google Street View)" onError={() => setFailed(true)} />
-      <span className="sv-label"><Icon name="camera" size={14} /> Vue de rue</span>
-    </button>
-  );
-}
-
 function SiteFacts({ site }) {
   return (
     <div className="facts">
@@ -141,13 +126,17 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
       <div className="card glass-in">
         <div className="card-title">Étiquette énergie {ref && <span>DPE du {frDate(ref.date_reception_dpe)}</span>}</div>
         {dpe.status === 'loading' && <div className="skeleton" style={{ height: 40 }} />}
-        {dpeOk && grade && <Scale active={grade} />}
         {dpeOk && grade && (
-          <div className="row small muted">
-            {ref?.conso_5_usages_par_m2_ep && <span><strong style={{ color: 'var(--ink)' }}>{Math.round(ref.conso_5_usages_par_m2_ep)}</strong> kWh/m²/an</span>}
-            {ref?.etiquette_ges && <span>GES <strong style={{ color: 'var(--ink)' }}>{ref.etiquette_ges}</strong></span>}
-            {nbDpe > 1 && <span>{ref?.methode_application_dpe === IMMEUBLE ? 'DPE de l’immeuble' : `synthèse de ${nbDpe} DPE`}</span>}
+          <div className="dpe-line">
+            <Scale active={grade} />
+            <div className="dpe-side small muted">
+              {ref?.conso_5_usages_par_m2_ep && <span><strong style={{ color: 'var(--ink)' }}>{Math.round(ref.conso_5_usages_par_m2_ep)}</strong> kWh/m²/an</span>}
+              {ref?.etiquette_ges && <span>GES <strong style={{ color: 'var(--ink)' }}>{ref.etiquette_ges}</strong></span>}
+            </div>
           </div>
+        )}
+        {dpeOk && grade && nbDpe > 1 && (
+          <div className="small muted">{ref?.methode_application_dpe === IMMEUBLE ? 'DPE de l’immeuble' : `synthèse de ${nbDpe} DPE`}</div>
         )}
         {dpeOk && !grade && (
           <div className="small muted">Aucun DPE publié par l’ADEME pour ce bâtiment.

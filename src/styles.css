@@ -279,3 +279,8 @@ a:hover { color: var(--action-dark); }
 .sv-thumb:hover .sv-label { background: var(--action); }
 .sv-none { padding: 2px 0; }
 .mobile .sv-thumb { aspect-ratio: 5 / 2; }
+
+/* Étiquette DPE : échelle à gauche, kWh et GES à droite */
+.dpe-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dpe-line > .scale { flex: 1; min-width: 0; }
+.dpe-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; font-size: 12px; }
