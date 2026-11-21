@@ -323,7 +323,7 @@ export default function App() {
 
       {/* Couches */}
       {panel === 'layers' && (
-        <div className="dropdown glass" role="dialog" aria-label="Couches">
+        <div className="dropdown layers-menu glass" role="dialog" aria-label="Couches">
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
             <h2 style={{ margin: 0 }}>Couches</h2>
             <button className="icon-btn" aria-label="Fermer les couches" onClick={() => setPanel(null)}><Icon name="x" size={18} /></button>
