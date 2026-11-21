@@ -36,7 +36,7 @@ export default function App() {
   const [overlays, setOverlays] = useState({});
   const [basemap, setBasemap] = useState('plan');
   const [measure, setMeasure] = useState(null);       // { points, done }
-  const [panel, setPanel] = useState(null);           // 'layers' | 'basemap' | 'tools' | 'sources'
+  const [panel, setPanel] = useState(null);           // 'layers' | 'basemap' | 'tools'
   const [street, setStreet] = useState(null);
   const [toast, setToast] = useState(null);
   const [locating, setLocating] = useState(false);
@@ -258,7 +258,6 @@ export default function App() {
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={toggleMeasure}><Icon name="ruler" /> Mesurer une surface</button>
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => { setPanel(null); openStreet(); }}><Icon name="camera" /> Vue de rue</button>
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => { setPanel(null); locate(); }}><Icon name="locate" /> {locating ? 'Arrêter la localisation' : 'Me localiser'}</button>
-            <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => setPanel('sources')}><Icon name="sources" /> Sources des données</button>
           </div>
         </div>
       )}
@@ -314,7 +313,6 @@ export default function App() {
         </div>
       )}
 
-      {panel === 'sources' && <Sources onClose={() => setPanel(null)} meta={api.current?.meta()} />}
 
       {/* Navigation du bas (mobile) */}
       {mobile && (

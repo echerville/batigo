@@ -49,18 +49,19 @@ const ICONS = {
       </g>
     </svg>
   ),
-  // Monument historique : temple dans son périmètre de 500 m
+  // Abords de monuments historiques : monument blanc sur fond rouge, dans son périmètre
   ac1: (
     <svg {...S}>
-      <circle cx="15" cy="15" r="13" fill="#FBE5E5" stroke="#B83B3B" strokeWidth="1.2" strokeDasharray="2.5 2" />
-      <path d="M9 13L15 9L21 13Z M10 14H20 M11 15V20 M14 15V20 M16 15V20 M19 15V20 M9.5 21H20.5" stroke="#B83B3B" strokeWidth="1.4" fill="#B83B3B" strokeLinejoin="round" />
+      <rect x="1" y="1" width="28" height="28" rx="6" fill="#C8102E" />
+      <circle cx="15" cy="15" r="11.5" fill="none" stroke="#fff" strokeWidth="1.2" strokeDasharray="2.5 2" />
+      <path d="M8.5 13.5L15 8.5L21.5 13.5Z M9.5 14.5H20.5 M10.5 15.5V20 M13.5 15.5V20 M16.5 15.5V20 M19.5 15.5V20 M8.5 21H21.5" stroke="#fff" strokeWidth="1.4" fill="#fff" strokeLinejoin="round" />
     </svg>
   ),
-  // Site patrimonial remarquable : périmètre de centre ancien
+  // Site patrimonial remarquable : quartier ancien blanc sur fond or
   ac4: (
     <svg {...S}>
-      <path d="M4 9L13 3L26 7L27 20L17 27L5 22Z" fill="#EEE3F8" stroke="#7B4BB0" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M10 19V13L13 10.5L16 13V19Z M16 19V11H21V19Z" fill="#7B4BB0" />
+      <rect x="1" y="1" width="28" height="28" rx="6" fill="#B8912F" />
+      <path d="M4 22V14L8 11L12 14V22Z M12 22V10H18V22Z M18 22V13L22 10.5L26 13V22Z M3 23.5H27" stroke="#fff" strokeWidth="1.3" fill="#fff" strokeLinejoin="round" />
     </svg>
   ),
   // Site classé ou inscrit : paysage protégé
