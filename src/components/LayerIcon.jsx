@@ -42,19 +42,25 @@ const ICONS = {
   // Zonage CNIG : U, AU, A, N
   plu: (
     <svg {...S}>
-      <rect x="1" y="1" width="14" height="14" fill="#F4B6B6" /><rect x="15" y="1" width="14" height="14" fill="#F7CF9B" />
-      <rect x="1" y="15" width="14" height="14" fill="#F5EB8C" /><rect x="15" y="15" width="14" height="14" fill="#A9D9A2" />
-      <g fontSize="8" fontWeight="800" fontFamily="Public Sans, sans-serif" textAnchor="middle" fill="#1F2430">
-        <text x="8" y="11">U</text><text x="22" y="11">AU</text><text x="8" y="25">A</text><text x="22" y="25">N</text>
-      </g>
+      <rect x="1" y="1" width="28" height="28" rx="6" fill="#2B5BA8" />
+      <path d="M15 4.5V8.5" stroke="#fff" strokeWidth="1.2" />
+      <path d="M15 4.7H19V7H15Z" fill="#E63946" />
+      <path d="M5.5 13L15 8.5L24.5 13Z" fill="#fff" />
+      <circle cx="15" cy="11.4" r="1.3" fill="#2B5BA8" />
+      <path d="M7.5 14.5H22.5V16H7.5Z M9 16.5H11V22H9Z M14 16.5H16V22H14Z M19 16.5H21V22H19Z M6.5 22.5H23.5V24.5H6.5Z" fill="#fff" />
     </svg>
   ),
-  // Abords de monuments historiques : monument blanc sur fond rouge, dans son périmètre
+  // Monuments historiques : disque orange quadrillé, comme sur la carte
   ac1: (
     <svg {...S}>
-      <rect x="1" y="1" width="28" height="28" rx="6" fill="#C8102E" />
-      <circle cx="15" cy="15" r="11.5" fill="none" stroke="#fff" strokeWidth="1.2" strokeDasharray="2.5 2" />
-      <path d="M8.5 13.5L15 8.5L21.5 13.5Z M9.5 14.5H20.5 M10.5 15.5V20 M13.5 15.5V20 M16.5 15.5V20 M19.5 15.5V20 M8.5 21H21.5" stroke="#fff" strokeWidth="1.4" fill="#fff" strokeLinejoin="round" />
+      <defs>
+        <pattern id="ac1-h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <path d="M0 0V6" stroke="#FF8000" strokeWidth="1.6" />
+          <path d="M0 3H6" stroke="#FF8000" strokeWidth="1.6" />
+        </pattern>
+      </defs>
+      <circle cx="15" cy="15" r="12.5" fill="#fff" />
+      <circle cx="15" cy="15" r="12.5" fill="url(#ac1-h)" stroke="#FF8000" strokeWidth="1.8" />
     </svg>
   ),
   // Site classé ou inscrit : paysage protégé
