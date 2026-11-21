@@ -34,7 +34,7 @@ export default function App() {
   const [dpe, setDpe] = useState({ status: 'idle' });
   const [tileGrade, setTileGrade] = useState(null);
   const [overlays, setOverlays] = useState({});
-  const [basemap, setBasemap] = useState('ortho');
+  const [basemap, setBasemap] = useState('plan');
   const [historic, setHistoric] = useState(null);     // null = fermé, '' = ouvert sans année
   const [measure, setMeasure] = useState(null);       // { points, done }
   const [panel, setPanel] = useState(null);           // 'layers' | 'basemap' | 'tools' | 'sources'
@@ -98,6 +98,8 @@ export default function App() {
       },
     });
     window._map = api.current.map; // pratique pour les tests
+    // Le Plan est le fond affiché à l'arrivée ; repli sur le satellite s'il est indisponible
+    api.current.setBasemap('plan').then(ok => { if (!ok) setBasemap('ortho'); });
     return () => api.current.map.remove();
   }, [say, selectPlace]);
 
