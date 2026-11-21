@@ -24,7 +24,7 @@ export const IGN_WMS_V = 'https://data.geopf.fr/wms-v/ows?SERVICE=WMS&VERSION=1.
 // Couches proposées dans le menu « Couches » (logos : src/components/LayerIcon.jsx)
 export const OVERLAYS = [
   { id: 'dpe',      label: 'DPE',                    group: 'Bâtiment' },
-  { id: 'cadastre', label: 'Cadastre',             group: 'Bâtiment' },
+  { id: 'cadastre', label: 'Cadastre',             group: 'Urbanisme' },
   { id: 'rcu',      label: 'Réseaux de chaleur',                group: 'Réseaux' },
   { id: 'gaz',      label: 'Réseau de gaz',                group: 'Réseaux' },
   { id: 'plu',      label: 'PLU',                     group: 'Urbanisme' },

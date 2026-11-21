@@ -328,38 +328,37 @@ export default function App() {
             <h2 style={{ margin: 0 }}>Couches</h2>
             <button className="icon-btn" aria-label="Fermer les couches" onClick={() => setPanel(null)}><Icon name="x" size={18} /></button>
           </div>
-          {[...new Set(OVERLAYS.map(o => o.group))].map(g => (
-            <div key={g}>
-              <h3>{g}</h3>
-              <div className="layer-grid">
-                {OVERLAYS.filter(o => o.group === g).map(o => (
-                  <button key={o.id} className="layer-tile" aria-pressed={!!overlays[o.id]} onClick={() => { toggleOverlay(o.id); setPanel(null); }}>
-                    <LayerIcon id={o.id} />
-                    <span>{o.label}</span>
-                    {overlays[o.id] && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-          <div>
-            <h3>Mes cartes</h3>
-            <div className="layer-grid">
-              {[
-                { id: 'reperes', label: 'Mes repères', n: reperes.length, on: repShow, set: setRepShow, sw: <Icon name="pin" size={20} stroke={2} /> },
-                { id: 'mesdpe', label: 'Mes DPE', n: mesDpe.length, on: dpeShow, set: setDpeShow, sw: <Grade g="B" size="lg" /> },
-              ].map(c => (
-                <div key={c.id} className="layer-tile-wrap">
-                  <button className="layer-tile" aria-pressed={c.on} onClick={() => { c.set(!c.on); setPanel(null); }}>
-                    <span className="layer-sw layer-sw-perso">{c.sw}</span>
-                    <span>{c.label}{c.n ? ` (${c.n})` : ''}</span>
-                    {c.on && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
-                  </button>
-                  <button className="layer-edit" aria-label={`Gérer ${c.label.toLowerCase()}`} onClick={() => setPanel(c.id)}><Icon name="edit" size={15} /></button>
+          {(() => {
+            const perso = [
+              { id: 'reperes', group: 'Repères', label: 'Mes repères', n: reperes.length, on: repShow, set: setRepShow, sw: <Icon name="pin" size={20} stroke={2} /> },
+              { id: 'mesdpe', group: 'Bâtiment', label: 'Mes DPE', n: mesDpe.length, on: dpeShow, set: setDpeShow, sw: <Grade g="B" size="lg" /> },
+            ];
+            const groups = ['Bâtiment', 'Urbanisme', 'Patrimoine', 'Réseaux', 'Repères'];
+            return groups.map(g => (
+              <div key={g}>
+                <h3>{g}</h3>
+                <div className="layer-grid">
+                  {OVERLAYS.filter(o => o.group === g).map(o => (
+                    <button key={o.id} className="layer-tile" aria-pressed={!!overlays[o.id]} onClick={() => { toggleOverlay(o.id); setPanel(null); }}>
+                      <LayerIcon id={o.id} />
+                      <span>{o.label}</span>
+                      {overlays[o.id] && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
+                    </button>
+                  ))}
+                  {perso.filter(c => c.group === g).map(c => (
+                    <div key={c.id} className="layer-tile-wrap">
+                      <button className="layer-tile" aria-pressed={c.on} onClick={() => { c.set(!c.on); setPanel(null); }}>
+                        <span className="layer-sw layer-sw-perso">{c.sw}</span>
+                        <span>{c.label}{c.n ? ` (${c.n})` : ''}</span>
+                        {c.on && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
+                      </button>
+                      <button className="layer-edit" aria-label={`Gérer ${c.label.toLowerCase()}`} onClick={() => setPanel(c.id)}><Icon name="edit" size={15} /></button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            ));
+          })()}
         </div>
       )}
       {/* Mes repères */}
