@@ -323,7 +323,7 @@ export default function App() {
 
       {/* Couches */}
       {panel === 'layers' && (
-        <div className="dropdown layers-menu glass" role="dialog" aria-label="Couches">
+        <div className="dropdown glass" role="dialog" aria-label="Couches">
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
             <h2 style={{ margin: 0 }}>Couches</h2>
             <button className="icon-btn" aria-label="Fermer les couches" onClick={() => setPanel(null)}><Icon name="x" size={18} /></button>
@@ -334,7 +334,7 @@ export default function App() {
               { id: 'mesdpe', group: 'Bâtiment', label: 'Mes DPE', n: mesDpe.length, on: dpeShow, set: setDpeShow, sw: <Grade g="B" size="lg" /> },
             ];
             const groups = ['Bâtiment', 'Urbanisme', 'Patrimoine', 'Réseaux', 'Repères'];
-            return groups.map(g => (
+            return <div className="layer-groups">{groups.map(g => (
               <div key={g}>
                 <h3>{g}</h3>
                 <div className="layer-grid">
@@ -357,7 +357,7 @@ export default function App() {
                   ))}
                 </div>
               </div>
-            ));
+            ))}</div>;
           })()}
         </div>
       )}
