@@ -282,7 +282,7 @@ export default function App() {
       {measure && (
         <div className="floating measure-panel glass" role="status" aria-live="polite">
           <div className="measure-values">
-            <div className="glass-in"><span>Surface au sol</span><strong>{mres?.surface || '—'}</strong></div>
+            <div className="glass-in"><span>Surface</span><strong>{mres?.surface || '—'}</strong></div>
             <div className="glass-in"><span>{mres?.label || 'Périmètre'}</span><strong>{mres?.perimetre || '—'}</strong></div>
           </div>
           {!measure.done ? (
