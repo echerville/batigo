@@ -18,14 +18,6 @@ export const BASEMAPS = {
 export const PLAN_ATTRIBUTION = '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a>';
 export const PLAN_ASSETS = 'https://protomaps.github.io/basemaps-assets';
 
-// Photos aériennes anciennes (IGN)
-export const HISTORIC = [
-  { id: 'ORTHOIMAGERY.ORTHOPHOTOS.1950-1965', label: '1950-1965' },
-  { id: 'ORTHOIMAGERY.ORTHOPHOTOS.1965-1980', label: '1965-1980' },
-  { id: 'ORTHOIMAGERY.ORTHOPHOTOS.1980-1995', label: '1980-1995' },
-];
-export const historicTiles = id => WMTS(id, 'image/png', 'BDORTHOHISTORIQUE', 'PM_3_18');
-
 export const CADASTRE_TILES = WMTS('CADASTRALPARCELS.PARCELLAIRE_EXPRESS');
 export const IGN_WMS_V = 'https://data.geopf.fr/wms-v/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&STYLES=&FORMAT=image/png&TRANSPARENT=true&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}&LAYERS=';
 

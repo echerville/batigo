@@ -9,7 +9,7 @@ import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import {
   BASEMAPS, FRANCE_BOUNDS, MAX_BOUNDS, CADASTRE_TILES, IGN_WMS_V, R2_BASE,
-  DPE_TILES_FALLBACK, DPE_HEX, historicTiles, PLAN_ATTRIBUTION, PLAN_ASSETS,
+  DPE_TILES_FALLBACK, DPE_HEX, PLAN_ATTRIBUTION, PLAN_ASSETS,
 } from './config.js';
 import { r2Meta, fetchPLUBounds } from './data.js';
 import { bestGrade } from './dpe.js';
@@ -57,7 +57,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
 
   const state = {
     overlays: {}, loaded: {}, measure: null, selBatId: null, corrections: new Map(),
-    addrMarker: null, measureMarkers: [], basemap: 'ortho', historic: null, dpeTiles: DPE_TILES_FALLBACK,
+    addrMarker: null, measureMarkers: [], basemap: 'ortho', dpeTiles: DPE_TILES_FALLBACK,
   };
   const ready = new Promise(res => map.once('load', res));
   let rcuPopup;
@@ -295,7 +295,6 @@ export function createMap(container, { onPick, onStatus, mobile }) {
 
     async setBasemap(key) {
       await ready;
-      state.historic = null;
       if (BASEMAPS[key].vector) {
         try { await loadPlan(); } catch { onStatus?.('Fond Plan indisponible pour le moment', 3000); return false; }
         state.basemap = key; showPlan(true);
@@ -305,13 +304,6 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       }
       return true;
     },
-    setHistoric(id) {
-      state.historic = id;
-      if (id) { showPlan(false); map.getSource('base')?.setTiles([historicTiles(id)]); }
-      else if (BASEMAPS[state.basemap].vector) showPlan(true);
-      else map.getSource('base')?.setTiles([BASEMAPS[state.basemap].tiles]);
-    },
-
     // Centre le bien dans la partie visible de la carte (à côté de la fiche, ou entre la barre du haut et la fiche sur mobile)
     // bottomPx : hauteur occupée en bas de l'écran (fiche + navigation) sur mobile
     flyTo(lngLat, zoom = 18, bottomPx) {

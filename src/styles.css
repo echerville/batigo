@@ -69,7 +69,9 @@ a:hover { color: var(--action-dark); }
 .seg button { border: 0; border-radius: 11px; padding: 10px 14px; background: transparent; font-weight: 600; font-size: 14px; color: var(--ink); white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--action); color: #fff; font-weight: 700; }
 .pill-btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 16px; padding: 12px 16px; font-weight: 700; font-size: 14px; border: 1px solid var(--glass-border); }
-.pill-btn[aria-expanded="true"] { outline: 2px solid var(--action); }
+.pill-btn[aria-expanded="true"], .pill-btn[aria-pressed="true"] { outline: 2px solid var(--action); }
+.pill-btn:has(> svg:only-child), .pill-btn[aria-label] { padding: 12px; }
+.pill-btn .count { margin-left: 2px; }
 .count { font-size: 12px; background: var(--action); color: #fff; border-radius: 999px; padding: 1px 7px; }
 
 .dropdown { position: absolute; top: 84px; right: 16px; width: 400px; max-height: calc(100% - 100px); overflow: auto; border-radius: 20px; padding: 16px; z-index: 25; }
@@ -153,10 +155,6 @@ a:hover { color: var(--action-dark); }
 .chips span { font-size: 13px; font-weight: 700; color: var(--action); background: var(--action-soft); border-radius: 999px; padding: 4px 12px; }
 
 /* Barre d'outils (PC) */
-.toolbar { position: absolute; bottom: 20px; left: calc(50% + 218px); transform: translateX(-50%); display: flex; gap: 4px; padding: 6px; border-radius: 18px; z-index: 15; }
-.toolbar button { display: flex; flex-direction: column; align-items: center; gap: 3px; border: 0; border-radius: 12px; padding: 8px 12px; background: transparent; font-size: 12px; font-weight: 600; min-width: 84px; color: var(--ink); }
-.toolbar button:hover { background: rgba(255,255,255,.5); }
-.toolbar button[aria-pressed="true"] { background: var(--action); color: #fff; }
 .mapctrl { position: absolute; right: 16px; bottom: 44px; display: flex; flex-direction: column; gap: 8px; z-index: 15; }
 .mapctrl .glass { border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
 .mapctrl button { width: 46px; height: 46px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; color: var(--ink); }
@@ -175,9 +173,6 @@ a:hover { color: var(--action-dark); }
 .mobile .topbar.hidden-measure { display: none; }
 @media (max-width: 1100px) { .topbar.hidden-measure { display: none; } }
 .hint { font-size: 13px; color: var(--muted); }
-.historic { bottom: 100px; padding: 8px; display: flex; gap: 6px; align-items: center; }
-.historic button { border: 0; border-radius: 10px; padding: 10px 12px; background: transparent; font-weight: 700; font-size: 14px; }
-.historic button[aria-pressed="true"] { background: var(--action); color: #fff; }
 .toast { bottom: 100px; padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #fff; background: rgba(18,24,38,.78); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 
 .streetview { position: absolute; right: 16px; bottom: 100px; width: max(340px, min(640px, calc(100% - 470px))); height: min(420px, calc(100% - 220px)); border-radius: 20px; overflow: hidden; z-index: 24; display: flex; flex-direction: column; }
@@ -223,7 +218,6 @@ a:hover { color: var(--action-dark); }
 .mobile .measure-values { flex: 1; min-width: 0; gap: 6px; }
 .mobile .measure-values > div { min-width: 0; padding: 4px 8px; }
 .mobile .measure-values strong { font-size: 15px; }
-.mobile .historic { bottom: 92px; }
 .mobile .toast { bottom: 160px; }
 .mobile .mapctrl { top: calc(var(--top-h, 130px) + 8px); bottom: auto; right: 12px; }
 .mobile .legend { display: none; }

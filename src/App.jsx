@@ -9,7 +9,7 @@ import Fiche from './components/Fiche.jsx';
 import { Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
 import { fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
-import { BASEMAPS, HISTORIC, OVERLAYS } from './lib/config.js';
+import { BASEMAPS, OVERLAYS } from './lib/config.js';
 
 const mobile = !!window.SCOPE_MOBILE;
 
@@ -35,7 +35,6 @@ export default function App() {
   const [tileGrade, setTileGrade] = useState(null);
   const [overlays, setOverlays] = useState({});
   const [basemap, setBasemap] = useState('plan');
-  const [historic, setHistoric] = useState(null);     // null = fermé, '' = ouvert sans année
   const [measure, setMeasure] = useState(null);       // { points, done }
   const [panel, setPanel] = useState(null);           // 'layers' | 'basemap' | 'tools' | 'sources'
   const [street, setStreet] = useState(null);
@@ -115,16 +114,8 @@ export default function App() {
   }
   async function chooseBasemap(k) {
     const prev = basemap;
-    setBasemap(k); setHistoric(null);
+    setBasemap(k);
     if (!(await api.current.setBasemap(k))) setBasemap(prev);
-  }
-  function chooseHistoric(id) {
-    const next = historic === id ? '' : id;
-    setHistoric(next); api.current.setHistoric(next || null);
-  }
-  function toggleHistoric() {
-    if (historic !== null) { setHistoric(null); api.current.setHistoric(null); }
-    else { setHistoric(''); setPanel(null); }
   }
   function toggleMeasure() {
     const m = api.current;
@@ -213,11 +204,13 @@ export default function App() {
             <div className="spacer" />
             <div className="seg glass" role="group" aria-label="Fond de carte">
               {Object.entries(BASEMAPS).map(([k, b]) => (
-                <button key={k} aria-pressed={basemap === k && !historic} onClick={() => chooseBasemap(k)}>{b.label}</button>
+                <button key={k} aria-pressed={basemap === k} onClick={() => chooseBasemap(k)}>{b.label}</button>
               ))}
             </div>
-            <button className="pill-btn glass" aria-expanded={panel === 'layers'} onClick={() => togglePanel('layers')}>
-              <Icon name="layers" size={18} /> Couches {nbOverlays > 0 && <span className="count">{nbOverlays}</span>}
+            <button className="pill-btn glass" aria-label="Mesurer" title="Mesurer" aria-pressed={!!measure} onClick={toggleMeasure}><Icon name="ruler" size={20} /></button>
+            <button className="pill-btn glass" aria-label="Vue de rue" title="Vue de rue" aria-pressed={!!street} onClick={() => (street ? setStreet(null) : openStreet())}><Icon name="camera" size={20} /></button>
+            <button className="pill-btn glass" aria-label="Couches" title="Couches" aria-expanded={panel === 'layers'} onClick={() => togglePanel('layers')}>
+              <Icon name="layers" size={20} />{nbOverlays > 0 && <span className="count">{nbOverlays}</span>}
             </button>
             <button className="pill-btn glass" aria-label="Sources des données" onClick={() => togglePanel('sources')}><Icon name="sources" size={18} /></button>
           </>
@@ -253,9 +246,8 @@ export default function App() {
           <h2>Fond de carte</h2>
           <div className="list">
             {Object.entries(BASEMAPS).map(([k, b]) => (
-              <button key={k} className={`btn ${basemap === k && !historic ? 'primary' : 'ghost'}`} aria-pressed={basemap === k && !historic} onClick={() => { chooseBasemap(k); setPanel(null); }}>{b.label}</button>
+              <button key={k} className={`btn ${basemap === k ? 'primary' : 'ghost'}`} aria-pressed={basemap === k} onClick={() => { chooseBasemap(k); setPanel(null); }}>{b.label}</button>
             ))}
-            <button className={`btn ${historic !== null ? 'primary' : 'ghost'}`} onClick={() => { toggleHistoric(); setPanel(null); }}><Icon name="clock" /> Photos anciennes</button>
           </div>
         </div>
       )}
@@ -297,25 +289,11 @@ export default function App() {
         </div>
       )}
 
-      {/* Photos aériennes anciennes */}
-      {historic !== null && (
-        <div className="floating historic glass" role="group" aria-label="Photos aériennes anciennes (IGN)">
-          <span className="small" style={{ fontWeight: 700, padding: '0 6px' }}>Photos IGN</span>
-          {HISTORIC.map(h => <button key={h.id} aria-pressed={historic === h.id} onClick={() => chooseHistoric(h.id)}>{h.label}</button>)}
-          <button className="icon-btn" aria-label="Fermer les photos anciennes" onClick={toggleHistoric}><Icon name="x" size={16} /></button>
-        </div>
-      )}
-
       {toast && <div className="floating toast" role="status">{toast}</div>}
 
       {/* Outils et contrôles (PC) */}
       {!mobile && (
         <>
-          <div className="toolbar glass" role="toolbar" aria-label="Outils">
-            <button aria-pressed={!!measure} onClick={toggleMeasure}><Icon name="ruler" />Mesurer</button>
-            <button aria-pressed={historic !== null} onClick={toggleHistoric}><Icon name="clock" />Photos anciennes</button>
-            <button aria-pressed={!!street} onClick={() => (street ? setStreet(null) : openStreet())}><Icon name="camera" />Vue de rue</button>
-          </div>
           <div className="mapctrl">
             <div className="glass"><button aria-label={locating ? 'Arrêter la localisation' : 'Me localiser'} aria-pressed={locating} onClick={locate}><Icon name="locate" /></button></div>
             <div className="glass">
@@ -345,7 +323,7 @@ export default function App() {
           <button aria-pressed={!panel && !!place && sheet !== 'closed'} aria-label={sheet === 'closed' ? 'Afficher la fiche' : 'Replier la fiche'}
             onClick={() => { if (panel) { setPanel(null); return; } if (place) setSheet(s => (s === 'closed' ? 'half' : 'closed')); }}><Icon name="building" size={22} />Fiche</button>
           <button aria-pressed={panel === 'layers'} onClick={() => togglePanel('layers')}><Icon name="layers" size={22} />Couches{nbOverlays ? ` (${nbOverlays})` : ''}</button>
-          <button aria-pressed={panel === 'basemap' || historic !== null} onClick={() => togglePanel('basemap')}><Icon name="map" size={22} />Fonds</button>
+          <button aria-pressed={panel === 'basemap'} onClick={() => togglePanel('basemap')}><Icon name="map" size={22} />Fonds</button>
           <button aria-pressed={panel === 'tools' || !!measure} onClick={() => togglePanel('tools')}><Icon name="ruler" size={22} />Outils</button>
         </nav>
       )}
