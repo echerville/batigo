@@ -60,9 +60,14 @@ const ICONS = {
   // Site classé ou inscrit : paysage protégé
   ac2: (
     <svg {...S}>
-      <path d="M4 9L13 3L26 7L27 20L17 27L5 22Z" fill="#E3F3E3" stroke="#2E8540" strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M8 21L13 13L16 17L18.5 14L23 21Z" fill="#2E8540" />
-      <circle cx="19" cy="10.5" r="1.8" fill="#2E8540" />
+      <defs>
+        <pattern id="ac2-h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <path d="M0 0V6" stroke="#7B2FBE" strokeWidth="1.6" />
+          <path d="M0 3H6" stroke="#7B2FBE" strokeWidth="1.6" />
+        </pattern>
+      </defs>
+      <path d="M4 9L13 3L26 7L27 20L17 27L5 22Z" fill="#fff" />
+      <path d="M4 9L13 3L26 7L27 20L17 27L5 22Z" fill="url(#ac2-h)" stroke="#7B2FBE" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   ),
 };

@@ -17,6 +17,29 @@ import { bestGrade } from './dpe.js';
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile.bind(protocol));
 
+// Sites classés et inscrits : l'IGN les sert en orange comme les monuments historiques.
+// On recolore chaque tuile : contour violet plein, intérieur quadrillé violet.
+const SITE_VIOLET = [123, 47, 190];
+maplibregl.addProtocol('ignsite', async (params, abort) => {
+  const res = await fetch(params.url.replace(/^ignsite:/, 'https:'), { signal: abort?.signal });
+  if (!res.ok) throw new Error('tuile ' + res.status);
+  const bmp = await createImageBitmap(await res.blob());
+  const W = bmp.width, H = bmp.height;
+  const cv = new OffscreenCanvas(W, H), g = cv.getContext('2d');
+  g.drawImage(bmp, 0, 0);
+  const img = g.getImageData(0, 0, W, H), d = img.data;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * 4, a = d[i + 3];
+    if (!a) continue;
+    let alpha = 0;
+    if (a >= 150) alpha = 255;                                   // contour
+    else if ((x + y) % 8 < 2 || (x - y + 256) % 8 < 2) alpha = 170; // quadrillé
+    d[i] = SITE_VIOLET[0]; d[i + 1] = SITE_VIOLET[1]; d[i + 2] = SITE_VIOLET[2]; d[i + 3] = alpha;
+  }
+  g.putImageData(img, 0, 0);
+  return { data: await (await cv.convertToBlob({ type: 'image/png' })).arrayBuffer() };
+});
+
 const DPE_COLOR = ['match', ['get', 'dpe'], ...Object.entries(DPE_HEX).flat(), '#AAAAAA'];
 const PLU_COLOR = ['case', ['==', ['get', 'typezone'], 'U'], '#7C3AED', ['==', ['get', 'typezone'], 'AU'], '#A78BFA',
   ['==', ['get', 'typezone'], 'A'], '#4ADE80', ['==', ['get', 'typezone'], 'N'], '#166534', '#94A3B8'];
@@ -92,7 +115,8 @@ export function createMap(container, { onPick, onStatus, mobile }) {
     map.addLayer({ id: 'plu-fill', type: 'fill', source: 'plu-src', layout: { visibility: 'none' }, paint: { 'fill-color': PLU_COLOR, 'fill-opacity': 0.18 } });
     map.addLayer({ id: 'plu-line', type: 'line', source: 'plu-src', layout: { visibility: 'none' }, paint: { 'line-color': PLU_COLOR, 'line-width': 1.5, 'line-opacity': 0.8 } });
     for (const [id, layer] of [['ac1', 'monument_historique'], ['ac2', 'monument_naturel_site']]) {
-      map.addSource(`${id}-src`, { type: 'raster', tiles: [IGN_WMS_V + layer], tileSize: 256 });
+      const url = IGN_WMS_V + layer;
+      map.addSource(`${id}-src`, { type: 'raster', tiles: [id === 'ac2' ? url.replace(/^https:/, 'ignsite:') : url], tileSize: 256 });
       map.addLayer({ id: `${id}-layer`, type: 'raster', source: `${id}-src`, layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.8 } });
     }
 
