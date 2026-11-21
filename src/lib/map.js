@@ -206,6 +206,8 @@ export function createMap(container, { onPick, onStatus, mobile }) {
     const m = await r2Meta('fond');
     map.addSource('fond', { type: 'vector', url: `pmtiles://${R2_BASE}/${m.fichier}`, attribution: PLAN_ATTRIBUTION });
     const below = map.getLayer('cadastre-layer') ? 'cadastre-layer' : undefined;
+    // Hors de l'extrait France, le fond prend la couleur du sol (et non le gris par défaut)
+    const flavor = { ...namedFlavor('light') }; flavor.background = flavor.earth;
     const add = (l) => {
       const id = `pm-${l.id}`;
       map.addLayer({ ...l, id, layout: { ...(l.layout || {}), visibility: 'none' } }, below);
@@ -220,7 +222,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       'AUTRE_CULTE_SURF', 'CHAPELLE_SURF', 'CHRETIEN_SURF', 'EGLISE_SURF', 'MOSQUEE_SURF', 'RELIGIEUX_QQUE', 'SYNAGOGUE_SURF',
       'ARC_TRIOMPHE_SURF', 'ARENE_THEATRE', 'CHATEAU_SURF', 'FORTIF_SURF', 'MONUMENT_SURF', 'TOUR_MOULIN_SURF',
       'SILO_SURF', 'RESERVOIR_INDUS_SURF', 'SERRE_SURF', 'CHATEAU_EAU_SURF'], true, false];
-    for (const l of pmLayers('fond', namedFlavor('light'), { lang: 'fr' })) {
+    for (const l of pmLayers('fond', flavor, { lang: 'fr' })) {
       if (l.id === 'pois') continue; // pas de commerces ni de lieux
       if (l.id === 'buildings') {
         add({ id: 'bati-fill', type: 'fill', source: 'ign-bati', 'source-layer': 'bati_surf', filter: BATI, minzoom: 14,
