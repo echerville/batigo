@@ -13,6 +13,7 @@ import {
 } from './config.js';
 import { r2Meta, fetchPLUBounds } from './data.js';
 import { bestGrade } from './dpe.js';
+import { iconColor, iconSvg } from './reperes.js';
 
 const protocol = new Protocol();
 maplibregl.addProtocol('pmtiles', protocol.tile.bind(protocol));
@@ -56,7 +57,7 @@ function franceView(el, mobile) {
   return { center: [(w0 + e0) / 2 + (mobile ? 0 : 0.6), mobile ? 46.2 : 46.6], zoom: Math.min(zx, zy) };
 }
 
-export function createMap(container, { onPick, onStatus, mobile }) {
+export function createMap(container, { onPick, onStatus, onRepere, mobile }) {
   const map = new maplibregl.Map({
     container,
     style: {
@@ -80,7 +81,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
 
   const state = {
     overlays: {}, loaded: {}, measure: null, selBatId: null, corrections: new Map(),
-    addrMarker: null, measureMarkers: [], basemap: 'ortho', dpeTiles: DPE_TILES_FALLBACK,
+    addrMarker: null, measureMarkers: [], repMarkers: [], pick: null, basemap: 'ortho', dpeTiles: DPE_TILES_FALLBACK,
   };
   const ready = new Promise(res => map.once('load', res));
   let rcuPopup;
@@ -120,6 +121,11 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       map.addLayer({ id: `${id}-layer`, type: 'raster', source: `${id}-src`, layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.8 } });
     }
 
+    // Repères de la carte privée (zones ; les points sont des marqueurs HTML)
+    map.addSource('rep-src', { type: 'geojson', data: EMPTY });
+    map.addLayer({ id: 'rep-fill', type: 'fill', source: 'rep-src', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 } });
+    map.addLayer({ id: 'rep-line', type: 'line', source: 'rep-src', paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-dasharray': [2, 1.5] } });
+
     // Mesure
     map.addSource('measure-src', { type: 'geojson', data: EMPTY });
     map.addLayer({ id: 'measure-fill', type: 'fill', source: 'measure-src', paint: { 'fill-color': '#2BB573', 'fill-opacity': 0.2 }, filter: ['==', '$type', 'Polygon'] });
@@ -157,6 +163,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
 
   // ── Clic sur la carte : mesure, ou sélection du bâtiment qui contient le point ──
   map.on('click', e => {
+    if (state.pick) { const cb = state.pick; api.cancelPick(); cb([e.lngLat.lng, e.lngLat.lat]); return; }
     if (state.measure) { addMeasurePoint([e.lngLat.lng, e.lngLat.lat]); return; }
     if (map.queryRenderedFeatures(e.point, { layers: ['rcu-layer', 'rcu-points'].filter(l => map.getLayer(l)) }).length) return;
     const { lng, lat } = e.lngLat;
@@ -381,6 +388,40 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       state.selBatId = null; state.addrMarker?.remove(); state.addrMarker = null;
       map.getSource('sel-outline-src')?.setData(EMPTY);
       map.getSource('neuf-hatch-src')?.setData(EMPTY);
+    },
+
+    // ── Repères (carte privée) ──
+    async setReperes(list) {
+      await ready;
+      state.repMarkers.forEach(m => m.remove()); state.repMarkers = [];
+      const feats = [];
+      for (const r of list) {
+        const color = iconColor(r.icon);
+        let at = r.coords;
+        if (r.type === 'zone') {
+          const ring = [...r.coords, r.coords[0]];
+          feats.push({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] }, properties: { color } });
+          try { at = centroid({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] }, properties: {} }).geometry.coordinates; } catch { at = r.coords[0]; }
+        }
+        const el = document.createElement('button');
+        el.type = 'button'; el.className = 'rep-pin';
+        el.style.background = color;
+        el.innerHTML = iconSvg(r.icon, 18, '#fff');
+        el.setAttribute('aria-label', r.text ? `Repère : ${r.text.slice(0, 60)}` : 'Repère');
+        if (r.text) el.title = r.text.slice(0, 120);
+        el.addEventListener('click', ev => { ev.stopPropagation(); onRepere?.(r.id); });
+        state.repMarkers.push(new maplibregl.Marker({ element: el }).setLngLat(at).addTo(map));
+      }
+      map.getSource('rep-src')?.setData({ type: 'FeatureCollection', features: feats });
+    },
+    pickPoint(cb) {
+      api.cancelPick();
+      state.pick = cb;
+      map.getCanvas().classList.add('is-measuring');
+    },
+    cancelPick() {
+      state.pick = null;
+      if (!state.measure) map.getCanvas().classList.remove('is-measuring');
     },
 
     startMeasure(onChange) {

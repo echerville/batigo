@@ -6,6 +6,8 @@ import Icon from './components/Icon.jsx';
 import Search from './components/Search.jsx';
 import LayerIcon from './components/LayerIcon.jsx';
 import Fiche from './components/Fiche.jsx';
+import Reperes from './components/Reperes.jsx';
+import { exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
 import { Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
 import { fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
@@ -39,6 +41,10 @@ export default function App() {
   const [panel, setPanel] = useState(null);           // 'layers' | 'basemap' | 'tools'
   const [street, setStreet] = useState(null);
   const [toast, setToast] = useState(null);
+  const [reperes, setReperes] = useState(loadReperes);   // carte privée (stockée sur l'appareil)
+  const [editing, setEditing] = useState(null);          // repère en cours de création / modification
+  const zoneMode = useRef(false);
+  const reperesRef = useRef(reperes); reperesRef.current = reperes;
   const [locating, setLocating] = useState(false);
   const [sheet, setSheet] = useState('half');
   const sheetBefore = useRef(null);
@@ -86,6 +92,10 @@ export default function App() {
     api.current = createMap(mapEl.current, {
       onStatus: say,
       mobile,
+      onRepere: id => {
+        const r = reperesRef.current.find(x => x.id === id);
+        if (r) { setEditing(r); setPanel('reperes'); }
+      },
       onPick: async ({ geocodeAt, clickAt, bldGroupId, tileGrade: tg }) => {
         say('Recherche de l’adresse…');
         try {
@@ -102,6 +112,39 @@ export default function App() {
     return () => api.current.map.remove();
   }, [say, selectPlace]);
 
+  useEffect(() => {
+    if (!saveReperes(reperes)) say('Impossible d’enregistrer les repères sur cet appareil', 3000);
+    api.current?.setReperes(reperes);
+  }, [reperes, say]);
+
+  // ── Carte privée : poser un point, dessiner une zone, enregistrer ──
+  function startPoint() {
+    setPanel(null); setEditing(null);
+    say('Touchez la carte pour poser le repère');
+    api.current.pickPoint(ll => { say(null); setEditing({ type: 'point', coords: ll, icon: 'pin', text: '' }); setPanel('reperes'); });
+  }
+  function startZone() {
+    setPanel(null); setEditing(null);
+    zoneMode.current = true;
+    if (mobile) { sheetBefore.current = sheet; setSheet('closed'); }
+    setMeasure({ points: [], done: false });
+    api.current.startMeasure((points, done) => setMeasure({ points, done: !!done }));
+    say('Touchez la carte pour tracer la zone, puis Terminer', 4000);
+  }
+  function saveRepere(r) {
+    setReperes(list => (r.id ? list.map(x => (x.id === r.id ? r : x)) : [...list, { ...r, id: newId(), createdAt: new Date().toISOString() }]));
+    setEditing(null);
+  }
+  function deleteRepere(id) {
+    if (!window.confirm('Supprimer ce repère ?')) return;
+    setReperes(list => list.filter(x => x.id !== id));
+    setEditing(null);
+  }
+  function goRepere(r) {
+    const at = r.type === 'zone' ? r.coords[0] : r.coords;
+    api.current.map.flyTo({ center: at, zoom: Math.max(api.current.map.getZoom(), 17), speed: 1.6 });
+    if (mobile) setPanel(null);
+  }
   function closeFiche() {
     seq.current++;
     setPlace(null); setBuilding({ status: 'idle' }); setDpe({ status: 'idle' }); setTileGrade(null);
@@ -127,6 +170,7 @@ export default function App() {
     m.startMeasure((points, done) => setMeasure({ points, done: !!done }));
   }
   function finishMeasure() {
+    if (zoneMode.current && (measure?.points.length || 0) < 3) { say('Une zone demande au moins 3 points', 2500); return; }
     if ((measure?.points.length || 0) >= 2) api.current.stopMeasure(true);
     else { api.current.stopMeasure(false); setMeasure(null); }
   }
@@ -183,6 +227,16 @@ export default function App() {
     if (!measure && sheetBefore.current) { setSheet(sheetBefore.current); sheetBefore.current = null; }
   }, [measure]);
 
+  useEffect(() => {
+    if (!measure) { zoneMode.current = false; return; }
+    if (zoneMode.current && measure.done) {
+      const pts = measure.points;
+      zoneMode.current = false;
+      api.current.clearMeasure(); setMeasure(null);
+      setEditing({ type: 'zone', coords: pts, icon: 'alert', text: '' }); setPanel('reperes');
+    }
+  }, [measure]);
+
   const mres = measure ? formatMeasure(measure.points) : null;
   const togglePanel = p => setPanel(cur => (cur === p ? null : p));
 
@@ -204,6 +258,7 @@ export default function App() {
             <div className="spacer" />
             <button className="pill-btn glass" aria-label="Mesurer" title="Mesurer" aria-pressed={!!measure} onClick={toggleMeasure}><Icon name="ruler" size={20} /></button>
             <button className="pill-btn glass" aria-label="Vue de rue" title="Vue de rue" aria-pressed={!!street} onClick={() => (street ? setStreet(null) : openStreet())}><Icon name="camera" size={20} /></button>
+            <button className="pill-btn glass" aria-label="Mes repères" title="Mes repères" aria-expanded={panel === 'reperes'} onClick={() => togglePanel('reperes')}><Icon name="pin" size={20} />{reperes.length > 0 && <span className="count">{reperes.length}</span>}</button>
             <button className="pill-btn glass" aria-label="Couches" title="Couches" aria-expanded={panel === 'layers'} onClick={() => togglePanel('layers')}>
               <Icon name="layers" size={20} />{nbOverlays > 0 && <span className="count">{nbOverlays}</span>}
             </button>
@@ -239,6 +294,11 @@ export default function App() {
           ))}
         </div>
       )}
+      {/* Carte privée */}
+      {panel === 'reperes' && (
+        <Reperes list={reperes} editing={editing} onEdit={setEditing} onSave={saveRepere} onDelete={deleteRepere}
+          onClose={() => { setPanel(null); setEditing(null); }} onPoint={startPoint} onZone={startZone} onGo={goRepere} onExport={() => exportReperes(reperes)} />
+      )}
       {/* Fonds de carte (mobile) */}
       {panel === 'basemap' && (
         <div className="dropdown glass" role="dialog" aria-label="Fond de carte">
@@ -257,6 +317,7 @@ export default function App() {
           <div className="list">
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={toggleMeasure}><Icon name="ruler" /> Mesurer une surface</button>
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => { setPanel(null); openStreet(); }}><Icon name="camera" /> Vue de rue</button>
+            <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => setPanel('reperes')}><Icon name="pin" /> Mes repères{reperes.length ? ` (${reperes.length})` : ''}</button>
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => { setPanel(null); locate(); }}><Icon name="locate" /> {locating ? 'Arrêter la localisation' : 'Me localiser'}</button>
           </div>
         </div>

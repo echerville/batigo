@@ -294,3 +294,26 @@ a:hover { color: var(--action-dark); }
 .info-btn { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--muted); background: transparent; border: 0; padding: 0; }
 .info-btn:hover, .info-btn[aria-expanded="true"] { color: var(--ink); background: rgba(255,255,255,.6); }
 .info-note { align-self: stretch; }
+
+/* Carte privée : repères */
+.rep-pin { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 2px 8px rgba(18,24,38,.35); display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; }
+.rep-pin svg { display: block; }
+.rep-ico { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.rep-ico svg { display: block; }
+.rep-add { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.rep-add .btn { justify-content: center; font-size: 13px; padding-left: 8px; padding-right: 8px; }
+.rep-list { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow: auto; }
+.rep-row { display: flex; align-items: center; gap: 4px; }
+.rep-go { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.5); text-align: left; font-size: 13px; }
+.rep-go:hover { background: rgba(255,255,255,.8); }
+.rep-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rep-empty, .rep-foot { margin: 8px 0 0; }
+.rep-export { margin-top: 8px; width: 100%; justify-content: center; font-size: 13px; }
+.rep-editor .rep-kind { margin-bottom: 2px; }
+.rep-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.rep-choice { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.75); background: rgba(255,255,255,.5); font-size: 11px; font-weight: 500; color: var(--ink); }
+.rep-choice[aria-pressed="true"] { border-color: var(--action); background: rgba(255,255,255,.92); box-shadow: 0 0 0 1px var(--action); }
+.rep-text { width: 100%; resize: vertical; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.75); background: rgba(255,255,255,.7); padding: 8px 10px; font: inherit; font-size: 14px; color: var(--ink); }
+.rep-count { text-align: right; margin-top: 2px; }
+.rep-err { color: #B3261E; font-size: 13px; margin-top: 4px; }
+.rep-actions { margin-top: 10px; gap: 6px; }
