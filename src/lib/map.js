@@ -91,7 +91,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
     map.addSource('plu-src', { type: 'geojson', data: EMPTY });
     map.addLayer({ id: 'plu-fill', type: 'fill', source: 'plu-src', layout: { visibility: 'none' }, paint: { 'fill-color': PLU_COLOR, 'fill-opacity': 0.18 } });
     map.addLayer({ id: 'plu-line', type: 'line', source: 'plu-src', layout: { visibility: 'none' }, paint: { 'line-color': PLU_COLOR, 'line-width': 1.5, 'line-opacity': 0.8 } });
-    for (const [id, layer] of [['ac1', 'monument_historique'], ['ac4', 'zone_secteur'], ['ac2', 'monument_naturel_site']]) {
+    for (const [id, layer] of [['ac1', 'monument_historique'], ['ac2', 'monument_naturel_site']]) {
       map.addSource(`${id}-src`, { type: 'raster', tiles: [IGN_WMS_V + layer], tileSize: 256 });
       map.addLayer({ id: `${id}-layer`, type: 'raster', source: `${id}-src`, layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.8 } });
     }
@@ -253,7 +253,7 @@ export function createMap(container, { onPick, onStatus, mobile }) {
 
   const LAYERS = {
     dpe: ['dpe-fill', 'dpe-line', 'dpe-neuf-hatch'], cadastre: ['cadastre-layer'], rcu: ['rcu-layer', 'rcu-points'],
-    gaz: ['gaz-layer'], plu: ['plu-fill', 'plu-line'], ac1: ['ac1-layer'], ac4: ['ac4-layer'], ac2: ['ac2-layer'],
+    gaz: ['gaz-layer'], plu: ['plu-fill', 'plu-line'], ac1: ['ac1-layer'], ac2: ['ac2-layer'],
   };
   async function refreshPLU() {
     if (!state.overlays.plu || map.getZoom() < 12) return;

@@ -263,7 +263,7 @@ function UrbaTab({ place, onShowLayer }) {
         <div className="card-title">Protections patrimoniales</div>
         <div className="small muted">Affichez-les sur la carte pour vérifier si le bien est concerné.</div>
         <div className="list">
-          {[['ac1', 'Abords de monuments historiques'], ['ac4', 'Sites patrimoniaux remarquables'], ['ac2', 'Sites classés ou inscrits'], ['plu', 'Zones du PLU']].map(([id, l]) => (
+          {[['ac1', 'Abords de monuments historiques'], ['ac2', 'Sites classés ou inscrits'], ['plu', 'Zones du PLU']].map(([id, l]) => (
             <button key={id} className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => onShowLayer(id)}><Icon name="layers" size={18} /> {l}</button>
           ))}
         </div>

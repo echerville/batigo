@@ -29,7 +29,6 @@ export const OVERLAYS = [
   { id: 'gaz',      label: 'Réseau de gaz GRDF',                group: 'Réseaux' },
   { id: 'plu',      label: 'Zonage du PLU',                     group: 'Urbanisme et patrimoine' },
   { id: 'ac1',      label: 'Abords de monuments historiques',   group: 'Urbanisme et patrimoine' },
-  { id: 'ac4',      label: 'Sites patrimoniaux remarquables',   group: 'Urbanisme et patrimoine' },
   { id: 'ac2',      label: 'Sites classés et inscrits',         group: 'Urbanisme et patrimoine' },
 ];
 

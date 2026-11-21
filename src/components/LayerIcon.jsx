@@ -57,13 +57,6 @@ const ICONS = {
       <path d="M8.5 13.5L15 8.5L21.5 13.5Z M9.5 14.5H20.5 M10.5 15.5V20 M13.5 15.5V20 M16.5 15.5V20 M19.5 15.5V20 M8.5 21H21.5" stroke="#fff" strokeWidth="1.4" fill="#fff" strokeLinejoin="round" />
     </svg>
   ),
-  // Site patrimonial remarquable : quartier ancien blanc sur fond or
-  ac4: (
-    <svg {...S}>
-      <rect x="1" y="1" width="28" height="28" rx="6" fill="#B8912F" />
-      <path d="M4 22V14L8 11L12 14V22Z M12 22V10H18V22Z M18 22V13L22 10.5L26 13V22Z M3 23.5H27" stroke="#fff" strokeWidth="1.3" fill="#fff" strokeLinejoin="round" />
-    </svg>
-  ),
   // Site classé ou inscrit : paysage protégé
   ac2: (
     <svg {...S}>
