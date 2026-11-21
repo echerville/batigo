@@ -2,6 +2,7 @@
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
+import franceMask from './france-mask.json';
 import { layers as pmLayers, namedFlavor } from '@protomaps/basemaps';
 import centroid from '@turf/centroid';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
@@ -234,6 +235,12 @@ export function createMap(container, { onPick, onStatus, mobile }) {
       }
       add(l);
     }
+    // Pays limitrophes assombris : masque « monde moins France », sous l'eau, les routes et les noms ; s'efface en zoomant
+    map.addSource('fr-mask', { type: 'geojson', data: franceMask });
+    map.addLayer({ id: 'pm-mask', type: 'fill', source: 'fr-mask', layout: { visibility: 'none' },
+      paint: { 'fill-color': '#1c2433', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.4, 9, 0.4, 12, 0] } },
+      map.getLayer('pm-water') ? 'pm-water' : below);
+    planIds.push('pm-mask');
   }
   function showPlan(on) {
     for (const id of planIds) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
