@@ -93,9 +93,9 @@ function Editor({ value, onSave, onDelete, onCancel }) {
 
 export default function Reperes({ list, editing, onEdit, onSave, onDelete, onClose, onPoint, onZone, onGo, onExport }) {
   return (
-    <div className="dropdown glass" role="dialog" aria-label="Mes repères">
+    <div className="dropdown glass" role="dialog" aria-label="Ma carte">
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-        <h2 style={{ margin: 0 }}>Mes repères</h2>
+        <h2 style={{ margin: 0 }}>Ma carte</h2>
         <button className="icon-btn" aria-label="Fermer" onClick={onClose}><Icon name="x" size={18} /></button>
       </div>
       {editing ? (

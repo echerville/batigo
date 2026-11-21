@@ -258,7 +258,6 @@ export default function App() {
             <div className="spacer" />
             <button className="pill-btn glass" aria-label="Mesurer" title="Mesurer" aria-pressed={!!measure} onClick={toggleMeasure}><Icon name="ruler" size={20} /></button>
             <button className="pill-btn glass" aria-label="Vue de rue" title="Vue de rue" aria-pressed={!!street} onClick={() => (street ? setStreet(null) : openStreet())}><Icon name="camera" size={20} /></button>
-            <button className="pill-btn glass" aria-label="Mes repères" title="Mes repères" aria-expanded={panel === 'reperes'} onClick={() => togglePanel('reperes')}><Icon name="pin" size={20} />{reperes.length > 0 && <span className="count">{reperes.length}</span>}</button>
             <button className="pill-btn glass" aria-label="Couches" title="Couches" aria-expanded={panel === 'layers'} onClick={() => togglePanel('layers')}>
               <Icon name="layers" size={20} />{nbOverlays > 0 && <span className="count">{nbOverlays}</span>}
             </button>
@@ -292,6 +291,15 @@ export default function App() {
               </div>
             </div>
           ))}
+          <div>
+            <h3>Ma carte</h3>
+            <div className="layer-grid">
+              <button className="layer-tile" onClick={() => setPanel('reperes')}>
+                <span className="layer-sw layer-sw-perso"><Icon name="pin" size={18} stroke={2} /></span>
+                <span>Ma carte{reperes.length ? ` (${reperes.length})` : ''}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
       {/* Carte privée */}
@@ -317,7 +325,6 @@ export default function App() {
           <div className="list">
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={toggleMeasure}><Icon name="ruler" /> Mesurer une surface</button>
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => { setPanel(null); openStreet(); }}><Icon name="camera" /> Vue de rue</button>
-            <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => setPanel('reperes')}><Icon name="pin" /> Mes repères{reperes.length ? ` (${reperes.length})` : ''}</button>
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => { setPanel(null); locate(); }}><Icon name="locate" /> {locating ? 'Arrêter la localisation' : 'Me localiser'}</button>
           </div>
         </div>

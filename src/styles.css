@@ -330,3 +330,5 @@ a:hover { color: var(--action-dark); }
 .rep-model .rep-ico { width: 20px; height: 20px; }
 .rep-model-x { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 50%; padding: 0; margin-right: 2px; }
 .rep-keep { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+
+.layer-sw-perso { background: var(--action); color: #fff; display: flex; align-items: center; justify-content: center; }
