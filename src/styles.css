@@ -332,3 +332,21 @@ a:hover { color: var(--action-dark); }
 .rep-keep { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 
 .layer-sw-perso { background: var(--action); color: #fff; display: flex; align-items: center; justify-content: center; }
+
+/* Mes DPE */
+.mesdpe-pin { min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 2px solid #1F2430; box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(18,24,38,.35); font: 800 13px/1 inherit; cursor: pointer; }
+.rep-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,.45); margin-bottom: 10px; }
+.rep-tabs button { height: 32px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--ink); background: transparent; }
+.rep-tabs button[aria-pressed="true"] { background: #fff; box-shadow: 0 1px 4px rgba(18,24,38,.15); }
+.dpe-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.dpe-filters select { flex: 1; min-width: 0; height: 34px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.75); background: rgba(255,255,255,.7); font: inherit; font-size: 13px; color: var(--ink); padding: 0 8px; }
+.dpe-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.5); text-align: left; font-size: 13px; width: 100%; }
+.dpe-row:hover { background: rgba(255,255,255,.8); }
+.dpe-row.is-replaced { opacity: .55; }
+.dpe-txt { min-width: 0; flex: 1; }
+.dpe-txt > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dpe-flag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px; background: rgba(255,255,255,.8); margin-right: 4px; }
+.dpe-flag.warn { background: #FCE8C8; color: #7A4A00; }
+.dpe-progress { height: 6px; border-radius: 3px; background: rgba(255,255,255,.6); overflow: hidden; margin-top: 6px; }
+.dpe-progress > span { display: block; height: 100%; background: var(--action); transition: width .2s; }
+.dpe-show { display: flex; align-items: center; gap: 6px; margin: 6px 0; }

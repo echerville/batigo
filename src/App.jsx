@@ -7,6 +7,7 @@ import Search from './components/Search.jsx';
 import LayerIcon from './components/LayerIcon.jsx';
 import Fiche from './components/Fiche.jsx';
 import Reperes from './components/Reperes.jsx';
+import { enrich, loadMesDpe, merge, readFile, saveMesDpe } from './lib/mesdpe.js';
 import { DEFAULT_COLOR, exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
 import { Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
@@ -43,6 +44,11 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [reperes, setReperes] = useState(loadReperes);   // carte privée (stockée sur l'appareil)
   const [editing, setEditing] = useState(null);          // repère en cours de création / modification
+  const [mesDpe, setMesDpe] = useState(loadMesDpe);   // mes DPE (importés, stockés sur l'appareil)
+  const [dpeShow, setDpeShow] = useState(() => localStorage.getItem('scope.mesdpe.show') !== '0');
+  const [dpeBusy, setDpeBusy] = useState(null);
+  const [carteTab, setCarteTab] = useState('reperes');
+  const mesDpeRef = useRef(mesDpe); mesDpeRef.current = mesDpe;
   const zoneMode = useRef(false);
   const reperesRef = useRef(reperes); reperesRef.current = reperes;
   const [locating, setLocating] = useState(false);
@@ -87,11 +93,14 @@ export default function App() {
     }
   }, []);
 
+  const goDpeRef = useRef(() => {});
+
   // ── Carte ──
   useEffect(() => {
     api.current = createMap(mapEl.current, {
       onStatus: say,
       mobile,
+      onMesDpe: n => { const x = mesDpeRef.current.find(d => d.n === n); if (x) goDpeRef.current(x); },
       onRepere: id => {
         const r = reperesRef.current.find(x => x.id === id);
         if (r) { setEditing(r); setPanel('reperes'); }
@@ -116,6 +125,44 @@ export default function App() {
     if (!saveReperes(reperes)) say('Impossible d’enregistrer les repères sur cet appareil', 3000);
     api.current?.setReperes(reperes);
   }, [reperes, say]);
+
+  useEffect(() => {
+    if (!saveMesDpe(mesDpe)) say('Impossible d’enregistrer vos DPE sur cet appareil', 3000);
+    try { localStorage.setItem('scope.mesdpe.show', dpeShow ? '1' : '0'); } catch { /* silencieux */ }
+    api.current?.setMesDpe(dpeShow ? mesDpe.filter(x => !/remplac/i.test(x.statut || '')) : []);
+  }, [mesDpe, dpeShow, say]);
+
+  // ── Mes DPE : import, enrichissement ADEME, ouverture du bien ──
+  async function runEnrich(items) {
+    setDpeBusy({ msg: 'Recherche des adresses (ADEME)…', done: 0, total: items.length });
+    try {
+      const res = await enrich(items, (done, total) => setDpeBusy({ msg: `Recherche des adresses (ADEME) : ${done}/${total}`, done, total }));
+      setMesDpe(list => merge(list, res));
+      const att = res.filter(x => x.etat === 'attente' || x.etat === 'erreur').length;
+      say(att ? `${res.length - att} DPE trouvés, ${att} en attente` : `${res.length} DPE ajoutés`, 3500);
+    } catch { say('Import impossible pour le moment', 3000); }
+    setDpeBusy(null);
+  }
+  async function importDpe(file) {
+    setDpeBusy({ msg: 'Lecture du fichier…', done: 0, total: 0 });
+    let items;
+    try { items = await readFile(file); } catch { setDpeBusy(null); say('Fichier illisible', 3000); return; }
+    if (!items.length) { setDpeBusy(null); say('Aucun numéro de DPE trouvé dans ce fichier', 3500); return; }
+    await runEnrich(items);
+  }
+  const refreshDpe = () => runEnrich(mesDpe.filter(x => x.etat === 'attente' || x.etat === 'erreur').map(x => ({ n: x.n, statut: x.statut, date: x.date, commune: x.commune })));
+  function clearDpe() {
+    if (!window.confirm('Vider la liste de vos DPE sur cet appareil ?')) return;
+    setMesDpe([]);
+  }
+  // Ouvre le bien : l'adresse BAN du DPE sert de clé, le rattachement au bâtiment reste strict
+  goDpeRef.current = x => {
+    if (x.lat == null) return;
+    selectPlace({
+      type: 'Feature', geometry: { type: 'Point', coordinates: [x.lng, x.lat] },
+      properties: { type: 'housenumber', id: x.ban, label: x.adresse || x.brut, citycode: x.insee, postcode: x.cp },
+    });
+  };
 
   // ── Carte privée : poser un point, dessiner une zone, enregistrer ──
   function startPoint() {
@@ -296,7 +343,7 @@ export default function App() {
             <div className="layer-grid">
               <button className="layer-tile" onClick={() => setPanel('reperes')}>
                 <span className="layer-sw layer-sw-perso"><Icon name="pin" size={18} stroke={2} /></span>
-                <span>Ma carte{reperes.length ? ` (${reperes.length})` : ''}</span>
+                <span>Ma carte{reperes.length + mesDpe.length ? ` (${reperes.length + mesDpe.length})` : ''}</span>
               </button>
             </div>
           </div>
@@ -305,7 +352,9 @@ export default function App() {
       {/* Carte privée */}
       {panel === 'reperes' && (
         <Reperes list={reperes} editing={editing} onEdit={setEditing} onSave={saveRepere} onDelete={deleteRepere}
-          onClose={() => { setPanel(null); setEditing(null); }} onPoint={startPoint} onZone={startZone} onGo={goRepere} onExport={() => exportReperes(reperes)} />
+          onClose={() => { setPanel(null); setEditing(null); }} onPoint={startPoint} onZone={startZone} onGo={goRepere} onExport={() => exportReperes(reperes)}
+          tab={carteTab} onTab={setCarteTab}
+          dpe={{ list: mesDpe, busy: dpeBusy, show: dpeShow, onShow: setDpeShow, onImport: importDpe, onRefresh: refreshDpe, onGo: x => goDpeRef.current(x), onClear: clearDpe }} />
       )}
       {/* Fonds de carte (mobile) */}
       {panel === 'basemap' && (

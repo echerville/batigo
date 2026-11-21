@@ -9,7 +9,7 @@ import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point } from '@turf/helpers';
 import {
   BASEMAPS, FRANCE_BOUNDS, MAX_BOUNDS, CADASTRE_TILES, IGN_WMS_V, R2_BASE,
-  DPE_TILES_FALLBACK, DPE_HEX, PLAN_ATTRIBUTION, PLAN_ASSETS,
+  DPE_TILES_FALLBACK, DPE_HEX, DPE_TEXT, PLAN_ATTRIBUTION, PLAN_ASSETS,
 } from './config.js';
 import { r2Meta, fetchPLUBounds } from './data.js';
 import { bestGrade } from './dpe.js';
@@ -57,7 +57,7 @@ function franceView(el, mobile) {
   return { center: [(w0 + e0) / 2 + (mobile ? 0 : 0.6), mobile ? 46.2 : 46.6], zoom: Math.min(zx, zy) };
 }
 
-export function createMap(container, { onPick, onStatus, onRepere, mobile }) {
+export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mobile }) {
   const map = new maplibregl.Map({
     container,
     style: {
@@ -81,7 +81,7 @@ export function createMap(container, { onPick, onStatus, onRepere, mobile }) {
 
   const state = {
     overlays: {}, loaded: {}, measure: null, selBatId: null, corrections: new Map(),
-    addrMarker: null, measureMarkers: [], repMarkers: [], pick: null, basemap: 'ortho', dpeTiles: DPE_TILES_FALLBACK,
+    addrMarker: null, measureMarkers: [], repMarkers: [], dpeMarkers: [], pick: null, basemap: 'ortho', dpeTiles: DPE_TILES_FALLBACK,
   };
   const ready = new Promise(res => map.once('load', res));
   let rcuPopup;
@@ -413,6 +413,22 @@ export function createMap(container, { onPick, onStatus, onRepere, mobile }) {
         state.repMarkers.push(new maplibregl.Marker({ element: el }).setLngLat(at).addTo(map));
       }
       map.getSource('rep-src')?.setData({ type: 'FeatureCollection', features: feats });
+    },
+    // Pastilles « Mes DPE » : point d'adresse de chaque DPE de l'utilisateur
+    async setMesDpe(list) {
+      await ready;
+      state.dpeMarkers.forEach(m => m.remove()); state.dpeMarkers = [];
+      for (const x of list) {
+        if (x.lat == null || x.lng == null || !DPE_HEX[x.etiquette]) continue;
+        const el = document.createElement('button');
+        el.type = 'button'; el.className = 'mesdpe-pin';
+        el.style.background = DPE_HEX[x.etiquette]; el.style.color = DPE_TEXT[x.etiquette];
+        el.textContent = x.etiquette;
+        const label = `Mon DPE ${x.etiquette} · ${x.adresse || x.brut || x.n}`;
+        el.setAttribute('aria-label', label); el.title = label;
+        el.addEventListener('click', ev => { ev.stopPropagation(); onMesDpe?.(x.n); });
+        state.dpeMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([x.lng, x.lat]).addTo(map));
+      }
     },
     pickPoint(cb) {
       api.cancelPick();
