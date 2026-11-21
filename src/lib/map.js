@@ -33,7 +33,7 @@ maplibregl.addProtocol('ignsite', async (params, abort) => {
     if (!a) continue;
     let alpha = 0;
     if (a >= 150) alpha = 255;                                   // contour
-    else if ((x + y) % 8 < 2 || (x - y + 256) % 8 < 2) alpha = 170; // quadrillé
+    else if ((x + y) % 16 < 2 || (x - y + 256) % 16 < 2) alpha = 150; // quadrillé
     d[i] = SITE_VIOLET[0]; d[i + 1] = SITE_VIOLET[1]; d[i + 2] = SITE_VIOLET[2]; d[i + 3] = alpha;
   }
   g.putImageData(img, 0, 0);
