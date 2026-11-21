@@ -2,13 +2,15 @@
 const S = { width: 30, height: 30, viewBox: '0 0 30 30', 'aria-hidden': true };
 
 const ICONS = {
-  // Étiquette énergie : flèches A à G
+  // DPE : une maison remplie des 7 couleurs de l'étiquette, du A (vert) au G (rouge)
   dpe: (
     <svg {...S}>
-      {['#009C6D', '#52B153', '#78BD76', '#F4E70F', '#F0B50F', '#EB8235', '#D7221F'].map((c, i) => {
-        const w = 9 + i * 2.6, y = 2.5 + i * 3.6;
-        return <path key={c} d={`M3 ${y}H${w}L${w + 2} ${y + 1.5}L${w} ${y + 3}H3Z`} fill={c} />;
-      })}
+      <defs><clipPath id="li-house"><path d="M15 2.5L28 14H24.5V27.5H5.5V14H2Z" /></clipPath></defs>
+      <g clipPath="url(#li-house)">
+        {['#009C6D', '#52B153', '#78BD76', '#F4E70F', '#F0B50F', '#EB8235', '#D7221F'].map((c, i) => (
+          <rect key={c} x="0" y={2.5 + i * 3.6} width="30" height="3.7" fill={c} />
+        ))}
+      </g>
     </svg>
   ),
   // Plan cadastral : limites de parcelles et bâti hachuré
