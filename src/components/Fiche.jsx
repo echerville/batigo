@@ -120,7 +120,7 @@ function SiteFacts({ site }) {
     <div className="facts">
       <Fact label="Zone climatique" value={site.zone} note={site.zone ? 'Méthode DPE (3CL)' : null} />
       <Fact label="Altitude" value={site.alt === undefined ? '…' : site.alt != null ? `${Math.round(site.alt)} m` : null}
-        note={site.alt != null ? `Classe ${classeAltitude(site.alt)} · IGN` : null} />
+        note={site.alt != null ? `Classe ${classeAltitude(site.alt)}` : null} />
     </div>
   );
 }
@@ -164,19 +164,19 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
         <div className="facts">{[0, 1, 2, 3].map(i => <div key={i} className="fact glass-in"><div className="skeleton" /><div className="skeleton" style={{ marginTop: 8, width: '60%' }} /></div>)}</div>
       ) : (
         <div className="facts">
-          <Fact label="Construction" value={bdnb?.annee_construction || sum?.year} note={bdnb?.annee_construction ? 'Source : BDNB' : sum?.year ? 'Source : DPE' : null} />
-          <Fact label="Emprise au sol" value={bdnb?.surface_emprise_sol ? `${Math.round(bdnb.surface_emprise_sol)} m²` : null} note="Source : BDNB" />
+          <Fact label="Construction" value={bdnb?.annee_construction || sum?.year} />
+          <Fact label="Emprise au sol" value={bdnb?.surface_emprise_sol ? `${Math.round(bdnb.surface_emprise_sol)} m²` : null} />
           <Fact label="Chauffage"
             value={sum?.chauffage ? energy(sum.chauffage, sum.chauffageType) : bdnbEnergie(bdnb?.type_energie_chauffage)}
-            note={sum?.chauffage ? 'Source : DPE' : bdnb?.type_energie_chauffage ? 'Source : BDNB' : null} />
+            />
           <Fact label="Eau chaude"
             value={sum?.ecs ? energy(sum.ecs, sum.ecsType) : bdnbEnergie(bdnb?.type_generateur_ecs)}
-            note={sum?.ecs ? 'Source : DPE' : bdnb?.type_generateur_ecs ? 'Source : BDNB' : null} />
+            />
           {sum?.surface && <Fact label="Surface (DPE)" value={sum.surface} />}
-          {bdnb?.nb_log > 0 && <Fact label="Logements" value={bdnb.nb_log} note="Source : BDNB" />}
+          {bdnb?.nb_log > 0 && <Fact label="Logements" value={bdnb.nb_log} />}
           <Fact label="Zone climatique" value={site.zone} note={site.zone ? 'Méthode DPE (3CL)' : null} />
           <Fact label="Altitude" value={site.alt === undefined ? '…' : site.alt != null ? `${Math.round(site.alt)} m` : null}
-            note={site.alt != null ? `Classe ${classeAltitude(site.alt)} · IGN` : null} />
+            note={site.alt != null ? `Classe ${classeAltitude(site.alt)}` : null} />
         </div>
       )}
 
