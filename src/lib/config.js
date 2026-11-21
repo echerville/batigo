@@ -27,9 +27,9 @@ export const OVERLAYS = [
   { id: 'cadastre', label: 'Cadastre',             group: 'Bâtiment' },
   { id: 'rcu',      label: 'Réseaux de chaleur',                group: 'Réseaux' },
   { id: 'gaz',      label: 'Réseau de gaz',                group: 'Réseaux' },
-  { id: 'plu',      label: 'PLU',                     group: 'Urbanisme et patrimoine' },
-  { id: 'ac1',      label: 'Monuments historiques',   group: 'Urbanisme et patrimoine' },
-  { id: 'ac2',      label: 'Sites classés',         group: 'Urbanisme et patrimoine' },
+  { id: 'plu',      label: 'PLU',                     group: 'Urbanisme' },
+  { id: 'ac1',      label: 'Monuments historiques',   group: 'Patrimoine' },
+  { id: 'ac2',      label: 'Sites classés',         group: 'Patrimoine' },
 ];
 
 // Couleurs officielles des étiquettes DPE (pleines, jamais translucides dans l'interface)
