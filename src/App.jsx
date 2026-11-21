@@ -183,7 +183,7 @@ export default function App() {
 
   // Fiche commune PC / mobile
   const fiche = place && (
-    <Fiche place={place} building={building} dpe={dpe} tileGrade={tileGrade} mobile={mobile} streetPreview={sv.key === place?.key ? sv : null}
+    <Fiche place={place} building={building} dpe={dpe} tileGrade={tileGrade} mobile={mobile}
       onClose={closeFiche} onStreetview={openStreet}
       onShowLayer={id => { toggleOverlay(id, true); if (mobile) setSheet('peek'); say('Couche affichée sur la carte', 2000); }} />
   );

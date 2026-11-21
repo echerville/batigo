@@ -36,7 +36,7 @@ function useLazy(enabled, key, loader) {
   return s.key === key ? s : { status: enabled ? 'loading' : 'idle' };
 }
 
-export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile, streetPreview }) {
+export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile }) {
   const [tab, setTab] = useState('batiment');
   useEffect(() => { setTab('batiment'); }, [place.key]);
 
