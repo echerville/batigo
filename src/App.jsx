@@ -338,7 +338,7 @@ export default function App() {
           <header>Vue de rue · Google Street View<span className="spacer" />
             <button className="icon-btn" aria-label="Fermer la vue de rue" onClick={() => setStreet(null)}><Icon name="x" size={18} /></button>
           </header>
-          <iframe key={street.url} title="Vue de rue" src={street.url} allow="fullscreen; accelerometer; gyroscope" allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+          <iframe key={street.url} title="Vue de rue" src={street.url} allow="fullscreen" allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
         </div>
       )}
 
