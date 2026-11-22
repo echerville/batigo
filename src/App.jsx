@@ -467,7 +467,7 @@ export default function App() {
 }
 
 // Hauteurs de la fiche mobile : repliée (cachée), aperçu, mi-hauteur, plein écran
-const NAV_H = 76;
+const NAV_H = 56;
 function sheetHeights() {
   const H = window.innerHeight - NAV_H;
   return { closed: 0, peek: 128, half: Math.round(H * 0.52), full: H - 72 };
