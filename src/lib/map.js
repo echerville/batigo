@@ -368,12 +368,25 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
 
     // Bâtiment sélectionné : contour noir + couleur du DPE ADEME vérifié (gardée pendant la session)
     // Image de la carte telle qu'affichée (JPEG), ou null si impossible (tuiles d'un autre site, etc.)
-    capture() {
+    // `ll` : position du bien, marquée d'un repère sur l'image
+    capture(ll) {
       return new Promise(res => {
         const t = setTimeout(() => res(null), 3000);
         map.once('render', () => {
           clearTimeout(t);
-          try { res(map.getCanvas().toDataURL('image/jpeg', 0.85)); } catch { res(null); }
+          try {
+            const src = map.getCanvas();
+            if (!ll) { res(src.toDataURL('image/jpeg', 0.85)); return; }
+            const c = document.createElement('canvas');
+            c.width = src.width; c.height = src.height;
+            const g = c.getContext('2d');
+            g.drawImage(src, 0, 0);
+            const k = src.width / src.clientWidth, p = map.project(ll), x = p.x * k, y = p.y * k, r = 9 * k;
+            g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = '#17804D'; g.fill();
+            g.lineWidth = 3 * k; g.strokeStyle = '#fff'; g.stroke();
+            g.beginPath(); g.arc(x, y, r * 2.2, 0, Math.PI * 2); g.lineWidth = 2 * k; g.strokeStyle = 'rgba(23,128,77,.55)'; g.stroke();
+            res(c.toDataURL('image/jpeg', 0.85));
+          } catch { res(null); }
         });
         map.triggerRepaint();
       });

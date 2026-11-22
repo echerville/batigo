@@ -356,7 +356,7 @@ export default function App() {
     const sauf = p => p.catch(() => null);
     const [plu, rnc, dvf, alt, carte] = await Promise.all([
       sauf(fetchPLUZone(lat, lng)), b?.rnc ? sauf(fetchRNC(b.rnc)) : null, b?.idu ? sauf(fetchDVF(b.idu)) : null,
-      sauf(fetchAltitude(lng, lat)), api.current.capture(),
+      sauf(fetchAltitude(lng, lat)), api.current.capture([lng, lat]),
     ]);
     const quand = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     setRapport({ place, b, dpe: dpe.status === 'ok' ? dpe : null, plu, rnc, dvf, alt, carte, quand, reperes: reperesProches(reperes, place.lngLat, b?.batId) });
