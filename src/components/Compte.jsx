@@ -32,7 +32,7 @@ export default function Compte({ session, profil, onClose }) {
       )}
       {sb && !session && etat !== 'envoye' && (
         <form onSubmit={envoyer} className="list">
-          <p className="small muted" style={{ margin: 0 }}>Saisissez votre adresse e-mail : vous recevrez un lien de connexion. Déjà inscrit ? Le lien ouvre votre compte, sur n'importe quel appareil.</p>
+          <p className="small muted" style={{ margin: 0 }}>Recevez un lien de connexion par e-mail. Déjà inscrit ? Le même lien ouvre votre compte.</p>
           <input className="rep-name" type="email" autoComplete="email" inputMode="email" placeholder="votre@adresse.fr"
             value={email} onChange={e => { setEmail(e.target.value); if (etat?.erreur) setEtat(null); }} aria-label="Adresse e-mail" />
           {etat?.erreur && <p className="small" style={{ color: 'var(--danger, #B42318)', margin: 0 }}>{etat.erreur}</p>}
