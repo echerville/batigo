@@ -8,7 +8,7 @@ import {
   splitAddress, summary, usageLabel, zoneClimatique,
 } from '../lib/dpe.js';
 
-const TABS = [['batiment', 'Bâtiment'], ['dpe', 'DPE'], ['urbanisme', 'Urbanisme'], ['parcelle', 'Parcelle']];
+const TABS = [['batiment', 'Bâtiment'], ['dpe', 'DPE'], ['parcelle', 'Parcelle']];
 const today = new Date().toLocaleDateString('fr-FR');
 
 // Icône ⓘ : le texte d'information n'apparaît qu'au clic
@@ -100,7 +100,6 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
           <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
         )}
         {tab === 'dpe' && <DpeTab dpe={dpe} />}
-        {tab === 'urbanisme' && <UrbaTab place={place} onShowLayer={onShowLayer} />}
         {tab === 'parcelle' && <ParcelleTab place={place} building={building} />}
       </div>
 
@@ -254,31 +253,23 @@ function DpeTab({ dpe }) {
   );
 }
 
-function UrbaTab({ place, onShowLayer }) {
+// Zone du PLU : le code n'est affiché qu'une fois, sans répétition dans le libellé
+function PluCard({ place }) {
   const plu = useLazy(true, place.key, () => fetchPLUZone(place.lngLat[1], place.lngLat[0]));
+  const d = plu.data;
+  const doublon = d?.libelle && d?.libelong && d.libelong.toLowerCase().includes(String(d.libelle).toLowerCase());
   return (
-    <>
-      <div className="card glass-in">
-        <div className="card-title">Zone du PLU</div>
-        {plu.status === 'loading' && <div className="skeleton" />}
-        {plu.status === 'error' && <div className="small muted">Géoportail de l’urbanisme indisponible pour le moment.</div>}
-        {plu.status === 'ok' && (plu.data ? (
-          <>
-            <div className="row"><span className="tag info" style={{ fontSize: 14 }}>{plu.data.libelle || '?'}</span>{plu.data.libelong && <span className="small">{plu.data.libelong}</span>}</div>
-            {plu.data.partition && <div className="small muted">Document {plu.data.partition}{plu.data.nom_commune ? ` · ${plu.data.nom_commune}` : ''}</div>}
-          </>
-        ) : <div className="small muted">Aucune zone de PLU publiée à cet endroit (commune au RNU ou document non numérisé).</div>)}
-      </div>
-      <div className="card glass-in">
-        <div className="card-title">Protections patrimoniales</div>
-        <div className="small muted">Affichez-les sur la carte pour vérifier si le bien est concerné.</div>
-        <div className="list">
-          {[['ac1', 'Abords de monuments historiques'], ['ac2', 'Sites classés ou inscrits'], ['plu', 'Zones du PLU']].map(([id, l]) => (
-            <button key={id} className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => onShowLayer(id)}><Icon name="layers" size={18} /> {l}</button>
-          ))}
-        </div>
-      </div>
-    </>
+    <div className="card glass-in">
+      <div className="card-title">Zone du PLU</div>
+      {plu.status === 'loading' && <div className="skeleton" />}
+      {plu.status === 'error' && <div className="small muted">Géoportail de l’urbanisme indisponible pour le moment.</div>}
+      {plu.status === 'ok' && (d ? (
+        <>
+          <div className="row">{d.libelle && !doublon && <span className="tag info" style={{ fontSize: 14 }}>{d.libelle}</span>}{d.libelong && <span className="small">{d.libelong}</span>}{!d.libelong && !d.libelle && <span className="small">?</span>}</div>
+          {d.partition && <div className="small muted">Document {d.partition}{d.nom_commune ? ` · ${d.nom_commune}` : ''}</div>}
+        </>
+      ) : <div className="small muted">Aucune zone de PLU publiée à cet endroit (commune au RNU ou document non numérisé).</div>)}
+    </div>
   );
 }
 
@@ -297,6 +288,8 @@ function ParcelleTab({ place, building }) {
         {cad?.contenance && <Fact label="Contenance" value={`${Number(cad.contenance).toLocaleString('fr-FR')} m²`} />}
         {cad?.idu && <Fact label="Référence" value={<span style={{ fontSize: 14 }}>{cad.idu}</span>} />}
       </div>
+
+      <PluCard place={place} />
 
       <div className="card glass-in">
         <div className="card-title">Copropriété <span>Registre national (RNIC)</span></div>
