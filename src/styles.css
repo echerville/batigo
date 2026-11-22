@@ -372,3 +372,4 @@ a:hover { color: var(--action-dark); }
 .layer-pro { position: absolute; top: 4px; right: 4px; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 6px; background: #17804D; color: #fff; }
 .layer-tile-wrap .layer-tile:has(.layer-pro) { opacity: .75; }
 .reserve { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.turnstile-boite { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 50; }

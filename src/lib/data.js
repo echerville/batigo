@@ -52,7 +52,7 @@ export async function fetchCadastre(lat, lng) {
 export class LimiteAtteinte extends Error {
   constructor(info) { super('limite'); this.info = info; }
 }
-async function bdnbGet(query, fiche, renouvele = false) {
+async function bdnbGet(query, fiche, renouvele = false, humainFait = false) {
   const headers = {};
   let sbc = null;
   try {
@@ -61,7 +61,14 @@ async function bdnbGet(query, fiche, renouvele = false) {
     if (s?.access_token) headers.Authorization = `Bearer ${s.access_token}`;
   } catch { /* sans compte */ }
   const r = await fetch(`/api/bdnb?${query}&fiche=${encodeURIComponent(fiche)}`, { headers });
-  if (r.status === 401 && !renouvele && headers.Authorization) return bdnbGet(query, fiche, true); // jeton expiré
+  if (r.status === 401 && !renouvele && headers.Authorization) return bdnbGet(query, fiche, true, humainFait); // jeton expiré
+  if (r.status === 403 && !humainFait) {
+    const e = await r.clone().json().catch(() => ({}));
+    if (e.error === 'captcha') {
+      const { verifierHumain } = await import('./humain.js');
+      if (await verifierHumain().catch(() => false)) return bdnbGet(query, fiche, renouvele, true);
+    }
+  }
   if (r.status === 402) throw new LimiteAtteinte(await r.json().catch(() => ({})));
   if (!r.ok) return [];
   const data = await r.json();

@@ -8,6 +8,19 @@ const URL = process.env.VITE_SUPABASE_URL;
 const KEY = process.env.VITE_SUPABASE_KEY;
 const SECRET = process.env.QUOTA_SECRET;
 
+// Cookie « humain » signé : date d'expiration + signature HMAC
+function signerHumain(exp) {
+  const sig = crypto.createHmac('sha256', `${SECRET}|humain`).update(String(exp)).digest('base64url');
+  return `${exp}.${sig}`;
+}
+function estHumain(req) {
+  if (!process.env.TURNSTILE_SECRET) return true; // captcha non configuré
+  const m = String(req.headers.cookie || '').match(/(?:^|;\s*)scope_h=(\d+)\.([\w-]+)/);
+  if (!m || Number(m[1]) < Date.now()) return false;
+  const attendu = signerHumain(m[1]).split('.')[1];
+  return attendu.length === m[2].length && crypto.timingSafeEqual(Buffer.from(attendu), Buffer.from(m[2]));
+}
+
 function ipHash(req) {
   const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
   return crypto.createHash('sha256').update(`${SECRET}|${ip}`).digest('hex').slice(0, 32);
@@ -39,6 +52,8 @@ async function quota(req, res) {
   if (!cle) { res.status(400).json({ error: 'fiche manquante' }); return true; }
   if (!URL || !KEY || !SECRET) return false; // comptes non configurés : pas de limite
   const hasAuth = /^Bearer\s+\S+/.test(String(req.headers.authorization || ''));
+  // Visiteur sans compte : vérification Turnstile (cookie valable 7 jours) avant toute fiche
+  if (!hasAuth && !estHumain(req)) { res.status(403).json({ error: 'captcha' }); return true; }
   try {
     const r = await appel(req, false);
     if (r.status === 401 && hasAuth) { // jeton expiré : le navigateur rafraîchit sa session et réessaie
@@ -57,4 +72,4 @@ async function quota(req, res) {
   }
 }
 
-module.exports = { quota, compter };
+module.exports = { quota, compter, signerHumain };
