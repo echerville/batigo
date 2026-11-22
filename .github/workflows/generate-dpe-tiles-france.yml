@@ -11,9 +11,17 @@ on:
         description: 'Départements (vide = France métropolitaine entière)'
         required: false
         default: ''
+      force:
+        description: 'Régénérer même si l’édition BDNB n’a pas changé'
+        type: boolean
+        default: true
+  schedule:
+    # Le 12 de chaque mois : régénère seulement si la BDNB a publié une nouvelle édition
+    - cron: '29 2 12 * *'
 
 env:
   R2_BUCKET: scope-tuiles-eu
+  R2_PUBLIC: https://pub-ba3b84e9a7d644e1854486f04e1f0116.r2.dev
 
 jobs:
   prepare:
@@ -21,6 +29,7 @@ jobs:
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
       millesime: ${{ steps.mil.outputs.millesime }}
+      skip: ${{ steps.mil.outputs.skip }}
     steps:
       - id: mil
         run: |
@@ -29,6 +38,17 @@ jobs:
           [ -z "$MIL" ] && { echo "::error::Édition BDNB introuvable"; exit 1; }
           echo "millesime=$MIL" >> "$GITHUB_OUTPUT"
           echo "Édition BDNB : $MIL"
+          # Lancement automatique : rien à faire si les tuiles en service viennent déjà de cette édition
+          EN_SERVICE=$(curl -sf "$R2_PUBLIC/dpe-france-meta.json" | python3 -c "import sys,json; print(json.load(sys.stdin).get('millesime',''))" || true)
+          echo "Édition des tuiles en service : ${EN_SERVICE:-inconnue}"
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.force }}" = "false" ]; then
+            if [ "$EN_SERVICE" = "$MIL" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "Tuiles déjà à jour ($MIL) : rien à régénérer." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
       - id: m
         env:
           DEPS: ${{ inputs.deps }}
@@ -43,6 +63,7 @@ jobs:
 
   departement:
     needs: prepare
+    if: ${{ needs.prepare.outputs.skip != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -81,7 +102,7 @@ jobs:
   fusion:
     needs: [prepare, departement]
     # Fusionner même si un département a échoué (il manquera, signalé dans le résumé)
-    if: ${{ !cancelled() && needs.prepare.result == 'success' }}
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && needs.prepare.outputs.skip != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
