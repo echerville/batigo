@@ -38,3 +38,7 @@ export const DPE_TEXT = { A: '#FFFFFF', B: '#FFFFFF', C: '#0F1A12', D: '#1A1700'
 export const GRADES = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
 export const ADEME_DPE_URL = num => `https://observatoire-dpe-audit.ademe.fr/afficher-dpe/${num}`;
+
+// Comptes (Supabase, région Paris). Adresse et clé publiable : publiques par nature.
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+export const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || '';
