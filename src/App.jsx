@@ -48,11 +48,11 @@ export default function App() {
   const [reperes, setReperes] = useState(loadReperes);   // carte privée (stockée sur l'appareil)
   const [editing, setEditing] = useState(null);          // repère en cours de création / modification
   const [mesDpe, setMesDpe] = useState(loadMesDpe);   // mes DPE (importés, stockés sur l'appareil)
-  const [dpeShow, setDpeShow] = useState(() => localStorage.getItem('scope.mesdpe.show') !== '0');
+  const [dpeShow, setDpeShow] = useState(() => localStorage.getItem('scope.mesdpe.show') === '1');
   const [dpeBusy, setDpeBusy] = useState(null);
   const [session, setSession] = useState(null);
   const [profil, setProfil] = useState(null);
-  const [repShow, setRepShow] = useState(() => localStorage.getItem('scope.reperes.show') !== '0');
+  const [repShow, setRepShow] = useState(() => localStorage.getItem('scope.reperes.show') === '1');
   const mesDpeRef = useRef(mesDpe); mesDpeRef.current = mesDpe;
   const zoneMode = useRef(false);
   const reperesRef = useRef(reperes); reperesRef.current = reperes;
