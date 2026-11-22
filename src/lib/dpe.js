@@ -54,39 +54,43 @@ export const adresseDe = r => r.identifiant_ban || (r.adresse_brut || '').split(
  *  1. DPE d'immeuble → il fait foi.
  *  2. Plusieurs adresses dans le bâtiment et une adresse cherchée → seulement les DPE de cette adresse
  *     (aucun → mode 'aucun-ici' : on n'affiche pas le DPE du voisin).
- *  3. DPE d'appartement présents → logements collectifs (y compris une maison divisée en appartements) :
- *     DPE d'appartement seuls, les DPE « maison » sont écartés et signalés.
+ *  3. DPE « maison » et DPE d'appartement à la même adresse (maison divisée ? vendue entière ?) → mode 'mixte' :
+ *     on ne sait pas lequel décrit le bien, pas d'étiquette ; on cite seulement le plus récent.
+ *     Que des appartements → moyenne (ou DPE unique).
  *  4. Que des maisons : une seule adresse → DPE le plus récent ; plusieurs adresses sans adresse cherchée
  *     → mode 'maisons', pas d'étiquette unique.
- * Retour : { mode, grade, ref?, n, base, kwh?, ges?, ecartes, maisons? }
+ * Retour : { mode, grade, ref?, n, base, kwh?, ges?, maisons? }
  */
 export function syntheseDPE(existants = [], neufs = [], cible = null) {
   const all = [...existants, ...neufs];
   if (!all.length) return null;
   const imm = existants.filter(r => r.methode_application_dpe === IMMEUBLE && isGrade(r.etiquette_dpe)).sort(byDate)[0];
-  if (imm) return { mode: 'immeuble', grade: imm.etiquette_dpe, ref: imm, n: all.length, base: [imm], ecartes: 0 };
+  if (imm) return { mode: 'immeuble', grade: imm.etiquette_dpe, ref: imm, n: all.length, base: [imm] };
   const adresses = new Set(all.map(adresseDe));
   let scope = all;
   if (cible && adresses.size > 1) {
     scope = all.filter(r => r.identifiant_ban === cible);
-    if (!scope.length) return { mode: 'aucun-ici', grade: null, n: all.length, base: [], ecartes: 0 };
+    if (!scope.length) return { mode: 'aucun-ici', grade: null, n: all.length, base: [] };
   }
   const apparts = scope.filter(r => !estMaison(r));
-  const ecartes = apparts.length ? scope.length - apparts.length : 0;
-  const pris = apparts.length ? apparts : scope;
+  if (apparts.length && apparts.length < scope.length) {
+    const ref = scope.filter(r => isGrade(r.etiquette_dpe)).sort(byDate)[0] || [...scope].sort(byDate)[0];
+    return { mode: 'mixte', grade: null, ref, n: scope.length, maisonsN: scope.length - apparts.length, appartsN: apparts.length, base: [] };
+  }
+  const pris = scope;
   const notes = pris.filter(r => isGrade(r.etiquette_dpe)).sort(byDate);
   if (!apparts.length) {
     const nbAdr = new Set(scope.map(adresseDe)).size;
-    if (!cible && nbAdr > 1) return { mode: 'maisons', grade: null, n: scope.length, maisons: nbAdr, base: [], ecartes: 0 };
+    if (!cible && nbAdr > 1) return { mode: 'maisons', grade: null, n: scope.length, maisons: nbAdr, base: [] };
   }
   if (!apparts.length || notes.length <= 1) {
     const ref = notes[0] || [...pris].sort(byDate)[0];
-    return { mode: 'unique', grade: notes[0]?.etiquette_dpe || null, ref, n: pris.length, base: pris, ecartes };
+    return { mode: 'unique', grade: notes[0]?.etiquette_dpe || null, ref, n: pris.length, base: pris };
   }
   const kwh = notes.map(r => Number(r.conso_5_usages_par_m2_ep)).filter(v => Number.isFinite(v) && v > 0);
   const ges = notes.map(r => NUM[r.etiquette_ges]).filter(Boolean);
   return {
-    mode: 'moyenne', n: notes.length, base: pris, ecartes,
+    mode: 'moyenne', n: notes.length, base: pris,
     grade: GRADES[Math.round(moyenne(notes.map(r => NUM[r.etiquette_dpe]))) - 1] || null,
     kwh: kwh.length ? Math.round(moyenne(kwh)) : null,
     ges: ges.length ? GRADES[Math.round(moyenne(ges)) - 1] : null,

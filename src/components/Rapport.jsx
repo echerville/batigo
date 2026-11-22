@@ -74,7 +74,7 @@ export default function Rapport({ data }) {
             {syn?.mode === 'moyenne' && <>Moyenne de {syn.n} DPE{syn.kwh != null ? ` · ${syn.kwh} kWh/m²/an en moyenne` : ''}{syn.ges ? ` · GES moyen ${syn.ges}` : ''}</>}
             {syn?.mode === 'maisons' && <>{syn.maisons} maisons à des adresses différentes, {syn.n} DPE : pas d’étiquette unique.</>}
             {syn?.mode === 'aucun-ici' && <>Aucun DPE publié pour cette adresse ({syn.n} DPE à d’autres adresses du bâtiment).</>}
-            {syn?.ecartes > 0 && <div className="rp-petit">DPE d’appartement seuls : {syn.ecartes} DPE « maison » écarté{syn.ecartes > 1 ? 's' : ''}.</div>}
+            {syn?.mode === 'mixte' && <>DPE de maison ({syn.maisonsN}) et d’appartements ({syn.appartsN}) à cette adresse : pas d’étiquette, le bien n’est pas identifiable.{syn.ref ? ` Le plus récent : ${syn.ref.etiquette_dpe} du ${frDate(syn.ref.date_reception_dpe)}.` : ''}</>}
             {syn && ['unique', 'immeuble'].includes(syn.mode) && <>{syn.mode === 'immeuble' ? 'DPE de l’immeuble' : 'DPE'} du {frDate(syn.ref.date_reception_dpe)}{syn.ref.conso_5_usages_par_m2_ep ? ` · ${Math.round(syn.ref.conso_5_usages_par_m2_ep)} kWh/m²/an` : ''}{syn.ref.etiquette_ges ? ` · GES ${syn.ref.etiquette_ges}` : ''}</>}
             {ex.length + ne.length > 1 && <div className="rp-petit">{ex.length + ne.length} DPE rattachés au bâtiment</div>}
           </div>

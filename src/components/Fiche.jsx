@@ -187,7 +187,6 @@ function DpeCote({ syn }) {
         <span>Moyenne de {syn.n} DPE</span>
         {syn.kwh != null && <span>{fort(syn.kwh)} kWh/m²/an en moyenne</span>}
         {syn.ges && <span>GES moyen {fort(syn.ges)}</span>}
-        {syn.ecartes > 0 && <span>DPE d’appartement seuls</span>}
       </div>
     );
   }
@@ -197,7 +196,6 @@ function DpeCote({ syn }) {
       <span>{syn.mode === 'immeuble' ? 'DPE de l’immeuble' : 'DPE'} du {frDate(r.date_reception_dpe)}</span>
       {r.conso_5_usages_par_m2_ep && <span>{fort(Math.round(r.conso_5_usages_par_m2_ep))} kWh/m²/an</span>}
       {r.etiquette_ges && <span>GES {fort(r.etiquette_ges)}</span>}
-      {syn.ecartes > 0 && <span>DPE d’appartement seul</span>}
     </div>
   );
 }
@@ -217,7 +215,7 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, syn, sum, grade, ref, tileGra
   return (
     <>
       <div className="card glass-in">
-        {!(dpeOk && grade) && ref && <div className="card-title"><span>DPE du {frDate(ref.date_reception_dpe)}</span></div>}
+        {!(dpeOk && grade) && ref && !['maisons', 'aucun-ici', 'mixte'].includes(syn?.mode) && <div className="card-title"><span>DPE du {frDate(ref.date_reception_dpe)}</span></div>}
         {dpe.status === 'loading' && <div className="skeleton" style={{ height: 40 }} />}
         {dpeOk && grade && (
           <div className="dpe-line">
@@ -233,10 +231,13 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, syn, sum, grade, ref, tileGra
           <div className="small muted"><strong style={{ color: 'var(--ink)' }}>Aucun DPE publié pour cette adresse.</strong> Le bâtiment compte {syn.n} DPE à d’autres adresses
             (maisons mitoyennes) : <button className="linklike" onClick={() => setTab('dpe')}>les voir</button>.</div>
         )}
-        {dpeOk && syn?.ecartes > 0 && (
-          <div className="small muted">{syn.ecartes === 1 ? '1 DPE « maison » écarté' : `${syn.ecartes} DPE « maison » écartés`} : l’adresse compte aussi des DPE d’appartement (maison divisée en logements ?).</div>
+        {dpeOk && syn?.mode === 'mixte' && (
+          <div className="small muted"><strong style={{ color: 'var(--ink)' }}>DPE de maison et d’appartements à cette adresse.</strong> Scope ne peut pas savoir lequel décrit le bien
+            ({syn.maisonsN} « maison », {syn.appartsN} « appartement ») : pas d’étiquette.
+            {syn.ref && <> Le plus récent : {syn.ref.etiquette_dpe} du {frDate(syn.ref.date_reception_dpe)} ({estMaison(syn.ref) ? 'maison' : 'appartement'}{syn.ref.complement_adresse_logement ? `, ${syn.ref.complement_adresse_logement}` : ''}).</>}{' '}
+            <button className="linklike" onClick={() => setTab('dpe')}>Voir les {syn.n} DPE</button></div>
         )}
-        {dpeOk && !grade && !['maisons', 'aucun-ici'].includes(syn?.mode) && (
+        {dpeOk && !grade && !['maisons', 'aucun-ici', 'mixte'].includes(syn?.mode) && (
           <div className="small muted">Aucun DPE publié par l’ADEME pour ce bâtiment.
             {tileGrade && <> La couleur sur la carte (étiquette {tileGrade}) vient de la BDNB et peut correspondre à un DPE plus ancien.</>}</div>
         )}
@@ -301,7 +302,7 @@ function groupesDPE(logs, cible) {
     const ici = k === cible ? ' (adresse cherchée)' : '';
     if (ap.length && ma.length) {
       out.push({ cle: `${k}a`, titre: `${multi ? `${adr}${ici} · ` : ''}Appartements`, note: `${ap.length} DPE`, rows: ap });
-      out.push({ cle: `${k}m`, titre: `${multi ? `${adr}${ici} · ` : ''}DPE « maison »`, note: `${ma.length} · non pris en compte dans l’étiquette`, rows: ma });
+      out.push({ cle: `${k}m`, titre: `${multi ? `${adr}${ici} · ` : ''}DPE « maison »`, note: `${ma.length} DPE`, rows: ma });
     } else out.push({ cle: k, titre: multi ? `${adr}${ici}` : (ap.length ? 'Appartements' : 'Maison'), note: `${rows.length} DPE`, rows });
   });
   return out.length > 1 ? out : null;
