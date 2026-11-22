@@ -10,6 +10,7 @@ import Reperes from './components/Reperes.jsx';
 import MesDpe from './components/MesDpe.jsx';
 import Compte from './components/Compte.jsx';
 import { lireProfil, sb } from './lib/compte.js';
+import { envoyerDiff, fusionner, lireTout, snapshotDe } from './lib/sync.js';
 import { enrich, loadMesDpe, merge, readFile, saveMesDpe } from './lib/mesdpe.js';
 import { DEFAULT_COLOR, exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
 import { Grade, Scale } from './components/Grade.jsx';
@@ -321,6 +322,44 @@ export default function App() {
     else setProfil(null);
     return () => { vivant = false; };
   }, [session]);
+
+  // ── Synchronisation de Mes repères et Mes DPE avec le compte ──
+  // snap = ce que le serveur contient (par clé) ; null tant que la première lecture n'est pas faite.
+  const snap = useRef({ reperes: null, mesdpe: null });
+  const enAttente = useRef(0); // envois programmés pas encore faits : on ne relit pas le serveur pendant ce temps
+  const uid = session?.user?.id || null;
+  const tirer = useCallback(async (premiere) => {
+    if (!sb || !uid || (!premiere && enAttente.current > 0)) return;
+    try {
+      const [srvR, srvD] = await Promise.all([lireTout('reperes'), lireTout('mesdpe')]);
+      snap.current = { reperes: snapshotDe(srvR, 'id'), mesdpe: snapshotDe(srvD, 'n') };
+      // Première fois : ce qui n'existait que sur l'appareil est gardé, puis envoyé par l'effet d'envoi
+      setReperes(l => (premiere ? fusionner(l, srvR, 'id') : srvR));
+      setMesDpe(l => (premiere ? fusionner(l, srvD, 'n') : srvD));
+    } catch { say('Synchronisation impossible pour le moment', 3000); }
+  }, [uid, say]);
+  useEffect(() => {
+    if (!uid) { snap.current = { reperes: null, mesdpe: null }; return undefined; }
+    tirer(true);
+    // Retour sur l'onglet (ou réouverture sur l'iPhone) : on reprend l'état du serveur
+    const vis = () => { if (document.visibilityState === 'visible') tirer(false); };
+    document.addEventListener('visibilitychange', vis);
+    return () => document.removeEventListener('visibilitychange', vis);
+  }, [uid, tirer]);
+  const envoyer = useCallback((kind, liste) => {
+    if (!sb || !uid || !snap.current[kind]) return undefined;
+    enAttente.current += 1;
+    let fait = false;
+    const t = setTimeout(async () => {
+      fait = true;
+      try { snap.current[kind] = await envoyerDiff(kind, snap.current[kind], liste); }
+      catch { say('Enregistrement dans le compte impossible pour le moment', 3000); }
+      finally { enAttente.current -= 1; }
+    }, 800);
+    return () => { if (!fait) { clearTimeout(t); enAttente.current -= 1; } };
+  }, [uid, say]);
+  useEffect(() => envoyer('reperes', reperes), [reperes, envoyer]);
+  useEffect(() => envoyer('mesdpe', mesDpe), [mesDpe, envoyer]);
 
   return (
     <div className={`app${mobile ? ' mobile' : ''}`} style={mobile ? { '--top-h': '120px' } : undefined}>
