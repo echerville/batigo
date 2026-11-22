@@ -99,6 +99,11 @@ def main(zip_path, output_path):
             dpe_usecols.append(nb_log_col)
         if date_col:
             dpe_usecols.append(date_col)
+        # Type de DPE : « neuf » = DPE établi selon la RT2012 ou la RE2020 (bâtiment neuf, hachuré sur la carte)
+        type_col = 'type_dpe' if 'type_dpe' in dpe_cols else None
+        if type_col:
+            dpe_usecols.append(type_col)
+        print(f"Colonne type DPE: {type_col or 'non trouvée (neuf = 0)'}", file=sys.stderr)
         print(f"Chargement du CSV DPE ({dpe_file})...", file=sys.stderr)
         df_dpe = read_csv_from_zip(z, dpe_file, usecols=dpe_usecols)
         # Filtrer uniquement les lignes avec DPE valide
@@ -144,6 +149,8 @@ def main(zip_path, output_path):
             nb = 0
             if nb_log_col and str(row.get(nb_log_col, '')).replace('.', '').isdigit():
                 nb = int(float(row.get(nb_log_col, 0) or 0))
+            t = str(row.get(type_col, '') or '').lower() if type_col else ''
+            neuf = 1 if ('rt2012' in t or 're2020' in t) else 0
             features.append({
                 'type': 'Feature',
                 'geometry': geom,
@@ -151,6 +158,7 @@ def main(zip_path, output_path):
                     'id':     str(bid),
                     'dpe':    str(row.get(dpe_col, '') or '').strip(),
                     'nb_log': nb,
+                    'neuf':   neuf,
                 }
             })
         print(f"  {len(features)} features avec géométrie valide", file=sys.stderr)
@@ -161,6 +169,7 @@ def main(zip_path, output_path):
         d = f['properties']['dpe']
         dpe_dist[d] = dpe_dist.get(d, 0) + 1
     print(f"Distribution DPE: {dict(sorted(dpe_dist.items()))}", file=sys.stderr)
+    print(f"Bâtiments neufs (RT2012/RE2020): {sum(f['properties']['neuf'] for f in features)}", file=sys.stderr)
 
     geojson = {'type': 'FeatureCollection', 'features': features}
     with open(output_path, 'w', encoding='utf-8') as f:
