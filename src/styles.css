@@ -364,3 +364,8 @@ a:hover { color: var(--action-dark); }
 .layer-edit { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--ink); background: rgba(255,255,255,.85); box-shadow: 0 1px 3px rgba(18,24,38,.2); }
 .layer-edit:hover { background: #fff; }
 .layer-sw-perso .grade { width: 30px; height: 30px; font-size: 18px; box-shadow: none; border-radius: 6px; }
+.mdp { position: relative; }
+.mdp .rep-name { padding-right: 76px; }
+.mdp-voir { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 4px 6px; }
+.compte-liens { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.compte-liens button { border: 0; background: transparent; color: #17804D; cursor: pointer; padding: 2px 0; font: inherit; text-decoration: underline; }

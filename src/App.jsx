@@ -53,6 +53,7 @@ export default function App() {
   const [dpeBusy, setDpeBusy] = useState(null);
   const [session, setSession] = useState(null);
   const [profil, setProfil] = useState(null);
+  const [recup, setRecup] = useState(false); // retour d'un e-mail « mot de passe oublié »
   const [repShow, setRepShow] = useState(() => localStorage.getItem('scope.reperes.show') === '1');
   const mesDpeRef = useRef(mesDpe); mesDpeRef.current = mesDpe;
   const zoneMode = useRef(false);
@@ -309,6 +310,7 @@ export default function App() {
     sb.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = sb.auth.onAuthStateChange((ev, s) => {
       setSession(s);
+      if (ev === 'PASSWORD_RECOVERY') { setRecup(true); setPanel('compte'); }
       if (ev === 'SIGNED_IN') {
         say('Connecté', 2000);
         if (location.hash.includes('access_token')) history.replaceState(null, '', location.pathname + location.search);
@@ -465,7 +467,7 @@ export default function App() {
         </div>
       )}
 
-      {panel === 'compte' && <Compte session={session} profil={profil} onClose={() => setPanel(null)} />}
+      {panel === 'compte' && <Compte session={session} profil={profil} recuperation={recup} onRecupere={() => setRecup(false)} onClose={() => { setPanel(null); setRecup(false); }} />}
 
       {/* Fiche ou accueil */}
       {!mobile && place && (
