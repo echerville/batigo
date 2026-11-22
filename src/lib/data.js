@@ -137,11 +137,10 @@ export async function resolveBuilding({ lat, lng, feature, bldGroupId, isClick }
   const idu = isClick ? (cadastre?.idu || bdnbIdu) : (bdnbIdu || cadastre?.idu);
 
   const props = feature?.properties || {};
-  const street = (props.street || props.name || '').trim();
-  const SKIP = /^(rue|avenue|boulevard|allée|allee|impasse|place|square|chemin|route|résidence|residence|voie|passage|cité|cite|hameau|lotissement|quartier|villa|domaine|du|de|la|le|les|des|d|l)$/i;
+  const street = (props.street || '').trim(); // nom de voie seul (sans numéro)
   const rnc = (props.citycode || bdnbIdu) ? {
     idu, cc: props.citycode || '', hn: (props.housenumber || '').trim(),
-    streetKey: street.split(/\s+/).find(w => w.length >= 4 && !SKIP.test(w)) || '', lat, lng,
+    street, lat, lng,
   } : null;
 
   return {
@@ -187,38 +186,45 @@ export async function fetchDPE(banIds) {
 }
 
 // ── Copropriété (RNIC) ──
-export async function fetchRNC({ idu, cc, hn, streetKey, lat, lng }) {
-  const BASE = 'https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/';
-  const closest = (data, maxDistSq) => {
-    let best = null, bestDist = Infinity;
-    for (const e of data) if (e.lat != null && e.long != null) {
-      const d = (e.long - lng) ** 2 + (e.lat - lat) ** 2;
-      if (d < bestDist) { bestDist = d; best = e; }
-    }
-    return best && bestDist < maxDistSq ? best : null;
-  };
+// Règle stricte : une copropriété n'est affichée que si elle est rattachée de façon certaine,
+// par la parcelle cadastrale (une seule copropriété sur la parcelle, ou une seule à la bonne adresse)
+// ou par l'adresse exacte (même numéro, même voie, même commune). Aucune recherche par proximité.
+const RNIC = 'https://tabular-api.data.gouv.fr/api/resources/3ea8e2c3-0038-464a-b17e-cd5c91f65ce2/data/';
+const ABREV = { r: 'rue', av: 'avenue', ave: 'avenue', bd: 'boulevard', bld: 'boulevard', pl: 'place', all: 'allee', imp: 'impasse',
+  ch: 'chemin', che: 'chemin', rte: 'route', sq: 'square', crs: 'cours', qu: 'quai', qua: 'quai', pas: 'passage', res: 'residence', fg: 'faubourg', st: 'saint', ste: 'sainte' };
+const norm = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  .split(' ').filter(Boolean).map(w => ABREV[w] || w).join(' ');
+// « 14 r antoine marty 11000 Carcassonne » → { num: '14', voie: 'rue antoine marty' }
+function splitAdr(a, cp) {
+  let t = norm(a);
+  if (cp) t = t.split(` ${cp}`)[0];
+  const m = t.match(/^(\d+)\s*(bis|ter|quater|[a-d])?\s+(.+)$/);
+  return m ? { num: m[1] + (m[2] ? ` ${m[2]}` : ''), voie: m[3].trim() } : null;
+}
+const memeAdresse = (e, num, voie) => [e.adresse_reference, e.adresse_complementaire_1, e.adresse_complementaire_2, e.adresse_complementaire_3]
+  .some(a => { const x = a && splitAdr(a, e.code_postal_adresse); return x && x.num === num && x.voie === voie; });
+
+export async function fetchRNC({ idu, cc, hn, street }) {
+  const get = async (q, n = 20) => { const r = await fetch(`${RNIC}?page_size=${n}&${q}`); if (!r.ok) throw new Error('RNIC'); return (await r.json()).data || []; };
+  const num = norm(hn).replace(/^(\d+)\s*([a-z]+)$/, '$1 $2'), voie = norm(street); // « 12bis » → « 12 bis »
+  // 1) Par la parcelle
   if (idu) {
-    for (const n of [1, 2, 3]) {
-      const r = await fetch(`${BASE}?page_size=5&reference_cadastrale_${n}__exact=${encodeURIComponent(idu)}`);
-      if (r.ok) { const d = await r.json(); if (d.data?.length) return d.data[0]; }
+    const lists = await Promise.all([1, 2, 3].map(n => get(`reference_cadastrale_${n}__exact=${encodeURIComponent(idu)}`)));
+    const all = [...new Map(lists.flat().map(e => [e.numero_immatriculation, e])).values()];
+    if (all.length === 1) return { copro: all[0], par: 'parcelle' };
+    if (all.length > 1) {
+      const ok = num && voie ? all.filter(e => memeAdresse(e, num, voie)) : [];
+      if (ok.length === 1) return { copro: ok[0], par: 'parcelle et adresse' };
+      return { copro: null, plusieurs: all.map(e => e.nom_usage_copropriete || e.adresse_reference).filter(Boolean).slice(0, 6) };
     }
   }
-  if (!cc) return null;
-  if (hn) {
-    const r = await fetch(`${BASE}?page_size=50&code_officiel_commune__exact=${cc}&adresse_reference__contains=${encodeURIComponent(hn)}`);
-    if (r.ok) {
-      const d = await r.json();
-      const cands = (d.data || []).filter(e => { const a = (e.adresse_reference || '').trim(); return a === hn || a.startsWith(hn + ' ') || a.startsWith(hn + ','); });
-      const res = closest(cands, 0.000003);
-      if (res) return res;
-    }
+  // 2) Par l'adresse exacte
+  if (cc && num && voie) {
+    const cands = await get(`commune__exact=${cc}&adresse_reference__contains=${encodeURIComponent(`${hn.trim()} `)}`, 100);
+    const ok = cands.filter(e => memeAdresse(e, num, voie));
+    if (ok.length === 1) return { copro: ok[0], par: 'adresse' };
   }
-  if (streetKey) {
-    const key = streetKey.normalize('NFD').replace(/[̀-ͯ]/g, '');
-    const r = await fetch(`${BASE}?page_size=100&code_officiel_commune__exact=${cc}&adresse_reference__contains=${encodeURIComponent(key)}`);
-    if (r.ok) { const d = await r.json(); return closest(d.data || [], 0.0000008); }
-  }
-  return null;
+  return { copro: null };
 }
 
 // ── Urbanisme (Géoportail de l'urbanisme) ──

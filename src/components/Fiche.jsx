@@ -328,15 +328,23 @@ function ParcelleTab({ place, building }) {
         {!b?.rnc && <div className="small muted">Adresse non identifiée.</div>}
         {rnc.status === 'loading' && <div className="skeleton" />}
         {rnc.status === 'error' && <div className="small muted">Registre indisponible pour le moment.</div>}
-        {rnc.status === 'ok' && (rnc.data ? (
-          <div className="facts">
-            <Fact label="Nom" value={rnc.data.nom_usage_copropriete} />
-            <Fact label="Syndic" value={rnc.data.raison_sociale_representant_legal} />
-            <Fact label="Lots" value={rnc.data.nombre_total_lots} note={rnc.data.nombre_lots_habitation ? `${rnc.data.nombre_lots_habitation} d’habitation` : null} />
-            <Fact label="Construction" value={rnc.data.periode_construction} />
-          </div>
-        ) : <div className="small muted">Aucune copropriété répertoriée à cette adresse.</div>)}
-        {rnc.status === 'ok' && rnc.data && !b?.rnc?.idu && <div className="small muted">Trouvée par proximité de l’adresse : à vérifier.</div>}
+        {rnc.status === 'ok' && rnc.data?.copro && (
+          <>
+            <div className="facts">
+              <Fact label="Nom" value={rnc.data.copro.nom_usage_copropriete} />
+              <Fact label="Syndic" value={rnc.data.copro.raison_sociale_representant_legal} />
+              <Fact label="Lots" value={rnc.data.copro.nombre_total_lots} note={rnc.data.copro.nombre_lots_habitation ? `${rnc.data.copro.nombre_lots_habitation} d’habitation` : null} />
+              <Fact label="Construction" value={rnc.data.copro.periode_construction} />
+            </div>
+            <div className="small muted">Adresse au registre : {rnc.data.copro.adresse_reference} · rattachée par {rnc.data.par === 'adresse' ? 'l’adresse exacte' : rnc.data.par === 'parcelle' ? 'la parcelle cadastrale' : 'la parcelle et l’adresse'}.</div>
+          </>
+        )}
+        {rnc.status === 'ok' && !rnc.data?.copro && rnc.data?.plusieurs?.length > 0 && (
+          <div className="small muted">Plusieurs copropriétés sont immatriculées sur cette parcelle ({rnc.data.plusieurs.join(', ')}) : Scope n’en rattache aucune à ce bâtiment faute de certitude.</div>
+        )}
+        {rnc.status === 'ok' && !rnc.data?.copro && !rnc.data?.plusieurs?.length && (
+          <div className="small muted">Aucune copropriété immatriculée rattachée à ce bâtiment de façon certaine.</div>
+        )}
       </div>
 
       <div className="card glass-in">
