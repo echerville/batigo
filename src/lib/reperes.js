@@ -68,3 +68,28 @@ export function loadModeles() {
   try { const l = JSON.parse(localStorage.getItem(KEY_M) || '[]'); return Array.isArray(l) ? l.filter(m => m && m.id) : []; } catch { return []; }
 }
 export function saveModeles(list) { try { localStorage.setItem(KEY_M, JSON.stringify(list)); } catch { /* silencieux */ } }
+
+// Repères proches d'un point (fiche du bien) : points à moins de `rayon` mètres,
+// zones qui contiennent le point ou dont un sommet est à moins de `rayon` mètres. Triés par distance.
+const distM = ([lng1, lat1], [lng2, lat2]) => {
+  const k = Math.PI / 180, x = (lng2 - lng1) * k * Math.cos(((lat1 + lat2) / 2) * k), y = (lat2 - lat1) * k;
+  return Math.hypot(x, y) * 6371000;
+};
+const dansZone = ([x, y], ring) => {
+  let ins = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) ins = !ins;
+  }
+  return ins;
+};
+export function reperesProches(list, ll, rayon = 40) {
+  if (!ll) return [];
+  return list.map(r => {
+    if (r.type === 'zone' && Array.isArray(r.coords) && r.coords.length > 2) {
+      if (dansZone(ll, r.coords)) return { r, d: 0 };
+      return { r, d: Math.min(...r.coords.map(c => distM(ll, c))) };
+    }
+    return { r, d: Array.isArray(r.coords) ? distM(ll, r.coords) : Infinity };
+  }).filter(x => x.d <= rayon).sort((a, b) => a.d - b.d);
+}

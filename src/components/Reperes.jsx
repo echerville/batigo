@@ -4,7 +4,7 @@ import { DEFAULT_COLOR, REPERE_COLORS, REPERE_ICONS, checkText, iconSvg, loadMod
 
 const MAX = 280, MAX_NAME = 40;
 
-function RepIcon({ id, color = DEFAULT_COLOR, size = 20 }) {
+export function RepIcon({ id, color = DEFAULT_COLOR, size = 20 }) {
   return <span className="rep-ico" style={{ background: color }} dangerouslySetInnerHTML={{ __html: iconSvg(id, size, '#fff') }} />;
 }
 

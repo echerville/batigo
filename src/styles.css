@@ -373,3 +373,6 @@ a:hover { color: var(--action-dark); }
 .layer-tile-wrap .layer-tile:has(.layer-pro) { opacity: .75; }
 .reserve { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .turnstile-boite { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 50; }
+.rep-ici { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: rgba(255,255,255,.55); border-radius: 10px; padding: 8px 10px; cursor: pointer; font: inherit; color: var(--ink); }
+.rep-ici:hover { background: rgba(255,255,255,.85); }
+.rep-ici-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

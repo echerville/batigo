@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import Icon from './Icon.jsx';
+import { RepIcon } from './Reperes.jsx';
+import { reperesProches } from '../lib/reperes.js';
 import { Grade, Scale } from './Grade.jsx';
 import { ADEME_DPE_URL } from '../lib/config.js';
 import { fetchAltitude, fetchDVF, fetchPLUZone, fetchRNC } from '../lib/data.js';
@@ -47,7 +49,7 @@ function useLazy(enabled, key, loader) {
   return s.key === key ? s : { status: enabled ? 'loading' : 'idle' };
 }
 
-export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile, niveau, onCompte }) {
+export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile, niveau, onCompte, reperes, onRepere }) {
   const [tab, setTab] = useState('batiment');
   useEffect(() => { setTab('batiment'); }, [place.key]);
 
@@ -98,7 +100,10 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
 
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {tab === 'batiment' && (
-          <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
+          <>
+            <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
+            {niveau === 'pro' && <ReperesIci list={reperes} ll={place.lngLat} onRepere={onRepere} />}
+          </>
         )}
         {tab === 'dpe' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="Le détail des DPE du bâtiment" /> : <DpeTab dpe={dpe} />)}
         {tab === 'parcelle' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="La parcelle, la zone du PLU, la copropriété et les ventes" /> : <ParcelleTab place={place} building={building} />)}
@@ -107,6 +112,29 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
 
       <InfoTip label="Sources des données">Sources : ADEME, BDNB (CSTB), IGN, DGFiP · consulté le {today}</InfoTip>
     </>
+  );
+}
+
+// Mes repères posés sur ou autour du bien (Pro)
+function ReperesIci({ list, ll, onRepere }) {
+  const proches = reperesProches(list || [], ll);
+  if (!proches.length) return null;
+  return (
+    <div className="card glass-in">
+      <div className="card-title">Mes repères ici <span>{proches.length}</span></div>
+      <div className="list">
+        {proches.map(({ r, d }) => (
+          <button key={r.id} type="button" className="rep-ici" onClick={() => onRepere?.(r)}>
+            <RepIcon id={r.icon} color={r.color} size={16} />
+            <span className="rep-ici-txt">
+              <strong>{r.name || 'Repère'}</strong>{r.type === 'zone' ? ' · zone' : ''}
+              {r.text && <span className="small muted"> — {r.text}</span>}
+            </span>
+            <span className="small muted">{d === 0 ? 'ici' : `${Math.round(d)} m`}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
