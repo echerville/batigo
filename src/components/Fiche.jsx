@@ -237,7 +237,7 @@ function DpeTab({ dpe }) {
       )}
       {logs.length > 0 && (
         <>
-          <div className="section-title">Logements · {logs.length} DPE</div>
+          <div className="section-title">Logement · {logs.length} DPE</div>
           <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>{Object.keys(counts).sort((a, b) => a.split('>')[1].localeCompare(b.split('>')[1]) || a.localeCompare(b)).map(k => { const [o, g] = k.split('>'); return <Grade key={k} g={g} from={o || undefined} size="mini" count={counts[k]} />; })}</div>
           <div className="list">{shown.map(r => <DpeRow key={r.numero_dpe} r={r} />)}</div>
           {logs.length > 10 && !all && <button className="btn ghost" onClick={() => setAll(true)}>Afficher les {logs.length - 10} autres</button>}
