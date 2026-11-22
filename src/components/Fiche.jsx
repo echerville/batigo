@@ -135,19 +135,18 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
   return (
     <>
       <div className="card glass-in">
-        {ref && <div className="card-title"><span>DPE du {frDate(ref.date_reception_dpe)}</span></div>}
+        {!(dpeOk && grade) && ref && <div className="card-title"><span>DPE du {frDate(ref.date_reception_dpe)}</span></div>}
         {dpe.status === 'loading' && <div className="skeleton" style={{ height: 40 }} />}
         {dpeOk && grade && (
           <div className="dpe-line">
             <Scale active={grade} />
             <div className="dpe-side small muted">
+              {ref && <span>DPE du {frDate(ref.date_reception_dpe)}</span>}
+              {nbDpe > 1 && <span>{ref?.methode_application_dpe === IMMEUBLE ? 'DPE de l’immeuble' : `synthèse de ${nbDpe} DPE`}</span>}
               {ref?.conso_5_usages_par_m2_ep && <span><strong style={{ color: 'var(--ink)' }}>{Math.round(ref.conso_5_usages_par_m2_ep)}</strong> kWh/m²/an</span>}
               {ref?.etiquette_ges && <span>GES <strong style={{ color: 'var(--ink)' }}>{ref.etiquette_ges}</strong></span>}
             </div>
           </div>
-        )}
-        {dpeOk && grade && nbDpe > 1 && (
-          <div className="small muted">{ref?.methode_application_dpe === IMMEUBLE ? 'DPE de l’immeuble' : `synthèse de ${nbDpe} DPE`}</div>
         )}
         {dpeOk && !grade && (
           <div className="small muted">Aucun DPE publié par l’ADEME pour ce bâtiment.
