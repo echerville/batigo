@@ -370,7 +370,7 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
     // Image de la carte telle qu'affichée (JPEG), ou null si impossible (tuiles d'un autre site, etc.)
     // Image de la carte pour le PDF : zoomée sur le bien (`ll`), sans les données privées (Mes repères,
     // Mes DPE), recadrée en 4:3 autour du bien et marquée d'un point. La vue de la carte est rétablie après.
-    async capture(ll, zoom = 19) {
+    async capture(ll, zoom = 18) {
       const PRIVE = ['rep-fill', 'rep-line', 'mesdpe-dot', 'mesdpe-letter'].filter(id => map.getLayer(id));
       const avant = PRIVE.map(id => map.getLayoutProperty(id, 'visibility') || 'visible');
       const cam = { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
