@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { DPE_HEX, DPE_TEXT } from '../lib/config.js';
 import {
-  IMMEUBLE, bdnbEnergie, bestGrade, frDate, installType, preCoeffGrade, referenceDPE, shortEnergie,
+  IMMEUBLE, bdnbEnergie, bestGrade, frDate, installType, preCoeffGrade, referenceDPE, shortEnergie, syntheseDPE,
   splitAddress, summary, usageLabel, zoneClimatique,
 } from '../lib/dpe.js';
 
@@ -30,7 +30,7 @@ export default function Rapport({ data }) {
   const [l1, l2] = splitAddress(label);
   const ex = dpe?.existants || [], ne = dpe?.neufs || [];
   const sum = ex.length || ne.length ? summary(ex, ne) : null;
-  const grade = bestGrade(ex, ne), ref = referenceDPE(ex, ne);
+  const grade = bestGrade(ex, ne), syn = syntheseDPE(ex, ne);
   const imm = ex.filter(r => r.methode_application_dpe === IMMEUBLE);
   const logs = ex.filter(r => r.methode_application_dpe !== IMMEUBLE);
   const cad = b?.cadastre;
@@ -70,7 +70,9 @@ export default function Rapport({ data }) {
         <div className="rp-dpe">
           <Lettre g={grade} />
           <div>
-            {ref ? <>DPE du {frDate(ref.date_reception_dpe)}{ref.conso_5_usages_par_m2_ep ? ` · ${Math.round(ref.conso_5_usages_par_m2_ep)} kWh/m²/an` : ''}{ref.etiquette_ges ? ` · GES ${ref.etiquette_ges}` : ''}</> : 'Aucun DPE publié par l’ADEME pour ce bâtiment.'}
+            {!syn && 'Aucun DPE publié par l’ADEME pour ce bâtiment.'}
+            {syn?.mode === 'moyenne' && <>Moyenne de {syn.n} DPE{syn.kwh != null ? ` · ${syn.kwh} kWh/m²/an en moyenne` : ''}{syn.ges ? ` · GES moyen ${syn.ges}` : ''}</>}
+            {syn && syn.mode !== 'moyenne' && <>{syn.mode === 'immeuble' ? 'DPE de l’immeuble' : 'DPE'} du {frDate(syn.ref.date_reception_dpe)}{syn.ref.conso_5_usages_par_m2_ep ? ` · ${Math.round(syn.ref.conso_5_usages_par_m2_ep)} kWh/m²/an` : ''}{syn.ref.etiquette_ges ? ` · GES ${syn.ref.etiquette_ges}` : ''}</>}
             {ex.length + ne.length > 1 && <div className="rp-petit">{ex.length + ne.length} DPE rattachés au bâtiment</div>}
           </div>
         </div>

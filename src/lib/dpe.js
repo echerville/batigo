@@ -57,6 +57,25 @@ export function bestGrade(existants = [], neufs = []) {
   return GRADES[Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) - 1] || null;
 }
 
+// Comment l'étiquette du bâtiment est obtenue : un DPE précis (immeuble, maison, DPE unique)
+// ou la moyenne de plusieurs DPE de logements. En moyenne : kWh et GES moyens, pas de date.
+export function syntheseDPE(existants = [], neufs = []) {
+  const all = [...existants, ...neufs];
+  if (!all.length) return null;
+  const imm = existants.find(r => r.methode_application_dpe === IMMEUBLE && isGrade(r.etiquette_dpe));
+  if (imm) return { mode: 'immeuble', ref: imm, n: all.length };
+  const maisons = all.every(r => r.methode_application_dpe === 'dpe maison individuelle' || !r.methode_application_dpe);
+  const notes = all.filter(r => isGrade(r.etiquette_dpe));
+  if (maisons || notes.length <= 1) return { mode: 'unique', ref: [...(notes.length ? notes : all)].sort(byDate)[0], n: all.length };
+  const kwh = notes.map(r => Number(r.conso_5_usages_par_m2_ep)).filter(v => Number.isFinite(v) && v > 0);
+  const ges = notes.map(r => NUM[r.etiquette_ges]).filter(Boolean);
+  return {
+    mode: 'moyenne', n: notes.length,
+    kwh: kwh.length ? Math.round(kwh.reduce((a, b) => a + b, 0) / kwh.length) : null,
+    ges: ges.length ? GRADES[Math.round(ges.reduce((a, b) => a + b, 0) / ges.length) - 1] : null,
+  };
+}
+
 // DPE de référence pour la fiche (immeuble en priorité, sinon le plus récent)
 export function referenceDPE(existants = [], neufs = []) {
   const all = [...existants, ...neufs];

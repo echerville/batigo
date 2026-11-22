@@ -6,7 +6,7 @@ import { Grade, Scale } from './Grade.jsx';
 import { ADEME_DPE_URL } from '../lib/config.js';
 import { fetchAltitude, fetchDVF, fetchPLUZone, fetchRNC } from '../lib/data.js';
 import {
-  IMMEUBLE, bdnbEnergie, bestGrade, frDate, installType, preCoeffGrade, referenceDPE, shortEnergie,
+  IMMEUBLE, bdnbEnergie, bestGrade, frDate, installType, preCoeffGrade, referenceDPE, shortEnergie, syntheseDPE,
   splitAddress, summary, usageLabel, zoneClimatique,
 } from '../lib/dpe.js';
 
@@ -176,6 +176,30 @@ function SiteFacts({ site }) {
   );
 }
 
+// À droite de l'échelle : un DPE précis (sa date, ses kWh, son GES) ou la moyenne de plusieurs DPE
+function DpeCote({ dpe }) {
+  const syn = syntheseDPE(dpe.existants || [], dpe.neufs || []);
+  if (!syn) return null;
+  const fort = v => <strong style={{ color: 'var(--ink)' }}>{v}</strong>;
+  if (syn.mode === 'moyenne') {
+    return (
+      <div className="dpe-side small muted">
+        <span>Moyenne de {syn.n} DPE</span>
+        {syn.kwh != null && <span>{fort(syn.kwh)} kWh/m²/an en moyenne</span>}
+        {syn.ges && <span>GES moyen {fort(syn.ges)}</span>}
+      </div>
+    );
+  }
+  const r = syn.ref;
+  return (
+    <div className="dpe-side small muted">
+      <span>{syn.mode === 'immeuble' ? 'DPE de l’immeuble' : 'DPE'} du {frDate(r.date_reception_dpe)}</span>
+      {r.conso_5_usages_par_m2_ep && <span>{fort(Math.round(r.conso_5_usages_par_m2_ep))} kWh/m²/an</span>}
+      {r.etiquette_ges && <span>GES {fort(r.etiquette_ges)}</span>}
+    </div>
+  );
+}
+
 function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }) {
   if (building.status === 'ok' && !bdnb) {
     return (
@@ -196,12 +220,7 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
         {dpeOk && grade && (
           <div className="dpe-line">
             <Scale active={grade} />
-            <div className="dpe-side small muted">
-              {ref && <span>DPE du {frDate(ref.date_reception_dpe)}</span>}
-              {nbDpe > 1 && <span>{ref?.methode_application_dpe === IMMEUBLE ? 'DPE de l’immeuble' : `synthèse de ${nbDpe} DPE`}</span>}
-              {ref?.conso_5_usages_par_m2_ep && <span><strong style={{ color: 'var(--ink)' }}>{Math.round(ref.conso_5_usages_par_m2_ep)}</strong> kWh/m²/an</span>}
-              {ref?.etiquette_ges && <span>GES <strong style={{ color: 'var(--ink)' }}>{ref.etiquette_ges}</strong></span>}
-            </div>
+            <DpeCote dpe={dpe} />
           </div>
         )}
         {dpeOk && !grade && (
