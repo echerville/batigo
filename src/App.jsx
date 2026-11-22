@@ -100,8 +100,6 @@ export default function App() {
     setBuilding({ status: 'ok', data });
     if (isClick && data.bdnb?.libelle_adr_principale_ban) setQuery(data.bdnb.libelle_adr_principale_ban);
     m.select(data.batId);
-    // Sans compte : fiche réduite (bâtiment, cadastre, année), pas de DPE
-    if (!niveauRef.current || niveauRef.current === 'anonyme') { setDpe({ status: 'reserve' }); return; }
     try {
       const d = await fetchDPE(data.banIds);
       if (id !== seq.current) return;

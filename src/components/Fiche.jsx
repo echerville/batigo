@@ -100,7 +100,7 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
         {tab === 'batiment' && (
           <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
         )}
-        {tab === 'dpe' && (dpe.status === 'reserve' ? <Reserve onCompte={onCompte} quoi="Les DPE du bâtiment" /> : <DpeTab dpe={dpe} />)}
+        {tab === 'dpe' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="Le détail des DPE du bâtiment" /> : <DpeTab dpe={dpe} />)}
         {tab === 'parcelle' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="La parcelle, la zone du PLU, la copropriété et les ventes" /> : <ParcelleTab place={place} building={building} />)}
       </div>
       </>}
@@ -115,7 +115,7 @@ function Reserve({ quoi, onCompte }) {
   return (
     <div className="empty glass-in reserve">
       <strong>{quoi} : réservé aux comptes.</strong>
-      <span className="small">La création d’un compte est gratuite (20 fiches complètes par mois).</span>
+      <span className="small">La création d’un compte est gratuite et donne des fiches complètes chaque mois.</span>
       {onCompte && <button className="btn primary" onClick={onCompte}>Se connecter ou créer un compte</button>}
     </div>
   );
@@ -126,7 +126,7 @@ function Limite({ info, niveau, onCompte }) {
   return (
     <div className="empty glass-in reserve">
       <strong>{anonyme ? `Limite de ${info?.limite || 3} fiches par jour atteinte sans compte.` : `Limite de ${info?.limite || 20} fiches par mois atteinte (formule gratuite).`}</strong>
-      <span className="small">{anonyme ? 'Créez un compte gratuit pour consulter 20 fiches complètes par mois.' : 'La formule Pro donne un accès illimité. Les fiches déjà ouvertes ce mois-ci restent consultables.'}</span>
+      <span className="small">{anonyme ? 'Créez un compte gratuit pour consulter davantage de fiches complètes chaque mois.' : 'La formule Pro donne un accès illimité. Les fiches déjà ouvertes ce mois-ci restent consultables.'}</span>
       {anonyme && onCompte && <button className="btn primary" onClick={onCompte}>Se connecter ou créer un compte</button>}
     </div>
   );
@@ -179,7 +179,6 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
           <div className="small muted">Carte : étiquette {tileGrade} (BDNB). DPE ADEME vérifié : {grade}.</div>
         )}
         {dpe.status === 'error' && <div className="small muted">DPE indisponibles pour le moment (ADEME).</div>}
-        {dpe.status === 'reserve' && <div className="small muted">DPE du bâtiment : connectez-vous (compte gratuit) pour les voir.</div>}
       </div>
 
       {building.status === 'loading' ? (

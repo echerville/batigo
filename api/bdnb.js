@@ -1,5 +1,5 @@
 const { guard } = require('./_guard');
-const { quota } = require('./_quota');
+const { quota, compter } = require('./_quota');
 
 // Conversion WGS84 (lng/lat) → Lambert-93 (EPSG:2154)
 // Formule simplifiée suffisamment précise pour un bbox de quelques centaines de mètres
@@ -45,7 +45,7 @@ const SELECT = 'annee_construction,surface_emprise_sol,type_energie_chauffage,ty
 
 // Mode « point » (clic sur la carte) : renvoie uniquement le ou les bâtiments
 // dont le contour contient le point cliqué.
-async function byPoint(point, res) {
+async function byPoint(point, req, res) {
   const [lng, lat] = String(point).split(',').map(Number);
   const ok = Number.isFinite(lng) && Number.isFinite(lat) && lng >= -5.5 && lng <= 10 && lat >= 41 && lat <= 51.5;
   if (!ok) return res.status(400).json({ error: 'point invalide' });
@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
   if (guard(req, res)) return;
   if (await quota(req, res)) return;
 
-  if (req.query.point) return byPoint(req.query.point, res);
+  if (req.query.point) return byPoint(req.query.point, req, res);
 
   const { bbox } = req.query;
   if (!bbox) return res.status(400).json({ error: 'bbox required' });
@@ -95,8 +95,12 @@ module.exports = async function handler(req, res) {
       return res.status(response.status).json({ error: 'BDNB error', detail: text });
     }
     const data = await response.json();
-    // Données publiques qui changent rarement : cache CDN Vercel 1 jour
-        res.json(Array.isArray(data) ? data : []);
+    const list = Array.isArray(data) ? data : [];
+    // La fiche compte seulement si le bâtiment de l'adresse (ou du clic) est dans la réponse
+    const f = String(req.query.fiche || '');
+    if (list.some(b => b.batiment_groupe_id === f || b.cle_interop_adr_principale_ban === f
+      || (Array.isArray(b.l_cle_interop_adr) && b.l_cle_interop_adr.includes(f)))) await compter(req);
+    res.json(list);
   } catch (e) {
     res.status(502).json({ error: 'Source BDNB indisponible' });
   }

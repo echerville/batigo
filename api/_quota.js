@@ -1,6 +1,7 @@
 // Quotas de fiches (étape 3 des comptes). Le préfixe "_" : pas une route publique.
 // Compte la fiche dans Supabase (fonction compter_fiche, protégée par QUOTA_SECRET).
-// Visiteur sans compte : 3 fiches par jour et par IP ; gratuit : 20 par mois ; Pro : illimité.
+// Visiteur sans compte : N fiches par jour et par IP ; gratuit : M par mois ; Pro : illimité.
+// N et M sont réglables dans la base (prive.reglages : limite_anonyme_jour, limite_gratuit_mois).
 const crypto = require('node:crypto');
 
 const URL = process.env.VITE_SUPABASE_URL;
@@ -12,21 +13,35 @@ function ipHash(req) {
   return crypto.createHash('sha256').update(`${SECRET}|${ip}`).digest('hex').slice(0, 32);
 }
 
-// Renvoie true si la requête a été refusée (réponse déjà envoyée).
+// Appel à la base. compter = false : vérification seule.
+async function appel(req, compter) {
+  const auth = String(req.headers.authorization || '');
+  const headers = { apikey: KEY, 'Content-Type': 'application/json' };
+  if (/^Bearer\s+\S+/.test(auth)) headers.Authorization = auth;
+  const cle = String(req.query.fiche || '').slice(0, 120);
+  const r = await fetch(`${URL}/rest/v1/rpc/compter_fiche`, {
+    method: 'POST', headers, signal: AbortSignal.timeout(5000),
+    body: JSON.stringify({ p_secret: SECRET, p_cle: cle, p_ip: ipHash(req), p_compter: compter }),
+  });
+  return r;
+}
+
+// Compte la fiche une fois qu'un bâtiment est identifié (erreurs ignorées : on ne bloque pas Scope)
+async function compter(req) {
+  if (!URL || !KEY || !SECRET) return;
+  try { await appel(req, true); } catch { /* rien */ }
+}
+
+// Vérifie avant de chercher le bâtiment. Renvoie true si la requête a été refusée (réponse déjà envoyée).
 async function quota(req, res) {
   res.setHeader('Cache-Control', 'private, no-store'); // la réponse dépend de la personne
   const cle = String(req.query.fiche || '').slice(0, 120);
   if (!cle) { res.status(400).json({ error: 'fiche manquante' }); return true; }
   if (!URL || !KEY || !SECRET) return false; // comptes non configurés : pas de limite
-  const auth = String(req.headers.authorization || '');
-  const headers = { apikey: KEY, 'Content-Type': 'application/json' };
-  if (/^Bearer\s+\S+/.test(auth)) headers.Authorization = auth;
+  const hasAuth = /^Bearer\s+\S+/.test(String(req.headers.authorization || ''));
   try {
-    const r = await fetch(`${URL}/rest/v1/rpc/compter_fiche`, {
-      method: 'POST', headers, signal: AbortSignal.timeout(5000),
-      body: JSON.stringify({ p_secret: SECRET, p_cle: cle, p_ip: ipHash(req) }),
-    });
-    if (r.status === 401 && headers.Authorization) { // session expirée : on compte comme visiteur
+    const r = await appel(req, false);
+    if (r.status === 401 && hasAuth) { // jeton expiré : le navigateur rafraîchit sa session et réessaie
       res.status(401).json({ error: 'session expirée' }); return true;
     }
     if (!r.ok) return false; // service de comptes indisponible : on ne bloque pas Scope
@@ -42,4 +57,4 @@ async function quota(req, res) {
   }
 }
 
-module.exports = { quota };
+module.exports = { quota, compter };

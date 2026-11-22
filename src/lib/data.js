@@ -52,14 +52,16 @@ export async function fetchCadastre(lat, lng) {
 export class LimiteAtteinte extends Error {
   constructor(info) { super('limite'); this.info = info; }
 }
-async function bdnbGet(query, fiche) {
+async function bdnbGet(query, fiche, renouvele = false) {
   const headers = {};
+  let sbc = null;
   try {
-    const { sb } = await import('./compte.js');
-    const tok = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
-    if (tok) headers.Authorization = `Bearer ${tok}`;
+    ({ sb: sbc } = await import('./compte.js'));
+    const s = sbc ? (renouvele ? (await sbc.auth.refreshSession()).data.session : (await sbc.auth.getSession()).data.session) : null;
+    if (s?.access_token) headers.Authorization = `Bearer ${s.access_token}`;
   } catch { /* sans compte */ }
   const r = await fetch(`/api/bdnb?${query}&fiche=${encodeURIComponent(fiche)}`, { headers });
+  if (r.status === 401 && !renouvele && headers.Authorization) return bdnbGet(query, fiche, true); // jeton expiré
   if (r.status === 402) throw new LimiteAtteinte(await r.json().catch(() => ({})));
   if (!r.ok) return [];
   const data = await r.json();
