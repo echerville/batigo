@@ -415,3 +415,7 @@ a:hover { color: var(--action-dark); }
 .fiche-pdf { position: absolute; top: 12px; right: 52px; padding: 5px 10px; font-size: 13px; gap: 5px; }
 .fiche-pdf.mobile { right: 12px; top: 10px; }
 .pdf-pro { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 6px; background: #17804D; color: #fff; margin-left: 4px; }
+
+/* DPE regroupés par adresse / type, lien en ligne */
+.dpe-groupe { display: flex; flex-direction: column; gap: 6px; }
+.linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--accent, #2563eb); text-decoration: underline; cursor: pointer; }

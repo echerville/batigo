@@ -43,38 +43,58 @@ export const frDate = d => (d && d.length >= 10 ? `${d.slice(8, 10)}/${d.slice(5
 
 const byDate = (a, b) => String(b.date_reception_dpe || '').localeCompare(String(a.date_reception_dpe || ''));
 
-// Étiquette retenue pour le bâtiment : DPE immeuble, sinon DPE le plus récent d'une maison, sinon moyenne des logements
-export function bestGrade(existants = [], neufs = []) {
-  const imm = existants.find(r => r.methode_application_dpe === IMMEUBLE);
-  if (isGrade(imm?.etiquette_dpe)) return imm.etiquette_dpe;
-  const all = [...existants, ...neufs];
-  if (all.length && all.every(r => r.methode_application_dpe === 'dpe maison individuelle' || !r.methode_application_dpe)) {
-    const latest = all.filter(r => isGrade(r.etiquette_dpe)).sort(byDate)[0];
-    if (latest) return latest.etiquette_dpe;
-  }
-  const nums = all.map(r => NUM[r.etiquette_dpe]).filter(Boolean);
-  if (!nums.length) return null;
-  return GRADES[Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) - 1] || null;
-}
+// Type de DPE : maison (ou non précisé), appartement / logement, immeuble
+export const estMaison = r => !r.methode_application_dpe || r.methode_application_dpe === 'dpe maison individuelle';
+const moyenne = v => v.reduce((a, b) => a + b, 0) / v.length;
+export const adresseDe = r => r.identifiant_ban || (r.adresse_brut || '').split('\n')[0].trim().toLowerCase() || '?';
 
-// Comment l'étiquette du bâtiment est obtenue : un DPE précis (immeuble, maison, DPE unique)
-// ou la moyenne de plusieurs DPE de logements. En moyenne : kWh et GES moyens, pas de date.
-export function syntheseDPE(existants = [], neufs = []) {
+/**
+ * Quels DPE font l'étiquette du bâtiment, et comment.
+ * cible : identifiant BAN de l'adresse cherchée (null pour un clic sur la carte).
+ *  1. DPE d'immeuble → il fait foi.
+ *  2. Plusieurs adresses dans le bâtiment et une adresse cherchée → seulement les DPE de cette adresse
+ *     (aucun → mode 'aucun-ici' : on n'affiche pas le DPE du voisin).
+ *  3. DPE d'appartement présents → logements collectifs (y compris une maison divisée en appartements) :
+ *     DPE d'appartement seuls, les DPE « maison » sont écartés et signalés.
+ *  4. Que des maisons : une seule adresse → DPE le plus récent ; plusieurs adresses sans adresse cherchée
+ *     → mode 'maisons', pas d'étiquette unique.
+ * Retour : { mode, grade, ref?, n, base, kwh?, ges?, ecartes, maisons? }
+ */
+export function syntheseDPE(existants = [], neufs = [], cible = null) {
   const all = [...existants, ...neufs];
   if (!all.length) return null;
-  const imm = existants.find(r => r.methode_application_dpe === IMMEUBLE && isGrade(r.etiquette_dpe));
-  if (imm) return { mode: 'immeuble', ref: imm, n: all.length };
-  const maisons = all.every(r => r.methode_application_dpe === 'dpe maison individuelle' || !r.methode_application_dpe);
-  const notes = all.filter(r => isGrade(r.etiquette_dpe));
-  if (maisons || notes.length <= 1) return { mode: 'unique', ref: [...(notes.length ? notes : all)].sort(byDate)[0], n: all.length };
+  const imm = existants.filter(r => r.methode_application_dpe === IMMEUBLE && isGrade(r.etiquette_dpe)).sort(byDate)[0];
+  if (imm) return { mode: 'immeuble', grade: imm.etiquette_dpe, ref: imm, n: all.length, base: [imm], ecartes: 0 };
+  const adresses = new Set(all.map(adresseDe));
+  let scope = all;
+  if (cible && adresses.size > 1) {
+    scope = all.filter(r => r.identifiant_ban === cible);
+    if (!scope.length) return { mode: 'aucun-ici', grade: null, n: all.length, base: [], ecartes: 0 };
+  }
+  const apparts = scope.filter(r => !estMaison(r));
+  const ecartes = apparts.length ? scope.length - apparts.length : 0;
+  const pris = apparts.length ? apparts : scope;
+  const notes = pris.filter(r => isGrade(r.etiquette_dpe)).sort(byDate);
+  if (!apparts.length) {
+    const nbAdr = new Set(scope.map(adresseDe)).size;
+    if (!cible && nbAdr > 1) return { mode: 'maisons', grade: null, n: scope.length, maisons: nbAdr, base: [], ecartes: 0 };
+  }
+  if (!apparts.length || notes.length <= 1) {
+    const ref = notes[0] || [...pris].sort(byDate)[0];
+    return { mode: 'unique', grade: notes[0]?.etiquette_dpe || null, ref, n: pris.length, base: pris, ecartes };
+  }
   const kwh = notes.map(r => Number(r.conso_5_usages_par_m2_ep)).filter(v => Number.isFinite(v) && v > 0);
   const ges = notes.map(r => NUM[r.etiquette_ges]).filter(Boolean);
   return {
-    mode: 'moyenne', n: notes.length,
-    kwh: kwh.length ? Math.round(kwh.reduce((a, b) => a + b, 0) / kwh.length) : null,
-    ges: ges.length ? GRADES[Math.round(ges.reduce((a, b) => a + b, 0) / ges.length) - 1] : null,
+    mode: 'moyenne', n: notes.length, base: pris, ecartes,
+    grade: GRADES[Math.round(moyenne(notes.map(r => NUM[r.etiquette_dpe]))) - 1] || null,
+    kwh: kwh.length ? Math.round(moyenne(kwh)) : null,
+    ges: ges.length ? GRADES[Math.round(moyenne(ges)) - 1] : null,
   };
 }
+
+// Étiquette retenue pour le bâtiment (voir syntheseDPE)
+export const bestGrade = (existants = [], neufs = [], cible = null) => syntheseDPE(existants, neufs, cible)?.grade || null;
 
 // DPE de référence pour la fiche (immeuble en priorité, sinon le plus récent)
 export function referenceDPE(existants = [], neufs = []) {

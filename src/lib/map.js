@@ -435,9 +435,10 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
       const tileGrade = feats[0].properties?.dpe || null;
       if (dpe) {
         const has = dpe.existants.length || dpe.neufs.length;
-        if (!has) state.corrections.delete(id);
+        const g = has ? bestGrade(dpe.existants, dpe.neufs) : null;
+        if (!g) state.corrections.delete(id); // pas d'étiquette unique (maisons distinctes) : couleur de la tuile
         else {
-          const color = DPE_HEX[bestGrade(dpe.existants, dpe.neufs)] || '#AAAAAA';
+          const color = DPE_HEX[g] || '#AAAAAA';
           state.corrections.set(id, plainGeom.map(f => ({ ...f, properties: { color } })));
         }
         const neufSeul = dpe.neufs.length > 0 && !dpe.existants.length;

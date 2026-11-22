@@ -6,7 +6,7 @@ import { Grade, Scale } from './Grade.jsx';
 import { ADEME_DPE_URL } from '../lib/config.js';
 import { fetchAltitude, fetchDVF, fetchPLUZone, fetchRNC } from '../lib/data.js';
 import {
-  IMMEUBLE, bdnbEnergie, bestGrade, frDate, installType, preCoeffGrade, referenceDPE, shortEnergie, syntheseDPE,
+  IMMEUBLE, adresseDe, bdnbEnergie, estMaison, bestGrade, frDate, installType, preCoeffGrade, referenceDPE, shortEnergie, syntheseDPE,
   splitAddress, summary, usageLabel, zoneClimatique,
 } from '../lib/dpe.js';
 
@@ -59,8 +59,9 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
   const [l1, l2] = splitAddress(label);
   const dpeOk = dpe.status === 'ok';
   const ex = dpe.existants || [], ne = dpe.neufs || [];
-  const sum = dpeOk ? summary(ex, ne) : null;
-  const grade = dpeOk ? bestGrade(ex, ne) : null;
+  const syn = dpeOk ? syntheseDPE(ex, ne, b?.banCherche) : null;
+  const sum = syn ? (syn.mode === 'immeuble' ? summary(ex, ne) : summary(syn.base)) : null;
+  const grade = syn?.grade || null;
   const ref = dpeOk ? referenceDPE(ex, ne) : null;
   const nbDpe = ex.length + ne.length;
   const [alt, setAlt] = useState({ key: null, z: null });
@@ -106,11 +107,11 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {tab === 'batiment' && (
           <>
-            <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
+            <BatimentTab {...{ building, bdnb, dpe, dpeOk, syn, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
             {niveau === 'pro' && <ReperesIci list={reperes} ll={place.lngLat} batId={b?.batId} onRepere={onRepere} />}
           </>
         )}
-        {tab === 'dpe' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="Le détail des DPE du bâtiment" /> : <DpeTab dpe={dpe} />)}
+        {tab === 'dpe' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="Le détail des DPE du bâtiment" /> : <DpeTab dpe={dpe} cible={b?.banCherche} />)}
         {tab === 'parcelle' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="La parcelle, la zone du PLU, la copropriété et les ventes" /> : <ParcelleTab place={place} building={building} />)}
       </div>
       </>}
@@ -177,8 +178,7 @@ function SiteFacts({ site }) {
 }
 
 // À droite de l'échelle : un DPE précis (sa date, ses kWh, son GES) ou la moyenne de plusieurs DPE
-function DpeCote({ dpe }) {
-  const syn = syntheseDPE(dpe.existants || [], dpe.neufs || []);
+function DpeCote({ syn }) {
   if (!syn) return null;
   const fort = v => <strong style={{ color: 'var(--ink)' }}>{v}</strong>;
   if (syn.mode === 'moyenne') {
@@ -187,6 +187,7 @@ function DpeCote({ dpe }) {
         <span>Moyenne de {syn.n} DPE</span>
         {syn.kwh != null && <span>{fort(syn.kwh)} kWh/m²/an en moyenne</span>}
         {syn.ges && <span>GES moyen {fort(syn.ges)}</span>}
+        {syn.ecartes > 0 && <span>DPE d’appartement seuls</span>}
       </div>
     );
   }
@@ -196,11 +197,12 @@ function DpeCote({ dpe }) {
       <span>{syn.mode === 'immeuble' ? 'DPE de l’immeuble' : 'DPE'} du {frDate(r.date_reception_dpe)}</span>
       {r.conso_5_usages_par_m2_ep && <span>{fort(Math.round(r.conso_5_usages_par_m2_ep))} kWh/m²/an</span>}
       {r.etiquette_ges && <span>GES {fort(r.etiquette_ges)}</span>}
+      {syn.ecartes > 0 && <span>DPE d’appartement seul</span>}
     </div>
   );
 }
 
-function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }) {
+function BatimentTab({ building, bdnb, dpe, dpeOk, syn, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }) {
   if (building.status === 'ok' && !bdnb) {
     return (
       <>
@@ -220,10 +222,21 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
         {dpeOk && grade && (
           <div className="dpe-line">
             <Scale active={grade} />
-            <DpeCote dpe={dpe} />
+            <DpeCote syn={syn} />
           </div>
         )}
-        {dpeOk && !grade && (
+        {dpeOk && syn?.mode === 'maisons' && (
+          <div className="small muted"><strong style={{ color: 'var(--ink)' }}>{syn.maisons} maisons, {syn.n} DPE.</strong> Ce bâtiment regroupe plusieurs maisons à des adresses différentes :
+            pas d’étiquette unique. Cherchez l’adresse exacte pour voir le DPE de la maison, ou <button className="linklike" onClick={() => setTab('dpe')}>voir les DPE par adresse</button>.</div>
+        )}
+        {dpeOk && syn?.mode === 'aucun-ici' && (
+          <div className="small muted"><strong style={{ color: 'var(--ink)' }}>Aucun DPE publié pour cette adresse.</strong> Le bâtiment compte {syn.n} DPE à d’autres adresses
+            (maisons mitoyennes) : <button className="linklike" onClick={() => setTab('dpe')}>les voir</button>.</div>
+        )}
+        {dpeOk && syn?.ecartes > 0 && (
+          <div className="small muted">{syn.ecartes === 1 ? '1 DPE « maison » écarté' : `${syn.ecartes} DPE « maison » écartés`} : l’adresse compte aussi des DPE d’appartement (maison divisée en logements ?).</div>
+        )}
+        {dpeOk && !grade && !['maisons', 'aucun-ici'].includes(syn?.mode) && (
           <div className="small muted">Aucun DPE publié par l’ADEME pour ce bâtiment.
             {tileGrade && <> La couleur sur la carte (étiquette {tileGrade}) vient de la BDNB et peut correspondre à un DPE plus ancien.</>}</div>
         )}
@@ -275,7 +288,26 @@ function DpeRow({ r, neuf }) {
   );
 }
 
-function DpeTab({ dpe }) {
+// Regroupe les DPE de logement : par adresse (maisons mitoyennes), puis appartements / maison
+// quand une même adresse mélange les deux (maison divisée). null si un seul groupe.
+function groupesDPE(logs, cible) {
+  const parAdr = new Map();
+  logs.forEach(r => { const k = adresseDe(r); if (!parAdr.has(k)) parAdr.set(k, []); parAdr.get(k).push(r); });
+  const multi = parAdr.size > 1;
+  const out = [];
+  [...parAdr.entries()].sort(([a], [b]) => (b === cible) - (a === cible)).forEach(([k, rows]) => {
+    const adr = splitAddress((rows[0].adresse_brut || '').split('\n')[0])[0] || 'Adresse non précisée';
+    const ap = rows.filter(r => !estMaison(r)), ma = rows.filter(estMaison);
+    const ici = k === cible ? ' (adresse cherchée)' : '';
+    if (ap.length && ma.length) {
+      out.push({ cle: `${k}a`, titre: `${multi ? `${adr}${ici} · ` : ''}Appartements`, note: `${ap.length} DPE`, rows: ap });
+      out.push({ cle: `${k}m`, titre: `${multi ? `${adr}${ici} · ` : ''}DPE « maison »`, note: `${ma.length} · non pris en compte dans l’étiquette`, rows: ma });
+    } else out.push({ cle: k, titre: multi ? `${adr}${ici}` : (ap.length ? 'Appartements' : 'Maison'), note: `${rows.length} DPE`, rows });
+  });
+  return out.length > 1 ? out : null;
+}
+
+function DpeTab({ dpe, cible }) {
   const [all, setAll] = useState(false);
   if (dpe.status === 'loading' || dpe.status === 'idle') return <Loading text="Recherche des DPE auprès de l’ADEME…" />;
   if (dpe.status === 'error') return <div className="empty glass-in">DPE indisponibles pour le moment (ADEME). Réessayez dans un instant.</div>;
@@ -291,6 +323,7 @@ function DpeTab({ dpe }) {
     );
   }
   const shown = all ? logs : logs.slice(0, 10);
+  const groupes = groupesDPE(logs, cible);
   const counts = {};
   logs.forEach(r => { const o = preCoeffGrade(r); const k = `${o || ''}>${r.etiquette_dpe}`; counts[k] = (counts[k] || 0) + 1; });
   return (
@@ -314,8 +347,15 @@ function DpeTab({ dpe }) {
         <>
           <div className="section-title">Logement · {logs.length} DPE</div>
           <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>{Object.keys(counts).sort((a, b) => a.split('>')[1].localeCompare(b.split('>')[1]) || a.localeCompare(b)).map(k => { const [o, g] = k.split('>'); return <Grade key={k} g={g} from={o || undefined} size="mini" count={counts[k]} />; })}</div>
-          <div className="list">{shown.map(r => <DpeRow key={r.numero_dpe} r={r} />)}</div>
-          {logs.length > 10 && !all && <button className="btn ghost" onClick={() => setAll(true)}>Afficher les {logs.length - 10} autres</button>}
+          {groupes ? groupes.map(g => (
+            <div key={g.cle} className="dpe-groupe">
+              <div className="small"><strong>{g.titre}</strong>{g.note && <span className="muted"> · {g.note}</span>}</div>
+              <div className="list">{g.rows.map(r => <DpeRow key={r.numero_dpe} r={r} />)}</div>
+            </div>
+          )) : <>
+            <div className="list">{shown.map(r => <DpeRow key={r.numero_dpe} r={r} />)}</div>
+            {logs.length > 10 && !all && <button className="btn ghost" onClick={() => setAll(true)}>Afficher les {logs.length - 10} autres</button>}
+          </>}
         </>
       )}
       {neufs.length > 0 && (

@@ -146,6 +146,7 @@ export async function resolveBuilding({ lat, lng, feature, bldGroupId, isClick }
   return {
     bdnb, cadastre, idu, rnc,
     batId: bdnb?.batiment_groupe_id || null,
+    banCherche: searchedBanId, // adresse saisie (null pour un clic)
     // DPE : uniquement les adresses que la BDNB rattache au bâtiment (ou l'adresse saisie elle-même)
     banIds: banIds.length ? banIds : (!isClick && props.id ? [props.id] : []),
   };
@@ -153,7 +154,7 @@ export async function resolveBuilding({ lat, lng, feature, bldGroupId, isClick }
 
 // ── DPE (ADEME) ──
 // Champs communs aux deux jeux ADEME ; les champs en plus ne sont demandés qu'au jeu des logements existants
-const SEL = 'numero_dpe,date_reception_dpe,etiquette_dpe,surface_habitable_logement,surface_habitable_immeuble,nombre_appartement,methode_application_dpe,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction,conso_5_usages_par_m2_ep';
+const SEL = 'numero_dpe,identifiant_ban,date_reception_dpe,etiquette_dpe,surface_habitable_logement,surface_habitable_immeuble,nombre_appartement,methode_application_dpe,type_energie_principale_chauffage,type_energie_principale_ecs,type_installation_chauffage_n1,type_installation_ecs_n1,adresse_brut,code_postal_ban,annee_construction,periode_construction,conso_5_usages_par_m2_ep';
 const SEL_EXISTANT = SEL + ',etiquette_ges,emission_ges_5_usages_par_m2,complement_adresse_logement';
 
 async function ademeGet(url) {
