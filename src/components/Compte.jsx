@@ -19,7 +19,7 @@ export default function Compte({ session, profil, onClose }) {
   return (
     <div className="dropdown compte glass" role="dialog" aria-label="Mon compte">
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-        <h2 style={{ margin: 0 }}>Mon compte</h2>
+        <h2 style={{ margin: 0 }}>{session ? 'Mon compte' : 'Se connecter'}</h2>
         <button className="icon-btn" aria-label="Fermer" onClick={onClose}><Icon name="x" size={18} /></button>
       </div>
       {!sb && <p className="small muted">Les comptes ne sont pas encore disponibles.</p>}
@@ -32,15 +32,15 @@ export default function Compte({ session, profil, onClose }) {
       )}
       {sb && !session && etat !== 'envoye' && (
         <form onSubmit={envoyer} className="list">
-          <p className="small muted" style={{ margin: 0 }}>Recevez un lien de connexion par e-mail.</p>
+          <p className="small muted" style={{ margin: 0 }}>Saisissez votre adresse e-mail : vous recevrez un lien de connexion. Déjà inscrit ? Le lien ouvre votre compte, sur n'importe quel appareil.</p>
           <input className="rep-name" type="email" autoComplete="email" inputMode="email" placeholder="votre@adresse.fr"
             value={email} onChange={e => { setEmail(e.target.value); if (etat?.erreur) setEtat(null); }} aria-label="Adresse e-mail" />
           {etat?.erreur && <p className="small" style={{ color: 'var(--danger, #B42318)', margin: 0 }}>{etat.erreur}</p>}
-          <button className="btn primary" type="submit" disabled={etat === 'envoi'}>{etat === 'envoi' ? 'Envoi…' : 'Recevoir le lien'}</button>
+          <button className="btn primary" type="submit" disabled={etat === 'envoi'}>{etat === 'envoi' ? 'Envoi…' : 'Recevoir le lien de connexion'}</button>
         </form>
       )}
       {sb && !session && etat === 'envoye' && (
-        <p className="small">Lien envoyé à <strong>{email.trim()}</strong>. Ouvrez-le sur cet appareil pour vous connecter (pensez aux indésirables).</p>
+        <p className="small">Lien envoyé à <strong>{email.trim()}</strong>. Ouvrez-le dans ce navigateur pour vous connecter (pensez aux indésirables).</p>
       )}
     </div>
   );
