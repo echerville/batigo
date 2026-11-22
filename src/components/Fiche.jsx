@@ -253,11 +253,11 @@ function DpeTab({ dpe }) {
   );
 }
 
-// Zone du PLU : le code n'est affiché qu'une fois, sans répétition dans le libellé
+// Zone du PLU : libellé complet seul ; le code court n'est affiché que s'il n'y a pas de libellé complet
 function PluCard({ place }) {
   const plu = useLazy(true, place.key, () => fetchPLUZone(place.lngLat[1], place.lngLat[0]));
   const d = plu.data;
-  const doublon = d?.libelle && d?.libelong && d.libelong.toLowerCase().includes(String(d.libelle).toLowerCase());
+  const doublon = !!(d?.libelong); // le libellé complet suffit : le code seul n'est pas affiché
   return (
     <div className="card glass-in">
       <div className="card-title">Zone du PLU</div>
