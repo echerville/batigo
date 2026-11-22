@@ -49,7 +49,7 @@ function useLazy(enabled, key, loader) {
   return s.key === key ? s : { status: enabled ? 'loading' : 'idle' };
 }
 
-export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile, niveau, onCompte, reperes, onRepere }) {
+export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile, niveau, onCompte, reperes, onRepere, onPdf }) {
   const [tab, setTab] = useState('batiment');
   useEffect(() => { setTab('batiment'); }, [place.key]);
 
@@ -87,6 +87,11 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
         {l2 && <div className="addr-sub">{l2}</div>}
       </div>
       {onClose && !mobile && <button className="icon-btn fiche-close" onClick={onClose} aria-label="Fermer la fiche"><Icon name="x" /></button>}
+      {onPdf && building.status === 'ok' && (
+        <button className={`btn ghost fiche-pdf${mobile ? ' mobile' : ''}`} onClick={onPdf} title="Exporter la fiche en PDF">
+          <Icon name="download" size={16} /> PDF{niveau !== 'pro' && <span className="pdf-pro">Pro</span>}
+        </button>
+      )}
 
 
       {building.status === 'limite' ? <Limite info={building.info} niveau={niveau} onCompte={onCompte} /> : <>

@@ -367,6 +367,17 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
     },
 
     // Bâtiment sélectionné : contour noir + couleur du DPE ADEME vérifié (gardée pendant la session)
+    // Image de la carte telle qu'affichée (JPEG), ou null si impossible (tuiles d'un autre site, etc.)
+    capture() {
+      return new Promise(res => {
+        const t = setTimeout(() => res(null), 3000);
+        map.once('render', () => {
+          clearTimeout(t);
+          try { res(map.getCanvas().toDataURL('image/jpeg', 0.85)); } catch { res(null); }
+        });
+        map.triggerRepaint();
+      });
+    },
     // Identifiant BDNB du bâtiment sous un point (couche DPE, si le bâtiment y figure), sinon null
     batimentA(ll) {
       try {

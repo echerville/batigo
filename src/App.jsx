@@ -9,13 +9,14 @@ import Fiche from './components/Fiche.jsx';
 import Reperes from './components/Reperes.jsx';
 import MesDpe from './components/MesDpe.jsx';
 import Compte from './components/Compte.jsx';
+import Rapport from './components/Rapport.jsx';
 import { lireProfil, sb } from './lib/compte.js';
 import { envoyerDiff, fusionner, lireTout, snapshotDe } from './lib/sync.js';
 import { enrich, loadMesDpe, merge, readFile, saveMesDpe } from './lib/mesdpe.js';
-import { DEFAULT_COLOR, exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
+import { DEFAULT_COLOR, exportReperes, loadReperes, newId, reperesProches, saveReperes } from './lib/reperes.js';
 import { Grade, Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
-import { LimiteAtteinte, fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
+import { LimiteAtteinte, fetchAltitude, fetchDVF, fetchPLUZone, fetchRNC, fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
 import { BASEMAPS, OVERLAYS } from './lib/config.js';
 
 const mobile = !!window.SCOPE_MOBILE;
@@ -53,7 +54,8 @@ export default function App() {
   const [dpeBusy, setDpeBusy] = useState(null);
   const [session, setSession] = useState(null);
   const [profil, setProfil] = useState(null);
-  const [recup, setRecup] = useState(false); // retour d'un e-mail « mot de passe oublié »
+  const [recup, setRecup] = useState(false);
+  const [rapport, setRapport] = useState(null); // données du PDF en cours // retour d'un e-mail « mot de passe oublié »
   // Niveau d'accès : anonyme (sans compte), gratuit ou pro. Sans service de comptes : tout est ouvert.
   const niveau = !sb ? 'pro' : !session ? 'anonyme' : (profil?.niveau || 'gratuit');
   const niveauRef = useRef(niveau);
@@ -318,7 +320,7 @@ export default function App() {
 
   // Fiche commune PC / mobile
   const fiche = place && (
-    <Fiche place={place} building={building} dpe={dpe} tileGrade={tileGrade} mobile={mobile} niveau={niveau} onCompte={() => setPanel('compte')} reperes={reperes} onRepere={r => { setEditing(r); setPanel('reperes'); }}
+    <Fiche place={place} building={building} dpe={dpe} tileGrade={tileGrade} mobile={mobile} niveau={niveau} onCompte={() => setPanel('compte')} reperes={reperes} onRepere={r => { setEditing(r); setPanel('reperes'); }} onPdf={exporterPdf}
       onClose={closeFiche} onStreetview={openStreet}
       onShowLayer={id => { toggleOverlay(id, true); if (mobile) setSheet('peek'); say('Couche affichée sur la carte', 2000); }} />
   );
@@ -345,6 +347,28 @@ export default function App() {
   }, [session]);
 
   const demanderCompte = useCallback(msg => { say(msg, 3500); setPanel('compte'); }, [say]);
+  // Export PDF de la fiche (Pro) : on rassemble toutes les données, puis l'impression du navigateur
+  async function exporterPdf() {
+    if (niveauRef.current !== 'pro') { say('L’export PDF est réservé à la formule Pro.', 3500); if (niveauRef.current === 'anonyme') setPanel('compte'); return; }
+    if (!place || building.status !== 'ok') return;
+    say('Préparation du PDF…');
+    const b = building.data, [lng, lat] = place.lngLat;
+    const sauf = p => p.catch(() => null);
+    const [plu, rnc, dvf, alt, carte] = await Promise.all([
+      sauf(fetchPLUZone(lat, lng)), b?.rnc ? sauf(fetchRNC(b.rnc)) : null, b?.idu ? sauf(fetchDVF(b.idu)) : null,
+      sauf(fetchAltitude(lng, lat)), api.current.capture(),
+    ]);
+    const quand = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    setRapport({ place, b, dpe: dpe.status === 'ok' ? dpe : null, plu, rnc, dvf, alt, carte, quand, reperes: reperesProches(reperes, place.lngLat, b?.batId) });
+    say(null);
+  }
+  useEffect(() => {
+    if (!rapport) return undefined;
+    const fin = () => setRapport(null);
+    window.addEventListener('afterprint', fin, { once: true });
+    const t = setTimeout(() => window.print(), 300); // laisse le temps aux images de s'afficher
+    return () => { clearTimeout(t); window.removeEventListener('afterprint', fin); };
+  }, [rapport]);
   const reservePro = () => (niveau === 'anonyme' ? demanderCompte('Mes repères et Mes DPE : réservés à la formule Pro. Connectez-vous.') : say('Mes repères et Mes DPE : réservés à la formule Pro.', 3500));
 
   // ── Synchronisation de Mes repères et Mes DPE avec le compte ──
@@ -490,6 +514,7 @@ export default function App() {
         </div>
       )}
 
+      <Rapport data={rapport} />
       {panel === 'compte' && <Compte session={session} profil={profil} recuperation={recup} onRecupere={() => setRecup(false)} onClose={() => { setPanel(null); setRecup(false); }} />}
 
       {/* Fiche ou accueil */}
