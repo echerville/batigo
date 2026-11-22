@@ -257,7 +257,14 @@ function DpeTab({ dpe }) {
 function PluCard({ place }) {
   const plu = useLazy(true, place.key, () => fetchPLUZone(place.lngLat[1], place.lngLat[0]));
   const d = plu.data;
-  const doublon = !!(d?.libelong); // le libellé complet suffit : le code seul n'est pas affiché
+  // Le code (ex. « U2 a ») s'affiche une seule fois, en tête ; le libellé suit sans le répéter
+  const code = d?.libelle || '';
+  const label = (() => {
+    const t = d?.libelong || '';
+    const m = t.match(/^([^:]{1,16}):\s*(.+)$/);
+    const head = m ? m[1].trim().split(/\s+/)[0].toLowerCase() : '';
+    return m && code && head === code.trim().split(/\s+/)[0].toLowerCase() ? m[2] : t;
+  })();
   return (
     <div className="card glass-in">
       <div className="card-title">Zone du PLU</div>
@@ -265,7 +272,7 @@ function PluCard({ place }) {
       {plu.status === 'error' && <div className="small muted">Géoportail de l’urbanisme indisponible pour le moment.</div>}
       {plu.status === 'ok' && (d ? (
         <>
-          <div className="row">{d.libelle && !doublon && <span className="tag info" style={{ fontSize: 14 }}>{d.libelle}</span>}{d.libelong && <span className="small">{d.libelong}</span>}{!d.libelong && !d.libelle && <span className="small">?</span>}</div>
+          <div className="row">{code && <span className="tag info" style={{ fontSize: 14 }}>{code}</span>}{label && <span className="small">{label}</span>}{!code && !label && <span className="small">?</span>}</div>
           {d.partition && <div className="small muted">Document {d.partition}{d.nom_commune ? ` · ${d.nom_commune}` : ''}</div>}
         </>
       ) : <div className="small muted">Aucune zone de PLU publiée à cet endroit (commune au RNU ou document non numérisé).</div>)}
