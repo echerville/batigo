@@ -354,20 +354,26 @@ export default function App() {
     say('Préparation du PDF…');
     const b = building.data, [lng, lat] = place.lngLat;
     const sauf = p => p.catch(() => null);
-    const [plu, rnc, dvf, alt, carte] = await Promise.all([
+    const [plu, rnc, dvf, alt, rue, carte] = await Promise.all([
       sauf(fetchPLUZone(lat, lng)), b?.rnc ? sauf(fetchRNC(b.rnc)) : null, b?.idu ? sauf(fetchDVF(b.idu)) : null,
-      sauf(fetchAltitude(lng, lat)), api.current.capture([lng, lat]),
+      sauf(fetchAltitude(lng, lat)), sauf(googleStreetView(lng, lat)), api.current.capture([lng, lat]),
     ]);
     const quand = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    setRapport({ place, b, dpe: dpe.status === 'ok' ? dpe : null, plu, rnc, dvf, alt, carte, quand, reperes: reperesProches(reperes, place.lngLat, b?.batId) });
+    setRapport({ place, b, dpe: dpe.status === 'ok' ? dpe : null, plu, rnc, dvf, alt, carte, rue: rue?.found ? rue : null, quand, reperes: reperesProches(reperes, place.lngLat, b?.batId) });
     say(null);
   }
   useEffect(() => {
     if (!rapport) return undefined;
     const fin = () => setRapport(null);
     window.addEventListener('afterprint', fin, { once: true });
-    const t = setTimeout(() => window.print(), 300); // laisse le temps aux images de s'afficher
-    return () => { clearTimeout(t); window.removeEventListener('afterprint', fin); };
+    let annule = false;
+    // On attend que les images (plan, vue de rue) soient chargées, 6 s au plus
+    const imgs = [...document.querySelectorAll('.rapport img')];
+    Promise.race([
+      Promise.all(imgs.map(i => (i.complete ? null : new Promise(ok => { i.onload = ok; i.onerror = ok; })))),
+      new Promise(ok => setTimeout(ok, 6000)),
+    ]).then(() => { if (!annule) window.print(); });
+    return () => { annule = true; window.removeEventListener('afterprint', fin); };
   }, [rapport]);
   const reservePro = () => (niveau === 'anonyme' ? demanderCompte('Mes repères et Mes DPE : réservés à la formule Pro. Connectez-vous.') : say('Mes repères et Mes DPE : réservés à la formule Pro.', 3500));
 

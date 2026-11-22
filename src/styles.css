@@ -390,7 +390,10 @@ a:hover { color: var(--action-dark); }
   .rp-marque { font-weight: 800; color: #2BB573; font-size: 11pt; letter-spacing: .02em; }
   .rp-sous { color: #5C6370; }
   .rp-date { text-align: right; color: #5C6370; font-size: 9pt; white-space: nowrap; }
-  .rp-carte { width: 100%; max-height: 80mm; object-fit: cover; border-radius: 6px; margin-top: 10px; }
+  .rp-images { display: flex; gap: 4mm; margin-top: 10px; }
+  .rp-images figure { flex: 1; margin: 0; }
+  .rp-images img { width: 100%; height: 55mm; object-fit: cover; border-radius: 5px; display: block; }
+  .rp-images figcaption { font-size: 7.5pt; color: #5C6370; margin-top: 2px; }
   .rp-dpe { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
   .rp-lettre-wrap { display: inline-flex; align-items: center; gap: 3px; }
   .rp-lettre { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; border-radius: 4px; font-weight: 800; font-size: 10pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

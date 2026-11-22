@@ -24,7 +24,7 @@ function Ligne({ k, v }) { return <tr><th>{k}</th><td>{val(v)}</td></tr>; }
 
 export default function Rapport({ data }) {
   if (!data) return null;
-  const { place, b, dpe, plu, rnc, dvf, alt, carte, reperes, quand } = data;
+  const { place, b, dpe, plu, rnc, dvf, alt, carte, rue, reperes, quand } = data;
   const bdnb = b?.bdnb;
   const label = (place.fromClick && bdnb?.libelle_adr_principale_ban) || place.label;
   const [l1, l2] = splitAddress(label);
@@ -58,7 +58,12 @@ export default function Rapport({ data }) {
         <div className="rp-date">Fiche du bien<br />{quand}</div>
       </header>
 
-      {carte && <img className="rp-carte" src={carte} alt="" />}
+      {(carte || rue) && (
+        <div className="rp-images">
+          {carte && <figure><img src={carte} alt="" /><figcaption>Plan</figcaption></figure>}
+          {rue && <figure><img src={rue.preview} alt="" referrerPolicy="no-referrer-when-downgrade" /><figcaption>Vue de rue · Google{rue.date ? ` · ${rue.date.split('-').reverse().join('/')}` : ''}</figcaption></figure>}
+        </div>
+      )}
 
       <section>
         <h2>Bâtiment</h2>

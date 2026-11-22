@@ -368,28 +368,44 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
 
     // Bâtiment sélectionné : contour noir + couleur du DPE ADEME vérifié (gardée pendant la session)
     // Image de la carte telle qu'affichée (JPEG), ou null si impossible (tuiles d'un autre site, etc.)
-    // `ll` : position du bien, marquée d'un repère sur l'image
-    capture(ll) {
-      return new Promise(res => {
-        const t = setTimeout(() => res(null), 3000);
+    // Image de la carte pour le PDF : zoomée sur le bien (`ll`), sans les données privées (Mes repères,
+    // Mes DPE), recadrée en 4:3 autour du bien et marquée d'un point. La vue de la carte est rétablie après.
+    async capture(ll, zoom = 19) {
+      const PRIVE = ['rep-fill', 'rep-line', 'mesdpe-dot', 'mesdpe-letter'].filter(id => map.getLayer(id));
+      const avant = PRIVE.map(id => map.getLayoutProperty(id, 'visibility') || 'visible');
+      const cam = { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+      const marqueurs = [...(state.repMarkers || [])];
+      PRIVE.forEach(id => map.setLayoutProperty(id, 'visibility', 'none'));
+      if (ll) map.jumpTo({ center: ll, zoom, bearing: 0, pitch: 0 });
+      await new Promise(ok => { const t = setTimeout(ok, 5000); map.once('idle', () => { clearTimeout(t); ok(); }); });
+      const image = await new Promise(res => {
         map.once('render', () => {
-          clearTimeout(t);
           try {
             const src = map.getCanvas();
-            if (!ll) { res(src.toDataURL('image/jpeg', 0.85)); return; }
+            const k = src.width / src.clientWidth;
+            const p = ll ? map.project(ll) : { x: src.clientWidth / 2, y: src.clientHeight / 2 };
+            const cx = p.x * k, cy = p.y * k;
+            let w = Math.min(src.width, src.height * 4 / 3), h = w * 3 / 4;
+            w *= 0.8; h *= 0.8;
+            const x0 = Math.max(0, Math.min(src.width - w, cx - w / 2)), y0 = Math.max(0, Math.min(src.height - h, cy - h / 2));
             const c = document.createElement('canvas');
-            c.width = src.width; c.height = src.height;
+            c.width = Math.round(w); c.height = Math.round(h);
             const g = c.getContext('2d');
-            g.drawImage(src, 0, 0);
-            const k = src.width / src.clientWidth, p = map.project(ll), x = p.x * k, y = p.y * k, r = 9 * k;
-            g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = '#17804D'; g.fill();
-            g.lineWidth = 3 * k; g.strokeStyle = '#fff'; g.stroke();
-            g.beginPath(); g.arc(x, y, r * 2.2, 0, Math.PI * 2); g.lineWidth = 2 * k; g.strokeStyle = 'rgba(23,128,77,.55)'; g.stroke();
+            g.drawImage(src, x0, y0, w, h, 0, 0, w, h);
+            if (ll) {
+              const x = cx - x0, y = cy - y0, r = 9 * k;
+              g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = '#17804D'; g.fill();
+              g.lineWidth = 3 * k; g.strokeStyle = '#fff'; g.stroke();
+            }
             res(c.toDataURL('image/jpeg', 0.85));
           } catch { res(null); }
         });
         map.triggerRepaint();
       });
+      PRIVE.forEach((id, i) => map.setLayoutProperty(id, 'visibility', avant[i]));
+      map.jumpTo(cam);
+      void marqueurs; // les repères ponctuels sont des éléments HTML : jamais dans l'image
+      return image;
     },
     // Identifiant BDNB du bâtiment sous un point (couche DPE, si le bâtiment y figure), sinon null
     batimentA(ll) {
