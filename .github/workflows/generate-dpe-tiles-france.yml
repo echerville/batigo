@@ -66,7 +66,7 @@ jobs:
           # La Corse peut être nommée 2A ou 2a selon les éditions
           DL=$(echo "$D" | tr 'AB' 'ab')
           wget -q "$(url_for "$D")" -O bdnb.zip || wget -q "$(url_for "$DL")" -O bdnb.zip
-          python3 scripts/extract_dpe_44.py bdnb.zip dpe.geojson 2> extract.log; tail -3 extract.log
+          python3 scripts/extract_dpe_44.py bdnb.zip dpe.geojson 2> extract.log; tail -4 extract.log
           rm bdnb.zip
           mkdir -p out
           tippecanoe -q -o out/dpe-$D.mbtiles --minimum-zoom=12 --maximum-zoom=18 --layer=dpe \

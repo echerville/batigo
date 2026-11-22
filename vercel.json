@@ -1,6 +1,5 @@
 {
   "name": "scope",
-  "outputDirectory": ".",
   "regions": [
     "cdg1"
   ],
@@ -31,5 +30,8 @@
         }
       ]
     }
-  ]
+  ],
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
 }
