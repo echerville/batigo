@@ -244,7 +244,8 @@ function DpeTab({ dpe }) {
       )}
       {neufs.length > 0 && (
         <>
-          <div className="section-title">Logements neufs · {neufs.length} DPE</div>
+          <div className="section-title">Logement neuf · {neufs.length} DPE</div>
+          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>{Object.entries(neufs.reduce((c, r) => { c[r.etiquette_dpe] = (c[r.etiquette_dpe] || 0) + 1; return c; }, {})).sort().map(([g, n]) => <Grade key={g} g={g} size="mini" hatch count={n} />)}</div>
           <div className="list">{neufs.slice(0, 20).map(r => <DpeRow key={r.numero_dpe} r={r} neuf />)}</div>
         </>
       )}

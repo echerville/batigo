@@ -98,26 +98,27 @@ async function ademe(dataset, nums) {
   return null;
 }
 const NEUF = 'g3cgx7jb3cmys5voxz1mrm22';
+const TERT = 'j9ol0fwjqckyf49vr29nknbu'; // DPE tertiaire (depuis juillet 2021) : n° du type 2618T0063102M
+export const isTert = n => /^\d{4}T/.test(n || '');
 
 // Complète chaque DPE importé. Un DPE absent de l'open data reste « en attente » (pas encore publié).
 export async function enrich(items, onProgress) {
-  const byNum = new Map();
-  const nums = items.filter(x => !x.n.startsWith('T')).map(x => x.n); // « T… » : tertiaire, à part
+  const byNum = new Map(), ds_of = new Map();
+  const nums = items.map(x => x.n);
   const todo = nums.slice();
   let done = 0, failed = false;
-  for (const ds of ['dpe03existant', NEUF]) {
+  for (const ds of ['dpe03existant', NEUF, TERT]) {
     const miss = ds === 'dpe03existant' ? todo : todo.filter(n => !byNum.has(n));
     for (let i = 0; i < miss.length; i += 30) {
       const res = await ademe(ds, miss.slice(i, i + 30));
       if (res === null) failed = true;
-      for (const r of res || []) byNum.set(r.numero_dpe, r);
+      for (const r of res || []) { byNum.set(r.numero_dpe, r); ds_of.set(r.numero_dpe, ds); }
       if (ds === 'dpe03existant') { done = Math.min(nums.length, i + 30); onProgress?.(done, nums.length); }
     }
   }
   const out = items.map(x => {
     const r = byNum.get(x.n);
     const base = { n: x.n, statut: x.statut || '', date: x.date || '', commune: x.commune || '' };
-    if (x.n.startsWith('T')) return { ...base, etat: 'tertiaire' };
     if (!r) {
       if (failed) return { ...base, etat: 'erreur' };
       // Un DPE remplacé n'est plus publié en open data : ce n'est pas une attente
@@ -129,7 +130,7 @@ export async function enrich(items, onProgress) {
     const [lat, lng] = String(r._geopoint || '').split(',').map(Number);
     return {
       ...base,
-      etat: 'ok',
+      etat: 'ok', tert: ds_of.get(x.n) === TERT,
       date: r.date_etablissement_dpe || base.date,
       commune: r.nom_commune_ban || base.commune,
       cp: r.code_postal_ban || '', insee: r.code_insee_ban || '',
