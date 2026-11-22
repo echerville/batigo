@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@protomaps/basemaps": "^5.7.2",
+    "@supabase/supabase-js": "2.119.2",
     "@turf/area": "^7.4.0",
     "@turf/boolean-point-in-polygon": "^7.4.0",
     "@turf/centroid": "^7.4.0",

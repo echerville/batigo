@@ -8,6 +8,8 @@ import LayerIcon from './components/LayerIcon.jsx';
 import Fiche from './components/Fiche.jsx';
 import Reperes from './components/Reperes.jsx';
 import MesDpe from './components/MesDpe.jsx';
+import Compte from './components/Compte.jsx';
+import { lireProfil, sb } from './lib/compte.js';
 import { enrich, loadMesDpe, merge, readFile, saveMesDpe } from './lib/mesdpe.js';
 import { DEFAULT_COLOR, exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
 import { Grade, Scale } from './components/Grade.jsx';
@@ -48,6 +50,8 @@ export default function App() {
   const [mesDpe, setMesDpe] = useState(loadMesDpe);   // mes DPE (importés, stockés sur l'appareil)
   const [dpeShow, setDpeShow] = useState(() => localStorage.getItem('scope.mesdpe.show') !== '0');
   const [dpeBusy, setDpeBusy] = useState(null);
+  const [session, setSession] = useState(null);
+  const [profil, setProfil] = useState(null);
   const [repShow, setRepShow] = useState(() => localStorage.getItem('scope.reperes.show') !== '0');
   const mesDpeRef = useRef(mesDpe); mesDpeRef.current = mesDpe;
   const zoneMode = useRef(false);
@@ -298,6 +302,26 @@ export default function App() {
       onShowLayer={id => { toggleOverlay(id, true); if (mobile) setSheet('peek'); say('Couche affichée sur la carte', 2000); }} />
   );
 
+  // Session de compte (Supabase) : restaurée au chargement, mise à jour à la connexion/déconnexion
+  useEffect(() => {
+    if (!sb) return undefined;
+    sb.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = sb.auth.onAuthStateChange((ev, s) => {
+      setSession(s);
+      if (ev === 'SIGNED_IN') {
+        say('Connecté', 2000);
+        if (location.hash.includes('access_token')) history.replaceState(null, '', location.pathname + location.search);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [say]);
+  useEffect(() => {
+    let vivant = true;
+    if (session?.user?.id) lireProfil(session.user.id).then(p => { if (vivant) setProfil(p); });
+    else setProfil(null);
+    return () => { vivant = false; };
+  }, [session]);
+
   return (
     <div className={`app${mobile ? ' mobile' : ''}`} style={mobile ? { '--top-h': '120px' } : undefined}>
       <div ref={mapEl} className="map" aria-label="Carte" role="region" />
@@ -312,6 +336,7 @@ export default function App() {
             <button className="pill-btn glass" aria-label="Couches" title="Couches" aria-expanded={panel === 'layers'} onClick={() => togglePanel('layers')}>
               <Icon name="layers" size={20} />{nbOverlays > 0 && <span className="count">{nbOverlays}</span>}
             </button>
+            <button className="pill-btn glass" aria-label={session ? 'Mon compte' : 'Se connecter'} title={session ? session.user.email : 'Se connecter'} aria-pressed={!!session} aria-expanded={panel === 'compte'} onClick={() => togglePanel('compte')}><Icon name="user" size={20} /></button>
             <div className="seg glass" role="group" aria-label="Fond de carte" style={{ '--n': Object.keys(BASEMAPS).length, '--i': Math.max(0, Object.keys(BASEMAPS).indexOf(basemap)) }}>
               {Object.entries(BASEMAPS).map(([k, b]) => (
                 <button key={k} aria-pressed={basemap === k} onClick={() => chooseBasemap(k)}>{b.label}</button>
@@ -396,9 +421,12 @@ export default function App() {
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={toggleMeasure}><Icon name="ruler" /> Mesurer une surface</button>
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => { setPanel(null); openStreet(); }}><Icon name="camera" /> Vue de rue</button>
             <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => { setPanel(null); locate(); }}><Icon name="locate" /> {locating ? 'Arrêter la localisation' : 'Me localiser'}</button>
+            <button className="btn ghost" style={{ justifyContent: 'flex-start' }} onClick={() => setPanel('compte')}><Icon name="user" /> {session ? 'Mon compte' : 'Se connecter'}</button>
           </div>
         </div>
       )}
+
+      {panel === 'compte' && <Compte session={session} profil={profil} onClose={() => setPanel(null)} />}
 
       {/* Fiche ou accueil */}
       {!mobile && place && (
