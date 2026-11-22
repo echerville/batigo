@@ -69,8 +69,10 @@ export function loadModeles() {
 }
 export function saveModeles(list) { try { localStorage.setItem(KEY_M, JSON.stringify(list)); } catch { /* silencieux */ } }
 
-// Repères proches d'un point (fiche du bien) : points à moins de `rayon` mètres,
-// zones qui contiennent le point ou dont un sommet est à moins de `rayon` mètres. Triés par distance.
+// Repères à afficher dans la fiche d'un bien. Repère « propre au bien » : seulement s'il est sur ce
+// bâtiment (même identifiant BDNB), ou à moins de 15 m s'il n'a pas pu être rattaché à un bâtiment.
+// Autres repères (termites, mérule…) : points à moins de `rayon` mètres, zones qui contiennent le point
+// ou dont un sommet est à moins de `rayon` mètres. Triés par distance.
 const distM = ([lng1, lat1], [lng2, lat2]) => {
   const k = Math.PI / 180, x = (lng2 - lng1) * k * Math.cos(((lat1 + lat2) / 2) * k), y = (lat2 - lat1) * k;
   return Math.hypot(x, y) * 6371000;
@@ -83,7 +85,7 @@ const dansZone = ([x, y], ring) => {
   }
   return ins;
 };
-export function reperesProches(list, ll, rayon = 40) {
+export function reperesProches(list, ll, batId = null, rayon = 40) {
   if (!ll) return [];
   return list.map(r => {
     if (r.type === 'zone' && Array.isArray(r.coords) && r.coords.length > 2) {
@@ -91,5 +93,9 @@ export function reperesProches(list, ll, rayon = 40) {
       return { r, d: Math.min(...r.coords.map(c => distM(ll, c))) };
     }
     return { r, d: Array.isArray(r.coords) ? distM(ll, r.coords) : Infinity };
-  }).filter(x => x.d <= rayon).sort((a, b) => a.d - b.d);
+  }).filter(({ r, d }) => {
+    if (!r.exclusif) return d <= rayon;
+    if (r.batId) return !!batId && r.batId === batId;
+    return d <= 15;
+  }).sort((a, b) => a.d - b.d);
 }

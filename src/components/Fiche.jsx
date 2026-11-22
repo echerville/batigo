@@ -102,7 +102,7 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
         {tab === 'batiment' && (
           <>
             <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
-            {niveau === 'pro' && <ReperesIci list={reperes} ll={place.lngLat} onRepere={onRepere} />}
+            {niveau === 'pro' && <ReperesIci list={reperes} ll={place.lngLat} batId={b?.batId} onRepere={onRepere} />}
           </>
         )}
         {tab === 'dpe' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="Le détail des DPE du bâtiment" /> : <DpeTab dpe={dpe} />)}
@@ -116,8 +116,8 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
 }
 
 // Mes repères posés sur ou autour du bien (Pro)
-function ReperesIci({ list, ll, onRepere }) {
-  const proches = reperesProches(list || [], ll);
+function ReperesIci({ list, ll, batId, onRepere }) {
+  const proches = reperesProches(list || [], ll, batId);
   if (!proches.length) return null;
   return (
     <div className="card glass-in">
@@ -127,7 +127,7 @@ function ReperesIci({ list, ll, onRepere }) {
           <button key={r.id} type="button" className="rep-ici" onClick={() => onRepere?.(r)}>
             <RepIcon id={r.icon} color={r.color} size={16} />
             <span className="rep-ici-txt">
-              <strong>{r.name || 'Repère'}</strong>{r.type === 'zone' ? ' · zone' : ''}
+              <strong>{r.name || 'Repère'}</strong>{r.type === 'zone' ? ' · zone' : ''}{r.exclusif ? ' · ce bien' : ''}
               {r.text && <span className="small muted"> — {r.text}</span>}
             </span>
             <span className="small muted">{d === 0 ? 'ici' : `${Math.round(d)} m`}</span>

@@ -14,6 +14,7 @@ function Editor({ value, onSave, onDelete, onCancel }) {
   const [color, setColor] = useState(value.color || DEFAULT_COLOR);
   const [text, setText] = useState(value.text || '');
   const [keep, setKeep] = useState(!value.id);
+  const [exclusif, setExclusif] = useState(!!value.exclusif);
   const [modeles, setModeles] = useState(loadModeles);
   const [err, setErr] = useState(null);
 
@@ -21,11 +22,11 @@ function Editor({ value, onSave, onDelete, onCancel }) {
     const e = checkText(name) || checkText(text);
     if (e) { setErr(e); return; }
     const n = name.trim() || 'Repère';
-    if (keep && !modeles.some(m => m.name === n && m.icon === icon && m.color === color)) {
-      const next = [...modeles, { id: newId(), name: n, icon, color }];
+    if (keep && !modeles.some(m => m.name === n && m.icon === icon && m.color === color && !!m.exclusif === exclusif)) {
+      const next = [...modeles.filter(m => !(m.name === n && m.icon === icon && m.color === color)), { id: newId(), name: n, icon, color, exclusif }];
       saveModeles(next); setModeles(next);
     }
-    onSave({ ...value, name: n, icon, color, text: text.trim() });
+    onSave({ ...value, name: n, icon, color, text: text.trim(), exclusif });
   }
   function removeModele(id) {
     const next = modeles.filter(m => m.id !== id);
@@ -41,7 +42,7 @@ function Editor({ value, onSave, onDelete, onCancel }) {
           <div className="rep-models">
             {modeles.map(m => (
               <span key={m.id} className="rep-model">
-                <button type="button" onClick={() => { setName(m.name); setIcon(m.icon); setColor(m.color); }} aria-label={`Utiliser le modèle ${m.name}`}>
+                <button type="button" onClick={() => { setName(m.name); setIcon(m.icon); setColor(m.color); setExclusif(!!m.exclusif); }} aria-label={`Utiliser le modèle ${m.name}`}>
                   <RepIcon id={m.icon} color={m.color} size={14} /><span>{m.name}</span>
                 </button>
                 <button type="button" className="rep-model-x" onClick={() => removeModele(m.id)} aria-label={`Retirer le modèle ${m.name}`}><Icon name="x" size={12} /></button>
@@ -79,6 +80,7 @@ function Editor({ value, onSave, onDelete, onCancel }) {
         onChange={e => { setText(e.target.value); setErr(null); }} aria-label="Note du repère" />
       <div className="small muted rep-count">{text.length}/{MAX}</div>
 
+      <label className="rep-keep small"><input type="checkbox" checked={exclusif} onChange={e => setExclusif(e.target.checked)} /> Propre à ce bien uniquement <span className="muted">(digicode, clé… : n’apparaît pas dans les fiches des biens voisins)</span></label>
       <label className="rep-keep small"><input type="checkbox" checked={keep} onChange={e => setKeep(e.target.checked)} /> Garder comme modèle</label>
       {err && <div className="rep-err" role="alert">{err}</div>}
       <div className="row rep-actions">

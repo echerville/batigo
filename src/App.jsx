@@ -201,6 +201,11 @@ export default function App() {
   }
   function saveRepere(r) {
     setRepShow(true);
+    // Repère propre au bien : on retient le bâtiment sous le repère (ou sous le centre de la zone)
+    if (r.exclusif) {
+      const at = r.type === 'zone' && r.coords?.length ? [r.coords.reduce((s, c) => s + c[0], 0) / r.coords.length, r.coords.reduce((s, c) => s + c[1], 0) / r.coords.length] : r.coords;
+      r = { ...r, batId: r.batId || api.current?.batimentA(at) || null };
+    } else if (r.batId) { r = { ...r, batId: null }; }
     setReperes(list => (r.id ? list.map(x => (x.id === r.id ? r : x)) : [...list, { ...r, id: newId(), createdAt: new Date().toISOString() }]));
     setEditing(null);
   }

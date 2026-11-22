@@ -367,6 +367,14 @@ export function createMap(container, { onPick, onStatus, onRepere, onMesDpe, mob
     },
 
     // Bâtiment sélectionné : contour noir + couleur du DPE ADEME vérifié (gardée pendant la session)
+    // Identifiant BDNB du bâtiment sous un point (couche DPE, si le bâtiment y figure), sinon null
+    batimentA(ll) {
+      try {
+        if (!map.getLayer('dpe-query') || map.getZoom() < 13) return null;
+        const f = map.queryRenderedFeatures(map.project(ll), { layers: ['dpe-query'] });
+        return f[0]?.properties?.id || null;
+      } catch { return null; }
+    },
     select(batId) {
       state.selBatId = batId;
       api.applySelection(null);
