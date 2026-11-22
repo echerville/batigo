@@ -1,4 +1,5 @@
 const { guard } = require('./_guard');
+const { quota } = require('./_quota');
 
 // Conversion WGS84 (lng/lat) → Lambert-93 (EPSG:2154)
 // Formule simplifiée suffisamment précise pour un bbox de quelques centaines de mètres
@@ -58,8 +59,7 @@ async function byPoint(point, res) {
     const inside = (Array.isArray(data) ? data : [])
       .filter(b => geomContains(b.geom_groupe, p.x, p.y))
       .map(({ geom_groupe, ...rest }) => rest);
-    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=86400');
-    return res.json(inside);
+        return res.json(inside);
   } catch (e) {
     return res.status(502).json({ error: 'Source BDNB indisponible' });
   }
@@ -67,6 +67,7 @@ async function byPoint(point, res) {
 
 module.exports = async function handler(req, res) {
   if (guard(req, res)) return;
+  if (await quota(req, res)) return;
 
   if (req.query.point) return byPoint(req.query.point, res);
 
@@ -95,8 +96,7 @@ module.exports = async function handler(req, res) {
     }
     const data = await response.json();
     // Données publiques qui changent rarement : cache CDN Vercel 1 jour
-    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=86400');
-    res.json(Array.isArray(data) ? data : []);
+        res.json(Array.isArray(data) ? data : []);
   } catch (e) {
     res.status(502).json({ error: 'Source BDNB indisponible' });
   }

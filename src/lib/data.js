@@ -48,12 +48,24 @@ export async function fetchCadastre(lat, lng) {
 }
 
 // ── Bâtiment (BDNB, via /api/bdnb) ──
-async function bdnbBbox(lng, lat, d) {
-  const r = await fetch(`/api/bdnb?bbox=${encodeURIComponent(`${lng - d},${lat - d},${lng + d},${lat + d}`)}`);
+// Chaque appel porte la clé de la fiche (comptée une fois par le serveur) et la session éventuelle.
+export class LimiteAtteinte extends Error {
+  constructor(info) { super('limite'); this.info = info; }
+}
+async function bdnbGet(query, fiche) {
+  const headers = {};
+  try {
+    const { sb } = await import('./compte.js');
+    const tok = sb ? (await sb.auth.getSession()).data.session?.access_token : null;
+    if (tok) headers.Authorization = `Bearer ${tok}`;
+  } catch { /* sans compte */ }
+  const r = await fetch(`/api/bdnb?${query}&fiche=${encodeURIComponent(fiche)}`, { headers });
+  if (r.status === 402) throw new LimiteAtteinte(await r.json().catch(() => ({})));
   if (!r.ok) return [];
   const data = await r.json();
   return Array.isArray(data) ? data : [];
 }
+const bdnbBbox = (lng, lat, d, fiche) => bdnbGet(`bbox=${encodeURIComponent(`${lng - d},${lat - d},${lng + d},${lat + d}`)}`, fiche);
 
 /**
  * Trouve le bâtiment et la parcelle d'une adresse ou d'un clic.
@@ -73,18 +85,19 @@ export async function resolveBuilding({ lat, lng, feature, bldGroupId, isClick }
     return null; // pas de rattachement certain : on n'affiche pas un voisin
   };
 
+  // Clé de la fiche pour le quota : l'adresse saisie, ou le bâtiment / le point cliqué (≈ 10 m)
+  const fiche = searchedBanId || bldGroupId || `${lng.toFixed(4)},${lat.toFixed(4)}`;
   let bdnb = null, cadastre = null;
   try {
     if (isClick) {
       cadastre = await fetchCadastre(lat, lng);
-      if (bldGroupId) bdnb = pickBest(await bdnbBbox(lng, lat, 0.0003).catch(() => []));
+      if (bldGroupId) bdnb = pickBest(await bdnbBbox(lng, lat, 0.0003, fiche));
       if (!bdnb) {
-        const r = await fetch(`/api/bdnb?point=${lng},${lat}`).catch(() => null);
-        const inside = r?.ok ? await r.json() : [];
-        if (Array.isArray(inside) && inside.length) bdnb = inside[0];
+        const inside = await bdnbGet(`point=${lng},${lat}`, fiche);
+        if (inside.length) bdnb = inside[0];
       }
       if (!bdnb && cadastre?.idu && cadastre.confident) {
-        const onParcel = (await bdnbBbox(lng, lat, 0.0005).catch(() => []))
+        const onParcel = (await bdnbBbox(lng, lat, 0.0005, fiche))
           .filter(b => Array.isArray(b.l_parcelle_id) && b.l_parcelle_id.includes(cadastre.idu));
         if (onParcel.length === 1) bdnb = onParcel[0];
       }
@@ -92,7 +105,7 @@ export async function resolveBuilding({ lat, lng, feature, bldGroupId, isClick }
       const [b, c] = await Promise.all([
         (async () => {
           for (const d of [0.0001, 0.0003, 0.0008]) {
-            const found = pickBest(await bdnbBbox(lng, lat, d).catch(() => []));
+            const found = pickBest(await bdnbBbox(lng, lat, d, fiche));
             if (found) return found;
           }
           return null;
@@ -104,7 +117,10 @@ export async function resolveBuilding({ lat, lng, feature, bldGroupId, isClick }
       const parcels = Array.isArray(bdnb?.l_parcelle_id) ? bdnb.l_parcelle_id : [];
       if (parcels.length && !parcels.includes(cadastre?.idu)) cadastre = parcelFromIdu(parcels[0]) || cadastre;
     }
-  } catch { /* rien : fiche sans bâtiment */ }
+  } catch (e) {
+    if (e instanceof LimiteAtteinte) throw e; // quota atteint : la fiche affiche la limite
+    /* sinon : fiche sans bâtiment */
+  }
 
   const mainBan = bdnb?.cle_interop_adr_principale_ban || null;
   const banIds = Array.isArray(bdnb?.l_cle_interop_adr) ? bdnb.l_cle_interop_adr : (mainBan ? [mainBan] : []);

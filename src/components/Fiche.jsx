@@ -47,7 +47,7 @@ function useLazy(enabled, key, loader) {
   return s.key === key ? s : { status: enabled ? 'loading' : 'idle' };
 }
 
-export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile }) {
+export default function Fiche({ place, building, dpe, tileGrade, onStreetview, onClose, onShowLayer, mobile, niveau, onCompte }) {
   const [tab, setTab] = useState('batiment');
   useEffect(() => { setTab('batiment'); }, [place.key]);
 
@@ -87,6 +87,7 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
       {onClose && !mobile && <button className="icon-btn fiche-close" onClick={onClose} aria-label="Fermer la fiche"><Icon name="x" /></button>}
 
 
+      {building.status === 'limite' ? <Limite info={building.info} niveau={niveau} onCompte={onCompte} /> : <>
       <div className="tabs" role="tablist" aria-label="Rubriques de la fiche">
         {TABS.map(([id, name]) => (
           <button key={id} role="tab" id={`tab-${id}`} aria-selected={tab === id} aria-controls={`panel-${id}`} onClick={() => setTab(id)}>
@@ -99,12 +100,35 @@ export default function Fiche({ place, building, dpe, tileGrade, onStreetview, o
         {tab === 'batiment' && (
           <BatimentTab {...{ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, onStreetview, setTab, nbDpe, site }} />
         )}
-        {tab === 'dpe' && <DpeTab dpe={dpe} />}
-        {tab === 'parcelle' && <ParcelleTab place={place} building={building} />}
+        {tab === 'dpe' && (dpe.status === 'reserve' ? <Reserve onCompte={onCompte} quoi="Les DPE du bâtiment" /> : <DpeTab dpe={dpe} />)}
+        {tab === 'parcelle' && (niveau === 'anonyme' ? <Reserve onCompte={onCompte} quoi="La parcelle, la zone du PLU, la copropriété et les ventes" /> : <ParcelleTab place={place} building={building} />)}
       </div>
+      </>}
 
       <InfoTip label="Sources des données">Sources : ADEME, BDNB (CSTB), IGN, DGFiP · consulté le {today}</InfoTip>
     </>
+  );
+}
+
+// Contenu réservé aux comptes
+function Reserve({ quoi, onCompte }) {
+  return (
+    <div className="empty glass-in reserve">
+      <strong>{quoi} : réservé aux comptes.</strong>
+      <span className="small">La création d’un compte est gratuite (20 fiches complètes par mois).</span>
+      {onCompte && <button className="btn primary" onClick={onCompte}>Se connecter ou créer un compte</button>}
+    </div>
+  );
+}
+// Quota de fiches atteint
+function Limite({ info, niveau, onCompte }) {
+  const anonyme = (info?.niveau || niveau) === 'anonyme';
+  return (
+    <div className="empty glass-in reserve">
+      <strong>{anonyme ? `Limite de ${info?.limite || 3} fiches par jour atteinte sans compte.` : `Limite de ${info?.limite || 20} fiches par mois atteinte (formule gratuite).`}</strong>
+      <span className="small">{anonyme ? 'Créez un compte gratuit pour consulter 20 fiches complètes par mois.' : 'La formule Pro donne un accès illimité. Les fiches déjà ouvertes ce mois-ci restent consultables.'}</span>
+      {anonyme && onCompte && <button className="btn primary" onClick={onCompte}>Se connecter ou créer un compte</button>}
+    </div>
   );
 }
 
@@ -155,6 +179,7 @@ function BatimentTab({ building, bdnb, dpe, dpeOk, sum, grade, ref, tileGrade, o
           <div className="small muted">Carte : étiquette {tileGrade} (BDNB). DPE ADEME vérifié : {grade}.</div>
         )}
         {dpe.status === 'error' && <div className="small muted">DPE indisponibles pour le moment (ADEME).</div>}
+        {dpe.status === 'reserve' && <div className="small muted">DPE du bâtiment : connectez-vous (compte gratuit) pour les voir.</div>}
       </div>
 
       {building.status === 'loading' ? (

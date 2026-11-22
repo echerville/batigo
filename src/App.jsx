@@ -15,7 +15,7 @@ import { enrich, loadMesDpe, merge, readFile, saveMesDpe } from './lib/mesdpe.js
 import { DEFAULT_COLOR, exportReperes, loadReperes, newId, saveReperes } from './lib/reperes.js';
 import { Grade, Scale } from './components/Grade.jsx';
 import { createMap } from './lib/map.js';
-import { fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
+import { LimiteAtteinte, fetchDPE, googleStreetView, hasGoogleStreetView, resolveBuilding, reverseAddress } from './lib/data.js';
 import { BASEMAPS, OVERLAYS } from './lib/config.js';
 
 const mobile = !!window.SCOPE_MOBILE;
@@ -54,6 +54,11 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [profil, setProfil] = useState(null);
   const [recup, setRecup] = useState(false); // retour d'un e-mail « mot de passe oublié »
+  // Niveau d'accès : anonyme (sans compte), gratuit ou pro. Sans service de comptes : tout est ouvert.
+  const niveau = !sb ? 'pro' : !session ? 'anonyme' : (profil?.niveau || 'gratuit');
+  const niveauRef = useRef(niveau);
+  niveauRef.current = niveau;
+  const estPro = niveau === 'pro';
   const [repShow, setRepShow] = useState(() => localStorage.getItem('scope.reperes.show') === '1');
   const mesDpeRef = useRef(mesDpe); mesDpeRef.current = mesDpe;
   const zoneMode = useRef(false);
@@ -83,11 +88,20 @@ export default function App() {
     const m = api.current;
     m.flyTo([lng, lat], 18, mobile ? sheetHeights().half + NAV_H : undefined); m.placeMarker([lng, lat]); m.select(null);
 
-    const data = await resolveBuilding({ lat, lng, feature, bldGroupId: opts.bldGroupId, isClick });
+    let data;
+    try {
+      data = await resolveBuilding({ lat, lng, feature, bldGroupId: opts.bldGroupId, isClick });
+    } catch (e) {
+      if (id !== seq.current) return;
+      if (e instanceof LimiteAtteinte) { setBuilding({ status: 'limite', info: e.info }); setDpe({ status: 'idle' }); return; }
+      throw e;
+    }
     if (id !== seq.current) return;
     setBuilding({ status: 'ok', data });
     if (isClick && data.bdnb?.libelle_adr_principale_ban) setQuery(data.bdnb.libelle_adr_principale_ban);
     m.select(data.batId);
+    // Sans compte : fiche réduite (bâtiment, cadastre, année), pas de DPE
+    if (!niveauRef.current || niveauRef.current === 'anonyme') { setDpe({ status: 'reserve' }); return; }
     try {
       const d = await fetchDPE(data.banIds);
       if (id !== seq.current) return;
@@ -131,14 +145,14 @@ export default function App() {
   useEffect(() => {
     if (!saveReperes(reperes)) say('Impossible d’enregistrer les repères sur cet appareil', 3000);
     try { localStorage.setItem('scope.reperes.show', repShow ? '1' : '0'); } catch { /* silencieux */ }
-    api.current?.setReperes(repShow ? reperes : []);
-  }, [reperes, repShow, say]);
+    api.current?.setReperes(repShow && estPro ? reperes : []);
+  }, [reperes, repShow, estPro, say]);
 
   useEffect(() => {
     if (!saveMesDpe(mesDpe)) say('Impossible d’enregistrer vos DPE sur cet appareil', 3000);
     try { localStorage.setItem('scope.mesdpe.show', dpeShow ? '1' : '0'); } catch { /* silencieux */ }
-    api.current?.setMesDpe(dpeShow ? mesDpe.filter(x => !/remplac/i.test(x.statut || '')) : []);
-  }, [mesDpe, dpeShow, say]);
+    api.current?.setMesDpe(dpeShow && estPro ? mesDpe.filter(x => !/remplac/i.test(x.statut || '')) : []);
+  }, [mesDpe, dpeShow, estPro, say]);
 
   // ── Mes DPE : import, enrichissement ADEME, ouverture du bien ──
   async function runEnrich(items) {
@@ -218,6 +232,7 @@ export default function App() {
     if (!(await api.current.setBasemap(k))) setBasemap(prev);
   }
   function toggleMeasure() {
+    if (niveauRef.current === 'anonyme' && !measure) { demanderCompte('La mesure est réservée aux comptes (gratuit). Connectez-vous.'); return; }
     const m = api.current;
     if (measure && !measure.done) { m.stopMeasure(false); setMeasure(null); return; }
     if (measure?.done) { m.clearMeasure(); setMeasure(null); return; }
@@ -245,6 +260,7 @@ export default function App() {
 
   // Vue de rue interactive
   async function openStreet() {
+    if (niveauRef.current === 'anonyme') { demanderCompte('La vue de rue est réservée aux comptes (gratuit). Connectez-vous.'); return; }
     if (!hasGoogleStreetView()) { say('Vue de rue non configurée', 3000); return; }
     if (place && sv.key === place.key && sv.status === 'ok') { setStreet({ url: sv.url }); return; }
     const at = place?.lngLat || api.current.map.getCenter().toArray();
@@ -299,7 +315,7 @@ export default function App() {
 
   // Fiche commune PC / mobile
   const fiche = place && (
-    <Fiche place={place} building={building} dpe={dpe} tileGrade={tileGrade} mobile={mobile}
+    <Fiche place={place} building={building} dpe={dpe} tileGrade={tileGrade} mobile={mobile} niveau={niveau} onCompte={() => setPanel('compte')}
       onClose={closeFiche} onStreetview={openStreet}
       onShowLayer={id => { toggleOverlay(id, true); if (mobile) setSheet('peek'); say('Couche affichée sur la carte', 2000); }} />
   );
@@ -324,6 +340,9 @@ export default function App() {
     else setProfil(null);
     return () => { vivant = false; };
   }, [session]);
+
+  const demanderCompte = useCallback(msg => { say(msg, 3500); setPanel('compte'); }, [say]);
+  const reservePro = () => (niveau === 'anonyme' ? demanderCompte('Mes repères et Mes DPE : réservés à la formule Pro. Connectez-vous.') : say('Mes repères et Mes DPE : réservés à la formule Pro.', 3500));
 
   // ── Synchronisation de Mes repères et Mes DPE avec le compte ──
   // snap = ce que le serveur contient (par clé) ; null tant que la première lecture n'est pas faite.
@@ -413,12 +432,13 @@ export default function App() {
                   ))}
                   {perso.filter(c => c.group === g).map(c => (
                     <div key={c.id} className="layer-tile-wrap">
-                      <button className="layer-tile" aria-pressed={c.on} onClick={() => { c.set(!c.on); setPanel(null); }}>
+                      <button className="layer-tile" aria-pressed={c.on && estPro} onClick={() => { if (!estPro) { reservePro(); return; } c.set(!c.on); setPanel(null); }}>
                         <span className="layer-sw layer-sw-perso">{c.sw}</span>
                         <span>{c.label}{c.n ? ` (${c.n})` : ''}</span>
-                        {c.on && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
+                        {c.on && estPro && <span className="layer-check" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>}
+                        {!estPro && <span className="layer-pro" aria-label="Formule Pro">Pro</span>}
                       </button>
-                      <button className="layer-edit" aria-label={`Gérer ${c.label.toLowerCase()}`} onClick={() => setPanel(c.id)}><Icon name="edit" size={15} /></button>
+                      <button className="layer-edit" aria-label={`Gérer ${c.label.toLowerCase()}`} onClick={() => (estPro ? setPanel(c.id) : reservePro())}><Icon name="edit" size={15} /></button>
                     </div>
                   ))}
                 </div>
